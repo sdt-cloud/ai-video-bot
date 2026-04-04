@@ -52,7 +52,7 @@ Yapay zeka kullanarak **bilgilendirici kısa videolar** (YouTube Shorts, Instagr
 ### 1. Repoyu Klonla
 
 ```bash
-git clone https://github.com/KULLANICI_ADINIZ/ai-video-bot.git
+git clone https://github.com/sdt-cloud/ai-video-bot.git
 cd ai-video-bot
 ```
 

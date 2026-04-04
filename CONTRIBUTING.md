@@ -24,7 +24,7 @@ AI Video Bot projesine katkıda bulunmak istediğiniz için teşekkürler! 🎉
 
 ```bash
 # Repoyu klonlayın
-git clone https://github.com/KULLANICI_ADINIZ/ai-video-bot.git
+git clone https://github.com/sdt-cloud/ai-video-bot.git
 cd ai-video-bot
 
 # Sanal ortam oluşturun
