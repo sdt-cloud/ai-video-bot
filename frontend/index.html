@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- İkonlar (Feather) -->
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sol Menü (Sidebar) -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i data-feather="video"></i>
+                <span>AIVid Creator</span>
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-target="generator-view">
+                    <i data-feather="plus-circle"></i>
+                    Yeni Üretim
+                </li>
+                <li data-target="scripts-view">
+                    <i data-feather="file-text"></i>
+                    Senaryolar
+                </li>
+                <li data-target="media-view">
+                    <i data-feather="image"></i>
+                    Görsel ve Ses Durumu
+                </li>
+                <li data-target="videos-view">
+                    <i data-feather="play-circle"></i>
+                    Hazır Videolar
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Ana İçerik -->
+        <main class="main-content">
+            
+            <!-- Görünüm 1: Yeni Üretim (Generator) -->
+            <section id="generator-view" class="view-section active">
+                <header>
+                    <h1>Yeni Video Oluştur</h1>
+                    <p>Tekli konu veya çoklu liste girerek video üretimini başlatın.</p>
+                </header>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="single">Tekli Konu</button>
+                    <button class="tab-btn" data-tab="bulk">Toplu Ekleme (Import)</button>
+                </div>
+
+                <div class="generator-layout">
+                    <div class="forms-area">
+                        <!-- Tekli Üretim Formu -->
+                        <div class="form-container" id="single-form">
+                            <div class="form-group">
+                                <label>Konu / Başlık</label>
+                                <input type="text" placeholder="Örn: Evde para biriktirmenin 3 yolu">
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Niş / Kategori</label>
+                                    <input type="text" placeholder="Finans, Tarih, Psikoloji...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ton (Seslenme Biçimi)</label>
+                                    <select>
+                                        <option>Enerjik ve Hızlı</option>
+                                        <option>Gizemli ve Derin</option>
+                                        <option>Bilimsel ve Ciddi</option>
+                                        <option>Komik ve Eğlenceli</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Süre</label>
+                                    <select>
+                                        <option value="30">30 saniye</option>
+                                        <option value="45">45 saniye</option>
+                                        <option value="60">60 saniye</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Dil</label>
+                                    <select>
+                                        <option value="tr">Türkçe</option>
+                                        <option value="en">İngilizce</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- AI Seçimleri -->
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Senaryo AI</label>
+                                    <select>
+                                        <option selected>Gemini (2.5 Pro)</option>
+                                        <option>OpenAI (GPT-4o-mini)</option>
+                                        <option>Claude (3.5 Sonnet)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Seslendirme AI</label>
+                                    <select>
+                                        <option>Edge-TTS (Ücretsiz)</option>
+                                        <option>ElevenLabs</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Görsel AI</label>
+                                    <select>
+                                        <option>Pollinations (Ücretsiz)</option>
+                                        <option>DALL-E 3</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button class="primary-btn">
+                                <i data-feather="zap"></i> Üretimi Başlat
+                            </button>
+                        </div>
+
+                        <!-- Toplu Üretim Formu -->
+                        <div class="form-container d-none" id="bulk-form">
+                            <div class="form-group">
+                                <label>Konu Listesi (Her satıra bir konu)</label>
+                                <textarea rows="6" placeholder="Büyük İskender'in kayıp mezarı...&#10;Güneş sisteminin sonu nasıl olacak...&#10;Yapay zeka meslekleri nasıl değiştirecek..."></textarea>
+                            </div>
+                            
+                            <!-- Ortak ayarlar -->
+                            <div class="form-row">
+                                 <div class="form-group">
+                                    <label>Ortak Süre</label>
+                                    <select>
+                                        <option value="30">30 saniye</option>
+                                        <option value="45">45 saniye</option>
+                                        <option value="60">60 saniye</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ortak Dil</label>
+                                    <select>
+                                        <option value="tr">Türkçe</option>
+                                        <option value="en">İngilizce</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Ortak AI Seçimleri -->
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Senaryo AI</label>
+                                    <select>
+                                        <option selected>Gemini (2.5 Pro)</option>
+                                        <option>OpenAI (GPT-4o-mini)</option>
+                                        <option>Claude (3.5 Sonnet)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Seslendirme AI</label>
+                                    <select>
+                                        <option>Edge-TTS (Ücretsiz)</option>
+                                        <option>ElevenLabs</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Görsel AI</label>
+                                    <select>
+                                        <option>Pollinations (Ücretsiz)</option>
+                                        <option>DALL-E 3</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button class="primary-btn">
+                                <i data-feather="layers"></i> Toplu Kuyruğa Ekle
+                            </button>
+                        </div>
+                    </div> <!-- /forms-area -->
+
+                    <!-- Sağ Panel: İstatistikler -->
+                    <div class="stats-panel">
+                        <h3>Genel Durum</h3>
+                        <div class="stat-box">
+                            <span>Kuyrukta Bekleyen</span>
+                            <strong>12</strong>
+                        </div>
+                        <div class="stat-box">
+                            <span>Şu An İşlenen</span>
+                            <strong>1</strong>
+                        </div>
+                        <div class="stat-box">
+                            <span>Tamamlanan</span>
+                            <strong class="color-success">45</strong>
+                        </div>
+                        <div class="stat-box">
+                            <span>Hatalı (Fail)</span>
+                            <strong class="color-danger">3</strong>
+                        </div>
+                        <div class="stat-box">
+                            <span>Toplam Konu</span>
+                            <strong>61</strong>
+                        </div>
+                        
+                        <div class="stat-progress">
+                            <div class="progress-labels">
+                                <span>Genel Başarı Oranı</span>
+                                <span>%94</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: 94%; background-color: var(--success);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /generator-layout -->
+            </section>
+
+            <!-- Görünüm 2: Senaryolar -->
+            <section id="scripts-view" class="view-section">
+                <header>
+                    <h1>Senaryo Takibi</h1>
+                    <p>Yazılmakta olan ve onaylanan senaryolar.</p>
+                </header>
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Konu</th>
+                                <th>Durum</th>
+                                <th>Dil</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Evrenin en soğuk yeri neresi?</td>
+                                <td><span class="badge success">Tamamlandı</span></td>
+                                <td>TR</td>
+                                <td><button class="text-btn">Görüntüle</button></td>
+                            </tr>
+                            <tr>
+                                <td>Roma İmparatorluğu'nun Çöküşü</td>
+                                <td><span class="badge warning">Üretiliyor...</span></td>
+                                <td>EN</td>
+                                <td><button class="text-btn">Bekliyor</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Görünüm 3: Medya Durumu -->
+            <section id="media-view" class="view-section">
+                <header>
+                    <h1>Görsel ve Ses Durumu</h1>
+                    <p>İndirilen görsellerin ve seslendirmelerin canlı durumu.</p>
+                </header>
+                <div class="media-grid">
+                    <!-- Örnek Kart -->
+                    <div class="media-card">
+                        <div class="card-header">
+                            <h4>Evrenin en soğuk yeri neresi?</h4>
+                            <span class="status-indicator processing"></span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: 60%"></div>
+                        </div>
+                        <div class="media-details">
+                            <p><i data-feather="mic"></i> Ses: Tamamlandı</p>
+                            <p><i data-feather="image"></i> Görseller: 3/5 İndirildi</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Görünüm 4: Videolar (Player) -->
+            <section id="videos-view" class="view-section">
+                <header>
+                    <h1>Hazır Videolar</h1>
+                    <p>Tamamlanan içeriklerinizi izleyin ve indirin.</p>
+                </header>
+                <div class="video-gallery">
+                    <div class="video-item">
+                        <div class="video-placeholder">
+                            <i data-feather="play"></i>
+                        </div>
+                        <div class="video-info">
+                            <h4>Nicola Tesla'nın Sırları</h4>
+                            <p>60 saniye • TR</p>
+                            <div class="video-actions">
+                                <button class="icon-btn"><i data-feather="download"></i></button>
+                                <button class="icon-btn"><i data-feather="share-2"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>

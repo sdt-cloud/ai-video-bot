@@ -1,0 +1,10 @@
+openai
+python-dotenv
+edge-tts
+moviepy
+requests
+pillow
+fastapi
+uvicorn
+pydantic
+google-generativeai

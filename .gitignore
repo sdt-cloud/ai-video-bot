@@ -1,0 +1,26 @@
+# API Anahtarları (ÇOK ÖNEMLİ - ASLA GITHUB'A YÜKLEME!)
+.env
+
+# Python sanal ortam
+venv/
+
+# Veritabanı
+*.db
+
+# Üretilen dosyalar
+assets/
+frontend/videos/
+test_*.json
+test_*.mp3
+test_*.jpg
+test_*.mp4
+temp-audio.m4a
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
