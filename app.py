@@ -146,6 +146,22 @@ async def get_stats():
 async def get_videos():
     return database.get_all_tasks()
 
+class DeleteRequest(BaseModel):
+    task_ids: List[int]
+
+@app.delete("/api/videos")
+async def delete_videos(req: DeleteRequest):
+    try:
+        video_paths = database.delete_tasks(req.task_ids)
+        # Attempt to delete physical files
+        for vp in video_paths:
+            path = f"frontend/videos/{vp}"
+            if os.path.exists(path):
+                os.remove(path)
+        return {"status": "success", "deleted": len(req.task_ids)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # Frontend Statik Dosyalarını Sun
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 

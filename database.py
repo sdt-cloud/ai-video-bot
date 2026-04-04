@@ -115,5 +115,22 @@ def get_stats():
         "success_rate": success_rate
     }
 
+def delete_tasks(task_ids):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # It's better to use parameter binding
+    placeholders = ','.join(['?'] * len(task_ids))
+    
+    # We could also fetch video_paths to delete files, but keeping it simple for DB first
+    # Or fetch them before deletion
+    cursor.execute(f"SELECT video_path FROM videos WHERE id IN ({placeholders}) AND video_path IS NOT NULL", task_ids)
+    paths = cursor.fetchall()
+    
+    cursor.execute(f"DELETE FROM videos WHERE id IN ({placeholders})", task_ids)
+    conn.commit()
+    conn.close()
+    
+    return [p[0] for p in paths]
+
 # Tabloyu oluştur
 init_db()

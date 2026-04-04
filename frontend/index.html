@@ -3,302 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Video Dashboard</title>
+    <title>VideoGenius AI — Dashboard</title>
+    <meta name="description" content="AI destekli otomatik video üretim sistemi. Konu gir, video al.">
     <link rel="stylesheet" href="/static/style.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- İkonlar (Feather) -->
-    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
 </head>
 <body>
-
     <div class="app-container">
-        <!-- Sol Menü (Sidebar) -->
+        <!-- Sol Sidebar -->
         <aside class="sidebar">
-            <div class="logo">
-                <i data-feather="video"></i>
-                <span>AIVid Creator</span>
+            <div class="sidebar-top">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <span class="material-symbols-rounded">smart_display</span>
+                    </div>
+                    <div class="logo-text">
+                        <span class="logo-title">VIDEO<span class="accent">GENIUS</span></span>
+                        <span class="logo-subtitle">AI</span>
+                    </div>
+                </div>
+
+                <nav class="nav-links">
+                    <a href="#" class="nav-item active" data-target="dashboard-view">
+                        <span class="material-symbols-rounded">dashboard</span>
+                        <span data-i18n="nav_dashboard">Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="projects-view">
+                        <span class="material-symbols-rounded">folder_open</span>
+                        <span data-i18n="nav_projects">Projects</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="templates-view">
+                        <span class="material-symbols-rounded">description</span>
+                        <span data-i18n="nav_templates">Templates</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="assets-view">
+                        <span class="material-symbols-rounded">perm_media</span>
+                        <span data-i18n="nav_assets">Assets</span>
+                    </a>
+                </nav>
             </div>
-            <ul class="nav-links">
-                <li class="active" data-target="generator-view">
-                    <i data-feather="plus-circle"></i>
-                    Yeni Üretim
-                </li>
-                <li data-target="scripts-view">
-                    <i data-feather="file-text"></i>
-                    Senaryolar
-                </li>
-                <li data-target="media-view">
-                    <i data-feather="image"></i>
-                    Görsel ve Ses Durumu
-                </li>
-                <li data-target="videos-view">
-                    <i data-feather="play-circle"></i>
-                    Hazır Videolar
-                </li>
-            </ul>
+
+            <div class="sidebar-bottom">
+                <!-- Theme and Language Switcher -->
+                <div class="sidebar-options">
+                    <div class="lang-switcher" style="margin-bottom:0;">
+                        <button class="lang-btn active" data-lang="tr">TR</button>
+                        <button class="lang-btn" data-lang="en">EN</button>
+                    </div>
+                    <button id="theme-toggle" class="theme-btn" title="Toggle Theme">
+                        <span class="material-symbols-rounded">light_mode</span>
+                    </button>
+                </div>
+                
+                <a href="#" class="nav-item" data-target="settings-view" style="margin-top: 1rem;">
+                    <span class="material-symbols-rounded">settings</span>
+                    <span data-i18n="nav_settings">Settings</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="material-symbols-rounded">help</span>
+                    <span data-i18n="nav_help">Help</span>
+                </a>
+            </div>
         </aside>
 
         <!-- Ana İçerik -->
         <main class="main-content">
-            
-            <!-- Görünüm 1: Yeni Üretim (Generator) -->
-            <section id="generator-view" class="view-section active">
-                <header>
-                    <h1>Yeni Video Oluştur</h1>
-                    <p>Tekli konu veya çoklu liste girerek video üretimini başlatın.</p>
-                </header>
 
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="single">Tekli Konu</button>
-                    <button class="tab-btn" data-tab="bulk">Toplu Ekleme (Import)</button>
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view-section active">
+
+                <!-- Üst Stat Kartları -->
+                <div class="stats-row">
+                    <div class="stat-card stat-total">
+                        <div class="stat-info">
+                            <span class="stat-label" data-i18n="stat_total">TOTAL VIDEOS</span>
+                            <span class="stat-value" id="stat-total">0</span>
+                        </div>
+                        <div class="stat-icon">
+                            <span class="material-symbols-rounded">bar_chart</span>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-progress">
+                        <div class="stat-info">
+                            <span class="stat-label" data-i18n="stat_progress">IN PROGRESS</span>
+                            <span class="stat-value" id="stat-progress">0</span>
+                        </div>
+                        <div class="stat-icon">
+                            <span class="material-symbols-rounded">pending</span>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-completed">
+                        <div class="stat-info">
+                            <span class="stat-label" data-i18n="stat_completed">COMPLETED</span>
+                            <span class="stat-value" id="stat-completed">0</span>
+                        </div>
+                        <div class="stat-icon">
+                            <span class="material-symbols-rounded">check_circle</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="generator-layout">
-                    <div class="forms-area">
-                        <!-- Tekli Üretim Formu -->
-                        <div class="form-container" id="single-form">
-                            <div class="form-group">
-                                <label>Konu / Başlık</label>
-                                <input type="text" placeholder="Örn: Evde para biriktirmenin 3 yolu">
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Niş / Kategori</label>
-                                    <input type="text" placeholder="Finans, Tarih, Psikoloji...">
-                                </div>
-                                <div class="form-group">
-                                    <label>Ton (Seslenme Biçimi)</label>
-                                    <select>
-                                        <option>Enerjik ve Hızlı</option>
-                                        <option>Gizemli ve Derin</option>
-                                        <option>Bilimsel ve Ciddi</option>
-                                        <option>Komik ve Eğlenceli</option>
-                                    </select>
-                                </div>
-                            </div>
+                <!-- Create New Video -->
+                <div class="section-block">
+                    <h2 class="section-title" data-i18n="dash_create_title">Create New Video</h2>
 
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Süre</label>
-                                    <select>
-                                        <option value="30">30 saniye</option>
-                                        <option value="45">45 saniye</option>
-                                        <option value="60">60 saniye</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Dil</label>
-                                    <select>
-                                        <option value="tr">Türkçe</option>
-                                        <option value="en">İngilizce</option>
-                                    </select>
-                                </div>
+                    <div class="create-card">
+                        <div class="create-card-header">
+                            <h3 data-i18n="dash_new_video">New Video</h3>
+                            <span class="create-subtitle" data-i18n="dash_video_topic">Video Topic / Prompt</span>
+                        </div>
+                        <div class="create-form">
+                            <div class="input-area">
+                                <input type="text" id="topic-input" class="topic-input" placeholder="Describe your video concept here..." data-i18n-placeholder="dash_input_placeholder">
                             </div>
-
-                            <!-- AI Seçimleri -->
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Senaryo AI</label>
-                                    <select>
-                                        <option selected>Gemini (2.5 Pro)</option>
-                                        <option>OpenAI (GPT-4o-mini)</option>
-                                        <option>Claude (3.5 Sonnet)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Seslendirme AI</label>
-                                    <select>
-                                        <option>Edge-TTS (Ücretsiz)</option>
-                                        <option>ElevenLabs</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Görsel AI</label>
-                                    <select>
-                                        <option>Pollinations (Ücretsiz)</option>
-                                        <option>DALL-E 3</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <button class="primary-btn">
-                                <i data-feather="zap"></i> Üretimi Başlat
+                            <button class="generate-btn" id="generate-btn">
+                                <span class="material-symbols-rounded">bolt</span>
+                                <span data-i18n="dash_gen_btn">GENERATE VIDEO</span>
                             </button>
                         </div>
 
-                        <!-- Toplu Üretim Formu -->
-                        <div class="form-container d-none" id="bulk-form">
-                            <div class="form-group">
-                                <label>Konu Listesi (Her satıra bir konu)</label>
-                                <textarea rows="6" placeholder="Büyük İskender'in kayıp mezarı...&#10;Güneş sisteminin sonu nasıl olacak...&#10;Yapay zeka meslekleri nasıl değiştirecek..."></textarea>
-                            </div>
-                            
-                            <!-- Ortak ayarlar -->
-                            <div class="form-row">
-                                 <div class="form-group">
-                                    <label>Ortak Süre</label>
-                                    <select>
-                                        <option value="30">30 saniye</option>
-                                        <option value="45">45 saniye</option>
-                                        <option value="60">60 saniye</option>
+                        <!-- Gelişmiş Seçenekler -->
+                        <div class="advanced-toggle" id="advanced-toggle">
+                            <span class="material-symbols-rounded">tune</span>
+                            <span data-i18n="dash_adv_options">Advanced Options</span>
+                            <span class="material-symbols-rounded toggle-arrow">expand_more</span>
+                        </div>
+                        <div class="advanced-options hidden" id="advanced-options">
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <label data-i18n="opt_category">Category</label>
+                                    <input type="text" id="opt-category" placeholder="Finans, Tarih, Teknoloji..." data-i18n-placeholder="opt_cat_placeholder">
+                                </div>
+                                <div class="option-group">
+                                    <label data-i18n="opt_tone">Tone</label>
+                                    <select id="opt-tone">
+                                        <option value="Enerjik" data-i18n="tone_energetic">Energetic & Fast</option>
+                                        <option value="Gizemli" data-i18n="tone_mysterious">Mysterious & Deep</option>
+                                        <option value="Bilimsel" data-i18n="tone_scientific">Scientific & Serious</option>
+                                        <option value="Komik" data-i18n="tone_funny">Funny & Entertaining</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label>Ortak Dil</label>
-                                    <select>
+                                <div class="option-group">
+                                    <label data-i18n="opt_duration">Duration</label>
+                                    <select id="opt-duration">
+                                        <option value="30">30 sec</option>
+                                        <option value="45">45 sec</option>
+                                        <option value="60">60 sec</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label data-i18n="opt_language">Language</label>
+                                    <select id="opt-language">
                                         <option value="tr">Türkçe</option>
-                                        <option value="en">İngilizce</option>
+                                        <option value="en">English</option>
                                     </select>
                                 </div>
-                            </div>
-                            
-                            <!-- Ortak AI Seçimleri -->
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Senaryo AI</label>
-                                    <select>
-                                        <option selected>Gemini (2.5 Pro)</option>
-                                        <option>OpenAI (GPT-4o-mini)</option>
-                                        <option>Claude (3.5 Sonnet)</option>
+                                <div class="option-group">
+                                    <label data-i18n="opt_script_ai">Script AI</label>
+                                    <select id="opt-script-ai">
+                                        <option value="Gemini">Gemini (2.5 Pro)</option>
+                                        <option value="OpenAI">OpenAI (GPT-4o-mini)</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label>Seslendirme AI</label>
-                                    <select>
-                                        <option>Edge-TTS (Ücretsiz)</option>
-                                        <option>ElevenLabs</option>
+                                <div class="option-group">
+                                    <label data-i18n="opt_voice_ai">Voice AI</label>
+                                    <select id="opt-voice-ai">
+                                        <option value="Edge-TTS">Edge-TTS (Free)</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label>Görsel AI</label>
-                                    <select>
-                                        <option>Pollinations (Ücretsiz)</option>
-                                        <option>DALL-E 3</option>
+                                <div class="option-group">
+                                    <label data-i18n="opt_image_ai">Image AI</label>
+                                    <select id="opt-image-ai">
+                                        <option value="Pollinations">Pollinations (Free)</option>
                                     </select>
                                 </div>
-                            </div>
-
-                            <button class="primary-btn">
-                                <i data-feather="layers"></i> Toplu Kuyruğa Ekle
-                            </button>
-                        </div>
-                    </div> <!-- /forms-area -->
-
-                    <!-- Sağ Panel: İstatistikler -->
-                    <div class="stats-panel">
-                        <h3>Genel Durum</h3>
-                        <div class="stat-box">
-                            <span>Kuyrukta Bekleyen</span>
-                            <strong>12</strong>
-                        </div>
-                        <div class="stat-box">
-                            <span>Şu An İşlenen</span>
-                            <strong>1</strong>
-                        </div>
-                        <div class="stat-box">
-                            <span>Tamamlanan</span>
-                            <strong class="color-success">45</strong>
-                        </div>
-                        <div class="stat-box">
-                            <span>Hatalı (Fail)</span>
-                            <strong class="color-danger">3</strong>
-                        </div>
-                        <div class="stat-box">
-                            <span>Toplam Konu</span>
-                            <strong>61</strong>
-                        </div>
-                        
-                        <div class="stat-progress">
-                            <div class="progress-labels">
-                                <span>Genel Başarı Oranı</span>
-                                <span>%94</span>
-                            </div>
-                            <div class="progress-container">
-                                <div class="progress-bar" style="width: 94%; background-color: var(--success);"></div>
                             </div>
                         </div>
                     </div>
-                </div> <!-- /generator-layout -->
+                </div>
+
+                <!-- Production Queue -->
+                <div class="section-block">
+                    <div class="section-header">
+                        <h2 class="section-title" data-i18n="queue_title">Production Queue</h2>
+                        <button class="refresh-btn" id="refresh-btn" title="Refresh">
+                            <span class="material-symbols-rounded">refresh</span>
+                        </button>
+                    </div>
+                    <div class="queue-grid" id="queue-grid">
+                        <div class="empty-state">
+                            <span class="material-symbols-rounded">movie_creation</span>
+                            <p data-i18n="queue_empty">No videos in queue yet.</p>
+                            <p class="hint" data-i18n="queue_empty_hint">Create your first video above!</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
-            <!-- Görünüm 2: Senaryolar -->
-            <section id="scripts-view" class="view-section">
-                <header>
-                    <h1>Senaryo Takibi</h1>
-                    <p>Yazılmakta olan ve onaylanan senaryolar.</p>
-                </header>
-                <div class="data-table">
-                    <table>
+            <!-- Projects View -->
+            <section id="projects-view" class="view-section">
+                <div class="projects-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+                    <div>
+                        <h1 class="page-title" data-i18n="proj_title">Projects</h1>
+                        <p class="page-subtitle" style="margin-bottom:0;" data-i18n="proj_subtitle">All your video projects organized by topic.</p>
+                    </div>
+                    <button id="delete-selected-btn" class="action-btn btn-primary" style="background-color: var(--danger); padding: 0.5rem 1rem; display:none; gap: 8px;">
+                        <span class="material-symbols-rounded">delete</span> <span data-i18n="delete_selected" style="font-weight:600;font-size:0.9rem;">Delete Selected</span>
+                    </button>
+                </div>
+                <div class="data-table-wrap">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Konu</th>
-                                <th>Durum</th>
-                                <th>Dil</th>
-                                <th>İşlem</th>
+                                <th style="width:40px; text-align:center;"><input type="checkbox" id="select-all-projects" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color);"></th>
+                                <th>#</th>
+                                <th data-i18n="table_topic">Topic</th>
+                                <th data-i18n="table_status">Status</th>
+                                <th data-i18n="table_progress">Progress</th>
+                                <th data-i18n="table_lang">Language</th>
+                                <th data-i18n="table_created">Created</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>Evrenin en soğuk yeri neresi?</td>
-                                <td><span class="badge success">Tamamlandı</span></td>
-                                <td>TR</td>
-                                <td><button class="text-btn">Görüntüle</button></td>
-                            </tr>
-                            <tr>
-                                <td>Roma İmparatorluğu'nun Çöküşü</td>
-                                <td><span class="badge warning">Üretiliyor...</span></td>
-                                <td>EN</td>
-                                <td><button class="text-btn">Bekliyor</button></td>
-                            </tr>
+                        <tbody id="projects-tbody">
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Görünüm 3: Medya Durumu -->
-            <section id="media-view" class="view-section">
-                <header>
-                    <h1>Görsel ve Ses Durumu</h1>
-                    <p>İndirilen görsellerin ve seslendirmelerin canlı durumu.</p>
-                </header>
-                <div class="media-grid">
-                    <!-- Örnek Kart -->
-                    <div class="media-card">
-                        <div class="card-header">
-                            <h4>Evrenin en soğuk yeri neresi?</h4>
-                            <span class="status-indicator processing"></span>
+            <!-- Templates View (Bulk Import) -->
+            <section id="templates-view" class="view-section">
+                <h1 class="page-title" data-i18n="bulk_title">Bulk Import</h1>
+                <p class="page-subtitle" data-i18n="bulk_subtitle">Add multiple topics to the production queue at once.</p>
+                <div class="bulk-card">
+                    <div class="form-group">
+                        <label data-i18n="bulk_label">Topic List (one topic per line)</label>
+                        <textarea id="bulk-textarea" rows="8" placeholder="Büyük İskender'in kayıp mezarı...&#10;Güneş sisteminin sonu nasıl olacak...&#10;Yapay zeka meslekleri nasıl değiştirecek..." data-i18n-placeholder="bulk_placeholder"></textarea>
+                    </div>
+                    <div class="bulk-options">
+                        <div class="option-group">
+                            <label data-i18n="opt_duration">Duration</label>
+                            <select id="bulk-duration">
+                                <option value="30">30 sec</option>
+                                <option value="45">45 sec</option>
+                                <option value="60">60 sec</option>
+                            </select>
                         </div>
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: 60%"></div>
+                        <div class="option-group">
+                            <label data-i18n="opt_language">Language</label>
+                            <select id="bulk-language">
+                                <option value="tr">Türkçe</option>
+                                <option value="en">English</option>
+                            </select>
                         </div>
-                        <div class="media-details">
-                            <p><i data-feather="mic"></i> Ses: Tamamlandı</p>
-                            <p><i data-feather="image"></i> Görseller: 3/5 İndirildi</p>
+                        <div class="option-group">
+                            <label data-i18n="opt_script_ai">Script AI</label>
+                            <select id="bulk-script-ai">
+                                <option value="Gemini">Gemini (2.5 Pro)</option>
+                                <option value="OpenAI">OpenAI (GPT-4o-mini)</option>
+                            </select>
                         </div>
+                    </div>
+                    <button class="generate-btn" id="bulk-btn">
+                        <span class="material-symbols-rounded">playlist_add</span>
+                        <span data-i18n="bulk_btn">ADD ALL TO QUEUE</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Assets View (Completed Videos) -->
+            <section id="assets-view" class="view-section">
+                <h1 class="page-title" data-i18n="assets_title">Completed Videos</h1>
+                <p class="page-subtitle" data-i18n="assets_subtitle">Watch, download and share your finished videos.</p>
+                <div class="video-gallery" id="video-gallery">
+                    <div class="empty-state">
+                        <span class="material-symbols-rounded">movie</span>
+                        <p data-i18n="assets_empty">No completed videos yet.</p>
                     </div>
                 </div>
             </section>
 
-            <!-- Görünüm 4: Videolar (Player) -->
-            <section id="videos-view" class="view-section">
-                <header>
-                    <h1>Hazır Videolar</h1>
-                    <p>Tamamlanan içeriklerinizi izleyin ve indirin.</p>
-                </header>
-                <div class="video-gallery">
-                    <div class="video-item">
-                        <div class="video-placeholder">
-                            <i data-feather="play"></i>
+            <!-- Settings View -->
+            <section id="settings-view" class="view-section">
+                <h1 class="page-title" data-i18n="nav_settings">Settings</h1>
+                <p class="page-subtitle" data-i18n="set_subtitle">Configure your AI models and preferences.</p>
+                <div class="settings-card">
+                    <div class="settings-group">
+                        <h3 data-i18n="set_api">API Keys</h3>
+                        <div class="option-group" style="margin-bottom: 1rem;">
+                            <label>Gemini API Key</label>
+                            <input type="password" placeholder="AIza..." disabled>
+                            <span class="hint" data-i18n="set_hint">Configured in .env file</span>
                         </div>
-                        <div class="video-info">
-                            <h4>Nicola Tesla'nın Sırları</h4>
-                            <p>60 saniye • TR</p>
-                            <div class="video-actions">
-                                <button class="icon-btn"><i data-feather="download"></i></button>
-                                <button class="icon-btn"><i data-feather="share-2"></i></button>
-                            </div>
+                        <div class="option-group">
+                            <label>OpenAI API Key</label>
+                            <input type="password" placeholder="sk-..." disabled>
+                            <span class="hint" data-i18n="set_hint">Configured in .env file</span>
                         </div>
                     </div>
                 </div>
@@ -307,9 +307,29 @@
         </main>
     </div>
 
+    <!-- Video Modal -->
+    <div class="modal-overlay hidden" id="video-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <video id="modal-video" controls></video>
+            <div class="modal-info">
+                <h3 id="modal-title"></h3>
+                <a id="modal-download" class="download-link" download>
+                    <span class="material-symbols-rounded">download</span>
+                    <span data-i18n="modal_download">Download</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast hidden" id="toast">
+        <span class="material-symbols-rounded toast-icon">check_circle</span>
+        <span class="toast-message" id="toast-message"></span>
+    </div>
+
     <script src="/static/app.js"></script>
-    <script>
-        feather.replace();
-    </script>
 </body>
 </html>
