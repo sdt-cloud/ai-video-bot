@@ -374,7 +374,7 @@ body {
 .video-thumb span { font-size: 48px; color: white; opacity: 0.8; transition: var(--transition); }
 .video-card:hover .video-thumb span { transform: scale(1.1); opacity: 1; }
 .video-details { padding: 1.5rem; }
-.video-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.video-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .video-meta { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; display: flex; justify-content: space-between; }
 .video-actions { display: flex; gap: 10px; }
 .action-btn { flex: 1; padding: 0.6rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;}
@@ -411,7 +411,7 @@ body {
 @keyframes gradientMove { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 
 .queue-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-.queue-topic { font-weight: 600; font-size: 1.05rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.queue-topic { font-weight: 600; font-size: 1.05rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .queue-icon { opacity: 0.5; color: var(--accent-color); }
 .queue-card-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--text-secondary); }
 
@@ -477,7 +477,7 @@ body:not(.light-theme) .refresh-btn:hover { background: rgba(255,255,255,0.1); }
 .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; }
 .form-group textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary); padding: 1rem; border-radius: 12px; resize: vertical; outline: none; transition: var(--transition); font-family: monospace; line-height: 1.5; }
 .form-group textarea:focus { border-color: var(--accent-color); }
-.bulk-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+.bulk-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
 .bulk-options .option-group select { background: var(--input-bg); border-color: var(--border-color); }
 
 /* Settings */

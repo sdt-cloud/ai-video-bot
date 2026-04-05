@@ -21,6 +21,7 @@ const translations = {
         "opt_script_ai": "Senaryo YZ",
         "opt_voice_ai": "Ses YZ",
         "opt_image_ai": "Görsel YZ",
+        "opt_video_mode": "Video Animasyon",
         "tone_energetic": "Enerjik ve Hızlı",
         "tone_mysterious": "Gizemli ve Derin",
         "tone_scientific": "Bilimsel ve Ciddi",
@@ -85,6 +86,7 @@ const translations = {
         "opt_script_ai": "Script AI",
         "opt_voice_ai": "Voice AI",
         "opt_image_ai": "Image AI",
+        "opt_video_mode": "Video Animation",
         "tone_energetic": "Energetic & Fast",
         "tone_mysterious": "Mysterious & Deep",
         "tone_scientific": "Scientific & Serious",
@@ -267,7 +269,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     script_ai: document.getElementById('opt-script-ai').value,
                     voice_ai: document.getElementById('opt-voice-ai').value,
                     image_ai: document.getElementById('opt-image-ai').value,
-                    subtitle_style: document.getElementById('opt-subtitle-style').value
+                    subtitle_style: document.getElementById('opt-subtitle-style').value,
+                    video_mode: document.getElementById('opt-video-mode').value
                 };
 
                 const res = await fetch('/api/videos/single', {
@@ -316,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: parseInt(document.getElementById('bulk-duration').value),
                     language: document.getElementById('bulk-language').value,
                     script_ai: document.getElementById('bulk-script-ai').value,
-                    subtitle_style: document.getElementById('bulk-subtitle-style').value
+                    video_mode: document.getElementById('bulk-video-mode').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {
@@ -689,7 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     script_ai: document.getElementById('nedir-script-ai').value,
                     voice_ai: document.getElementById('nedir-voice-ai').value,
                     image_ai: document.getElementById('nedir-image-ai').value,
-                    subtitle_style: document.getElementById('nedir-subtitle-style').value
+                    subtitle_style: document.getElementById('nedir-subtitle-style').value,
+                    video_mode: document.getElementById('nedir-video-mode').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {

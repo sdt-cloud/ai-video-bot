@@ -27,6 +27,7 @@ class VideoRequest(BaseModel):
     voice_ai: Optional[str] = "Edge-TTS"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
+    video_mode: Optional[str] = "slideshow"
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
@@ -36,6 +37,7 @@ class BulkVideoRequest(BaseModel):
     voice_ai: Optional[str] = "Edge-TTS"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
+    video_mode: Optional[str] = "slideshow"
 
 async def process_video(task):
     task_id = task["id"]
@@ -96,8 +98,9 @@ async def process_video(task):
     # Sahne metinlerini topla (altyazı için)
     narrations = [scene.get("narration", "") for scene in scenes]
     subtitle_style = task.get("subtitle_style", "tiktok")
+    video_mode = task.get("video_mode", "slideshow")
     
-    video_success = create_video(image_paths, voice_file, output_video_path, narrations=narrations, subtitle_style=subtitle_style)
+    video_success = create_video(image_paths, voice_file, output_video_path, narrations=narrations, subtitle_style=subtitle_style, video_mode=video_mode)
     
     if video_success:
         database.update_status(task_id, "completed", 100, None, output_filename)
@@ -128,7 +131,7 @@ async def startup_event():
 async def add_single_video(req: VideoRequest):
     task_id = database.add_video_task(
         req.topic, req.category, req.tone, req.duration, req.language,
-        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style
+        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode
     )
     return {"status": "success", "task_id": task_id}
 
@@ -139,7 +142,7 @@ async def add_bulk_videos(req: BulkVideoRequest):
         if topic:
             database.add_video_task(
                 topic, "Genel", "Enerjik", req.duration, req.language,
-                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style
+                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode
             )
     return {"status": "success", "count": len(req.topics)}
 

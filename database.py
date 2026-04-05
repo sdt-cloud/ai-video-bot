@@ -20,6 +20,7 @@ def init_db():
             subtitle_style TEXT DEFAULT 'tiktok',
             status TEXT DEFAULT 'pending',
             progress INTEGER DEFAULT 0,
+            video_mode TEXT DEFAULT 'slideshow',
             error_message TEXT,
             video_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -33,16 +34,21 @@ def init_db():
     except sqlite3.OperationalError:
         pass
         
+    try:
+        cursor.execute("ALTER TABLE videos ADD COLUMN video_mode TEXT DEFAULT 'slideshow'")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
-def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok"):
+def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok", video_mode="slideshow"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style))
+        INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style, video_mode)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style, video_mode))
     task_id = cursor.lastrowid
     conn.commit()
     conn.close()

@@ -61,9 +61,65 @@ def generate_image_pollinations(prompt, output_filename):
         print(f"[-] Görsel indirilirken hata oluştu: {e}")
         return False
 
+def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell"):
+    import replicate
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: Replicate - {model_name})")
+    
+    try:
+        # Replicate modelleri için en boy oranı ayarları (portre moduna zorla)
+        input_data = {
+            "prompt": prompt,
+            "aspect_ratio": "9:16",
+        }
+        
+        # Farklı modeller için farklı girdi parametreleri gerekebilir
+        if "flux" in model_name:
+            input_data["output_format"] = "webp"
+            input_data["num_outputs"] = 1
+        elif "sdxl" in model_name:
+            input_data = {
+                "prompt": prompt,
+                "width": 768,
+                "height": 1344, # SDXL portre
+                "refine": "expert_ensemble_refiner",
+                "apply_watermark": False,
+                "num_inference_steps": 25
+            }
+
+        output = replicate.run(model_name, input=input_data)
+        
+        # Çıktı genelde bir liste olur (URL'ler)
+        image_url = output[0] if isinstance(output, list) else output
+        
+        # Resmi indir
+        img_response = requests.get(image_url, stream=True)
+        if img_response.status_code == 200:
+            with open(output_filename, 'wb') as f:
+                for chunk in img_response.iter_content(1024):
+                    f.write(chunk)
+            print(f"[+] Görsel kaydedildi: {output_filename}")
+            return True
+        else:
+            print(f"[-] Replicate Görseli indirilemedi, HTTP Status: {img_response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"[-] Replicate hatası: {e}")
+        return False
+
 def generate_image(prompt, output_filename, ai_provider="Pollinations"):
-    if "dall-e" in ai_provider.lower() or "openai" in ai_provider.lower():
+    provider_lower = ai_provider.lower()
+    if "dall-e" in provider_lower or "openai" in provider_lower:
         return generate_image_openai(prompt, output_filename)
+    elif "flux" in provider_lower:
+        # flux, flux-schnell, flux-pro gibi varyasyonları destekle
+        model = "black-forest-labs/flux-schnell"
+        if "pro" in provider_lower: model = "black-forest-labs/flux-pro"
+        return generate_image_replicate(prompt, output_filename, model)
+    elif "sdxl" in provider_lower:
+        return generate_image_replicate(prompt, output_filename, "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7f23bb69422f281454559869502b4")
+    elif "replicate" in provider_lower:
+        return generate_image_replicate(prompt, output_filename)
     else:
         return generate_image_pollinations(prompt, output_filename)
 
