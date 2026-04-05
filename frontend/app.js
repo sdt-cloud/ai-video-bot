@@ -266,7 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     language: document.getElementById('opt-language').value,
                     script_ai: document.getElementById('opt-script-ai').value,
                     voice_ai: document.getElementById('opt-voice-ai').value,
-                    image_ai: document.getElementById('opt-image-ai').value
+                    image_ai: document.getElementById('opt-image-ai').value,
+                    subtitle_style: document.getElementById('opt-subtitle-style').value
                 };
 
                 const res = await fetch('/api/videos/single', {
@@ -314,7 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     topics: lines,
                     duration: parseInt(document.getElementById('bulk-duration').value),
                     language: document.getElementById('bulk-language').value,
-                    script_ai: document.getElementById('bulk-script-ai').value
+                    script_ai: document.getElementById('bulk-script-ai').value,
+                    subtitle_style: document.getElementById('bulk-subtitle-style').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {
@@ -591,6 +593,130 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 deleteBtn.innerHTML = `<span class="material-symbols-rounded">delete</span> <span data-i18n="delete_selected" style="font-weight:600;font-size:0.9rem;">${langData.delete_selected}</span>`;
                 deleteBtn.disabled = false;
+            }
+        });
+    }
+
+    // 3. Nedir.me Integration
+    const nedirFetchBtn = document.getElementById('nedir-fetch-btn');
+    if (nedirFetchBtn) {
+        nedirFetchBtn.addEventListener('click', async () => {
+            const postType = document.getElementById('nedir-type-select').value;
+            const resultsDiv = document.getElementById('nedir-results');
+            const submitBtn = document.getElementById('nedir-submit-btn');
+            const optionsDiv = document.getElementById('nedir-options');
+            
+            nedirFetchBtn.innerHTML = '<span class="material-symbols-rounded" style="animation: spin 1s linear infinite;">rotate_right</span> Fetching...';
+            nedirFetchBtn.disabled = true;
+            
+            try {
+                const res = await fetch(`/api/nedir/fetch?post_type=${postType}&limit=20`);
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    const meta = data.meta || {};
+                    const metaHtml = meta.total_posts ? `
+                        <div style="margin-bottom:1rem; padding:0.6rem 1rem; background:rgba(99,102,241,0.1); border-radius:8px; font-size:0.82rem; color:var(--accent-color); display:flex; gap:1.5rem; flex-wrap:wrap;">
+                            <span>📊 Toplam: <strong>${meta.total_posts}</strong> içerik</span>
+                            <span>📄 Rastgele Sayfa: <strong>${meta.page} / ${meta.total_pages}</strong></span>
+                            ${meta.skipped_already_done > 0 ? `<span>✅ Zaten Yapılmış: <strong>${meta.skipped_already_done}</strong> adet atlandı</span>` : ''}
+                        </div>` : '';
+
+                    if (data.data.length === 0) {
+                        resultsDiv.innerHTML = metaHtml + `<p style="padding:1rem;color:var(--text-color);">Bu sayfadaki tüm içerikler zaten kuyruğa eklenmiş. Tekrar Fetch Data'ya bas — farklı bir rastgele sayfadan içerik gelecek!</p>`;
+                        submitBtn.style.display = 'none';
+                        optionsDiv.style.display = 'none';
+                    } else {
+                        let html = metaHtml;
+                        data.data.forEach(item => {
+                            // Basit bir checkbox ve açıklama kutusu
+                            html += `
+                            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <input type="checkbox" class="nedir-cb" value="${item.id}" style="margin-top:5px; accent-color:var(--accent-color);" checked>
+                                <div>
+                                    <h4 style="margin:0 0 5px 0; color:var(--text-color);">${item.title}</h4>
+                                    <p style="margin:0; font-size:0.85rem; color:#888;" class="nedir-desc" data-title="${item.title}">${item.excerpt}</p>
+                                </div>
+                            </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                        submitBtn.style.display = 'flex';
+                        optionsDiv.style.display = 'flex';
+                    }
+                    resultsDiv.style.display = 'block';
+
+                } else {
+                    showToast(data.message, "error");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("API bağlantı hatası. .env dosyasını kontrol edin.", "error");
+            } finally {
+                nedirFetchBtn.innerHTML = '<span class="material-symbols-rounded">cloud_sync</span> <span data-i18n="nedir_fetch">Fetch Data</span>';
+                nedirFetchBtn.disabled = false;
+                applyTranslations();
+            }
+        });
+    }
+
+    const nedirSubmitBtn = document.getElementById('nedir-submit-btn');
+    if (nedirSubmitBtn) {
+        nedirSubmitBtn.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.nedir-cb:checked');
+            if (checkboxes.length === 0) {
+                alert("Lütfen en az bir içerik seçin!");
+                return;
+            }
+
+            const lines = [];
+            checkboxes.forEach(cb => {
+                const descP = cb.nextElementSibling.querySelector('.nedir-desc');
+                const title = descP.getAttribute('data-title');
+                const excerpt = descP.textContent;
+                lines.push(`Nedir.me Konusu: ${title} - Özeti: ${excerpt}`);
+            });
+
+            const originalHtml = nedirSubmitBtn.innerHTML;
+            nedirSubmitBtn.innerHTML = '<span class="material-symbols-rounded" style="animation: spin 1s linear infinite;">rotate_right</span> Processing...';
+            nedirSubmitBtn.disabled = true;
+
+            try {
+                const payload = {
+                    topics: lines,
+                    duration: parseInt(document.getElementById('nedir-duration').value),
+                    language: 'tr', // Nedir.me Türkçe
+                    script_ai: document.getElementById('nedir-script-ai').value,
+                    voice_ai: document.getElementById('nedir-voice-ai').value,
+                    image_ai: document.getElementById('nedir-image-ai').value,
+                    subtitle_style: document.getElementById('nedir-subtitle-style').value
+                };
+
+                const res = await fetch('/api/videos/bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if(res.ok) {
+                    showToast(`${lines.length} adet konu başarıyla kuyruğa eklendi!`);
+                    document.getElementById('nedir-results').innerHTML = '';
+                    document.getElementById('nedir-results').style.display = 'none';
+                    document.getElementById('nedir-options').style.display = 'none';
+                    nedirSubmitBtn.style.display = 'none';
+                    fetchStats();
+                    fetchVideos();
+                    // Queue sayfasına git
+                    document.querySelector('.nav-item[data-target="dashboard-view"]').click();
+                } else {
+                    showToast("Kuyruğa eklenirken hata oluştu.", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Sunucu ile bağlantı hatası.", "error");
+            } finally {
+                nedirSubmitBtn.innerHTML = originalHtml;
+                nedirSubmitBtn.disabled = false;
             }
         });
     }

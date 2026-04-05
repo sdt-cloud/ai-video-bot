@@ -17,7 +17,8 @@ def init_db():
             script_ai TEXT,
             voice_ai TEXT,
             image_ai TEXT,
-            status TEXT DEFAULT 'pending', -- pending, scripting, media, rendering, completed, failed
+            subtitle_style TEXT DEFAULT 'tiktok',
+            status TEXT DEFAULT 'pending',
             progress INTEGER DEFAULT 0,
             error_message TEXT,
             video_path TEXT,
@@ -25,16 +26,23 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Geçmiş veritabanına sütun ekleme (varsa hata verir, ignore edilir)
+    try:
+        cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_style TEXT DEFAULT 'tiktok'")
+    except sqlite3.OperationalError:
+        pass
+        
     conn.commit()
     conn.close()
 
-def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai):
+def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, image_ai)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (topic, category, tone, duration, language, script_ai, voice_ai, image_ai))
+        INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style))
     task_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -114,6 +122,15 @@ def get_stats():
         "failed": failed,
         "success_rate": success_rate
     }
+
+def get_existing_topics():
+    """Daha önce kuyruğa eklenmiş veya tamamlanmış tüm konu başlıklarını döndürür (tekrar eklemeyi önlemek için)."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT LOWER(topic) FROM videos")
+    rows = cursor.fetchall()
+    conn.close()
+    return {row[0] for row in rows}
 
 def delete_tasks(task_ids):
     conn = sqlite3.connect(DB_NAME)

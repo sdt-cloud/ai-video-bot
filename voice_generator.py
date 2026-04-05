@@ -1,11 +1,57 @@
 import edge_tts
 import os
+import requests
+import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Ses seçenekleri (Örn: tr-TR-AhmetNeural, tr-TR-EmelNeural)
 VOICE = "tr-TR-AhmetNeural"
 
-async def generate_voice_async(text, output_filename):
-    """Async ortamdan (FastAPI gibi) çağrılacak versiyon."""
+def generate_voice_elevenlabs(text, output_filename):
+    print(f"[+] '{output_filename}' için ses sentezleniyor (AI: ElevenLabs)...")
+    try:
+        api_key = os.environ.get("ELEVENLABS_API_KEY")
+        if not api_key:
+            print("[-] ELEVENLABS_API_KEY bulunamadı!")
+            return False
+            
+        # Varsayılan iyi bir ElevenLabs sesi (Özel ses ID'si ile değiştirilebilir)
+        voice_id = "pNInz6obpgDQGcFmaJgB" 
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": api_key
+        }
+        
+        data = {
+            "text": text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75
+            }
+        }
+        
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 200:
+            with open(output_filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            print(f"[+] Ses dosyası kaydedildi: {output_filename}")
+            return True
+        else:
+            print(f"[-] ElevenLabs Hatası: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"[-] Ses üretilirken hata oluştu: {e}")
+        return False
+
+async def generate_voice_edge(text, output_filename):
     print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS)...")
     try:
         communicate = edge_tts.Communicate(text, VOICE)
@@ -16,18 +62,21 @@ async def generate_voice_async(text, output_filename):
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-def generate_voice(text, output_filename):
+async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS"):
+    """Async ortamdan (FastAPI gibi) çağrılacak versiyon."""
+    if "elevenlabs" in ai_provider.lower():
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, generate_voice_elevenlabs, text, output_filename)
+    else:
+        return await generate_voice_edge(text, output_filename)
+
+def generate_voice(text, output_filename, ai_provider="Edge-TTS"):
     """Senkron ortamdan çağrılacak versiyon (test için)."""
-    import asyncio
-    print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS)...")
-    try:
-        asyncio.run(edge_tts.Communicate(text, VOICE).save(output_filename))
-        print(f"[+] Ses dosyası kaydedildi: {output_filename}")
-        return True
-    except Exception as e:
-        print(f"[-] Ses üretilirken hata oluştu: {e}")
-        return False
+    if "elevenlabs" in ai_provider.lower():
+        return generate_voice_elevenlabs(text, output_filename)
+    else:
+        return asyncio.run(generate_voice_edge(text, output_filename))
 
 if __name__ == "__main__":
     test_text = "Dünya sadece bir kum tanesi mi yoksa sonsuz bir okyanus mu?"
-    generate_voice(test_text, "test_voice.mp3")
+    generate_voice(test_text, "test_voice.mp3", ai_provider="ElevenLabs")
