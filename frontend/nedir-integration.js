@@ -41,11 +41,13 @@ class NedirIntegration {
                             <label for="nedir-category">Kategori Filtresi:</label>
                             <select id="nedir-category">
                                 <option value="">Tüm Kategoriler</option>
-                                <option value="teknoloji">Teknoloji</option>
-                                <option value="bilim">Bilim</option>
-                                <option value="tarih">Tarih</option>
-                                <option value="sanat">Sanat</option>
-                                <option value="genel">Genel</option>
+                                <option value="kavramlar">Kavramlar</option>
+                                <option value="kimdir">Kimdir</option>
+                                <option value="videolar">Videolar</option>
+                                <option value="kisaltmalar">Kısaltmalar</option>
+                                <option value="terimler">Terimler</option>
+                                <option value="gunluk-dil">Günlük Dil</option>
+                                <option value="yeni-kavramlar">Yeni Kavramlar</option>
                             </select>
                         </div>
 
