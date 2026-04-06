@@ -1,0 +1,17 @@
+2026-04-07 00:59:38,807 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:02:17,897 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:02:50,648 - queue_manager - INFO - Task 91 başlatılıyor: Karaciğer fonksiyonu nedir? genel kategorisinde açıklama
+2026-04-07 01:02:50,648 - video_production - INFO - VIDEO_STEP: {"step": "video_start", "task_id": 91, "timestamp": "2026-04-07T01:02:50.648932", "details": {"topic": "Karaciğer fonksiyonu nedir? genel kategorisinde açıklama"}}
+2026-04-07 01:04:55,817 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:05:05,434 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:06:00,767 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:09:27,615 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:10:16,061 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:10:51,054 - queue_manager - INFO - Task 92 başlatılıyor: D vitamini nedir? genel kategorisinde açıklama
+2026-04-07 01:10:51,055 - video_production - INFO - VIDEO_STEP: {"step": "video_start", "task_id": 92, "timestamp": "2026-04-07T01:10:51.055791", "details": {"topic": "D vitamini nedir? genel kategorisinde açıklama"}}
+2026-04-07 01:12:57,923 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:14:12,766 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 01:15:24,549 - queue_manager - INFO - Task 93 başlatılıyor: Kural nedir? genel kategorisinde açıklama
+2026-04-07 01:15:24,550 - video_production - INFO - VIDEO_STEP: {"step": "video_start", "task_id": 93, "timestamp": "2026-04-07T01:15:24.550651", "details": {"topic": "Kural nedir? genel kategorisinde açıklama"}}
+2026-04-07 01:24:28,865 - video_production - INFO - VIDEO_STEP: {"step": "video_completed", "task_id": 93, "timestamp": "2026-04-07T01:24:28.849507", "details": {"output_filename": "vid_93_Kural_nedir__genel_k.mp4"}}
+2026-04-07 01:24:28,898 - queue_manager - INFO - Task 93 tamamlandı

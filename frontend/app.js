@@ -195,20 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             const targetId = item.getAttribute('data-target');
-            const viewId = item.getAttribute('data-view');
-            
-            // Sosyal medya için yönlendirme
-            if (viewId === 'social-view') {
-                window.location.href = '/social';
-                return;
-            }
-            
-            // Nedir.me için yönlendirme
-            if (viewId === 'nedir-view') {
-                window.location.href = '/nedir';
-                return;
-            }
-            
             if(!targetId) return;
 
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));

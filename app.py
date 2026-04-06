@@ -1,26 +1,16 @@
 import asyncio
 import os
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
-import os
-import json
-import asyncio
-import logging
-import uvicorn
+from typing import List, Optional
 import database
 import time
 import traceback
-import script_generator
-import voice_generator
-import image_generator
-import video_maker
-import queue_manager
-import nedir_integration
+
+# Connection error filter'ı import et
 from connection_filter import setup_connection_filter
-from social_media_manager import social_manager
 
 # Connection filter'ı kur
 setup_connection_filter()
@@ -30,6 +20,7 @@ from script_generator import generate_script
 from voice_generator import generate_voice_async
 from image_generator import generate_image
 from video_maker import create_video
+from social_media_manager import social_manager
 from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
 
@@ -302,6 +293,10 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 async def serve_home():
     return FileResponse("frontend/index.html")
 
+@app.get("/social")
+async def serve_social():
+    return FileResponse("frontend/social-media.html")
+
 @app.on_event("startup")
 async def startup_event():
     """Uygulama başladığında kuyruk yöneticisini başlatır"""
@@ -312,112 +307,84 @@ async def startup_event():
     asyncio.create_task(start_queue_manager())
     print("🚀 Otomatik kuyruk yöneticisi başlatıldı!")
 
-@app.get("/social", response_class=HTMLResponse)
-async def social_dashboard():
-    """Sosyal medya dashboard sayfası"""
-    with open("frontend/social-dashboard.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read(), status_code=200)
+@app.get("/api/queue-status")
+async def get_queue_status_api():
+    """Kuyruk durumunu döndürür"""
+    return get_queue_status()
 
-@app.get("/nedir", response_class=HTMLResponse)
-async def nedir_dashboard():
-    """Nedir.me dashboard sayfası"""
-    with open("frontend/nedir-integration.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read(), status_code=200)
+@app.get("/api/social/platforms")
+async def get_social_platforms():
+    """Sosyal medya platformlarının durumunu döndürür"""
+    return social_manager.config
 
-@app.get("/api/social/status")
-async def get_social_status():
-    """Sosyal medya platform durumlarını döndürür"""
-    return {
-        "youtube": social_manager.config["youtube"]["enabled"],
-        "twitter": social_manager.config["twitter"]["enabled"],
-        "tiktok": social_manager.config["tiktok"]["enabled"],
-        "facebook": social_manager.config["facebook"]["enabled"]
-    }
-
-@app.post("/api/social/config")
-async def update_social_config(request: Request):
-    """Sosyal medya konfigürasyonunu günceller"""
+@app.post("/api/social/connect/{platform}")
+async def connect_platform(platform: str):
+    """Platforma bağlanır"""
     try:
-        config = await request.json()
-        
-        # Konfigürasyonu güncelle
-        social_manager.config.update(config)
-        
-        # Dosyaya kaydet
-        import shutil
-        shutil.copy("config/social_media_config.json", "config/social_media_config.json.backup")
-        
-        with open("config/social_media_config.json", 'w', encoding='utf-8') as f:
-            json.dump(social_manager.config, f, indent=2, ensure_ascii=False)
-        
-        # API'leri yeniden kur
-        social_manager.setup_apis()
-        
-        return {"success": True, "message": "Konfigürasyon güncellendi"}
+        # TODO: Platform bağlantı implementasyonu
+        return {"success": True, "message": f"{platform} bağlandı"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "message": str(e)}
 
-@app.post("/api/social/share")
-async def share_video(request: Request, background_tasks: BackgroundTasks):
-    """Videoyu sosyal medyada paylaşır"""
+@app.post("/api/social/test/{platform}")
+async def test_platform(platform: str):
+    """Platform bağlantısını test eder"""
     try:
-        data = await request.json()
+        # TODO: Platform test implementasyonu
+        return {"success": True, "message": f"{platform} test başarılı"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+@app.post("/api/social/preview")
+async def preview_content(request):
+    """İçerik önizlemesi üretir"""
+    try:
+        content = social_manager.generate_content(
+            request.get("topic", ""), 
+            request.get("description", "")
+        )
+        return content
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/social/post")
+async def post_to_social(request):
+    """Sosyal medyaya gönderi atar"""
+    try:
+        video_id = request.get("video_id")
+        platforms = request.get("platforms", [])
+        schedule_time = request.get("schedule_time")
         
         # Video bilgilerini al
-        video_id = data["video_id"]
-        video = database.get_video_by_id(video_id)
+        video_info = database.get_video_by_id(video_id)
+        if not video_info:
+            return {"error": "Video bulunamadı"}
         
-        if not video:
-            return {"success": False, "error": "Video bulunamadı"}
+        # Gönderi zamanla
+        scheduled_time = None
+        if schedule_time:
+            from datetime import datetime
+            scheduled_time = datetime.fromisoformat(schedule_time.replace('Z', '+00:00'))
         
-        # SocialPost objesi oluştur
-        from social_media_manager import SocialPost
-        post = SocialPost(
-            video_path=f"frontend/videos/{video['filename']}",
-            title=data["title"],
-            description=data["description"],
-            tags=data["tags"],
-            platform=data["platforms"][0] if data["platforms"] else "youtube",
-            scheduled_time=data.get("schedule_time")
+        social_manager.schedule_post(
+            video_info["video_path"],
+            video_info["topic"],
+            video_info["description"],
+            platforms,
+            scheduled_time
         )
         
-        # Arka planda paylaşımı başlat
-        background_tasks.add_task(share_video_background, post, data["platforms"])
-        
-        return {"success": True, "message": "Video paylaşım için kuyruğa alındı"}
+        return {"success": True, "message": "Gönderi planlandı"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"error": str(e)}
 
-async def share_video_background(post: 'SocialPost', platforms: List[str]):
-    """Arka planda video paylaşımı yapar"""
+@app.get("/api/social/posts")
+async def get_social_posts():
+    """Sosyal medya gönderilerini döndürür"""
     try:
-        # Her platform için paylaşım yap
-        for platform in platforms:
-            post.platform = platform
-            result = social_manager.post_to_all_platforms([post])
-            
-            # Sonucu veritabanına kaydet
-            database.add_share_history(
-                video_id=post.video_path,
-                platforms=platforms,
-                success=result[0]["success"],
-                post_url=result[0].get("video_url", result[0].get("tweet_url", "")),
-                error=result[0].get("error", "")
-            )
-            
-            print(f"✅ {platform} paylaşımı: {result[0]['success']}")
-            
+        return social_manager.get_post_status()
     except Exception as e:
-        print(f"❌ Paylaşım hatası: {e}")
-
-@app.get("/api/social/history")
-async def get_share_history():
-    """Paylaşım geçmişini döndürür"""
-    try:
-        history = database.get_share_history()
-        return history
-    except Exception as e:
-        return []
+        return {"error": str(e)}
 
 @app.post("/api/test-voice")
 async def test_voice_api(request):

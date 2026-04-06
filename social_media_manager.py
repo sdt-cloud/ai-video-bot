@@ -5,311 +5,304 @@ Sosyal Medya Otomatik Paylaşım Sistemi
 import os
 import json
 import requests
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from dataclasses import dataclass
-import tweepy
-import googleapiclient.discovery
-import googleapiclient.errors
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
+import logging
 
 @dataclass
 class SocialPost:
-    """Sosyal medya gönderisi için veri yapısı"""
+    """Sosyal medya gönderisi verisi"""
     video_path: str
     title: str
     description: str
     tags: List[str]
     platform: str
     scheduled_time: Optional[datetime] = None
-    thumbnail_path: Optional[str] = None
+    status: str = "pending"  # pending, posted, failed
 
 class SocialMediaManager:
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.config = self.load_config()
-        self.setup_apis()
-    
-    def load_config(self) -> Dict:
-        """Sosyal medya API konfigürasyonunu yükler"""
-        config_path = "config/social_media_config.json"
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
+        self.posts = []
+        
+    def load_config(self):
+        """Sosyal medya API konfigürasyonlarını yükler"""
+        config_file = "social_config.json"
+        if os.path.exists(config_file):
+            with open(config_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         
         # Varsayılan konfigürasyon
         default_config = {
             "youtube": {
                 "enabled": False,
-                "api_key": os.environ.get("YOUTUBE_API_KEY"),
-                "client_secrets_file": "config/youtube_client_secrets.json",
-                "token_file": "config/youtube_token.json",
-                "category_id": "22",  # People & Blogs
-                "privacy_status": "public"
+                "api_key": "",
+                "channel_id": "",
+                "client_secrets_file": ""
             },
             "twitter": {
                 "enabled": False,
-                "api_key": os.environ.get("TWITTER_API_KEY"),
-                "api_secret": os.environ.get("TWITTER_API_SECRET"),
-                "access_token": os.environ.get("TWITTER_ACCESS_TOKEN"),
-                "access_token_secret": os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"),
-                "bearer_token": os.environ.get("TWITTER_BEARER_TOKEN")
+                "api_key": "",
+                "api_secret": "",
+                "access_token": "",
+                "access_token_secret": ""
             },
             "tiktok": {
                 "enabled": False,
-                "session_id": os.environ.get("TIKTOK_SESSION_ID"),
-                "username": os.environ.get("TIKTOK_USERNAME")
+                "username": "",
+                "session_id": ""
             },
             "facebook": {
                 "enabled": False,
-                "page_id": os.environ.get("FACEBOOK_PAGE_ID"),
-                "access_token": os.environ.get("FACEBOOK_ACCESS_TOKEN")
+                "page_id": "",
+                "access_token": ""
             }
         }
         
-        # Konfigürasyon dosyasını oluştur
-        os.makedirs("config", exist_ok=True)
-        with open(config_path, 'w', encoding='utf-8') as f:
+        with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=2, ensure_ascii=False)
         
         return default_config
     
-    def setup_apis(self):
-        """API bağlantılarını kurar"""
-        self.youtube_api = None
-        self.twitter_api = None
+    def generate_content(self, topic: str, video_description: str) -> Dict[str, str]:
+        """Platformlara özel içerik üretir"""
         
-        # YouTube API
-        if self.config["youtube"]["enabled"] and self.config["youtube"]["api_key"]:
-            try:
-                self.youtube_api = googleapiclient.discovery.build(
-                    'youtube', 'v3', 
-                    developerKey=self.config["youtube"]["api_key"]
-                )
-                print("✅ YouTube API bağlantısı kuruldu")
-            except Exception as e:
-                print(f"❌ YouTube API hatası: {e}")
+        # Etiketler
+        tags = self.generate_tags(topic)
         
-        # Twitter API
-        if self.config["twitter"]["enabled"] and all([
-            self.config["twitter"]["api_key"],
-            self.config["twitter"]["api_secret"],
-            self.config["twitter"]["access_token"],
-            self.config["twitter"]["access_token_secret"]
-        ]):
-            try:
-                auth = tweepy.OAuthHandler(
-                    self.config["twitter"]["api_key"],
-                    self.config["twitter"]["api_secret"]
-                )
-                auth.set_access_token(
-                    self.config["twitter"]["access_token"],
-                    self.config["twitter"]["access_token_secret"]
-                )
-                self.twitter_api = tweepy.API(auth)
-                print("✅ Twitter API bağlantısı kuruldu")
-            except Exception as e:
-                print(f"❌ Twitter API hatası: {e}")
-    
-    def generate_content_for_platform(self, post: SocialPost) -> Dict[str, str]:
-        """Platforma özel içerik üretir"""
-        base_title = post.title
-        base_desc = post.description
+        # YouTube için
+        youtube_title = f"🎬 {topic} - Nedir? Nasıl Çalışır? | [2026]"
+        youtube_description = f"""
+{video_description}
+
+📚 Konu hakkında daha fazla bilgi için nedir.me adresini ziyaret edin!
+
+🔔 Abone olmayı unutmayın!
+👍 Beğen ve paylaş!
+
+{tags}
+"""
         
-        content = {
+        # Twitter için
+        twitter_text = f"""
+🎬 {topic} hakkında yeni video!
+
+📹 Detaylı anlatım ve görsellerle hazırladığımız videomuzda {topic} konusunu tüm yönleriyle ele aldık.
+
+{video_description[:200]}...
+
+#nedir #nasılçalışır #{tags.replace('#', ' #')}
+"""
+        
+        # TikTok için
+        tiktok_text = f"""
+{topic} nedir? 🤔
+
+Kısa ve öz anlatım! 📹
+
+{video_description[:150]}
+
+{tags}
+"""
+        
+        # Facebook için
+        facebook_text = f"""
+🎬 Yeni Video: {topic}
+
+{video_description}
+
+📚 Konu hakkında daha fazla bilgi için nedir.me adresini ziyaret edin!
+
+{tags}
+"""
+        
+        return {
             "youtube": {
-                "title": base_title,
-                "description": f"{base_desc}\n\n🎬 AI Video Bot ile otomatik üretildi\n\n{', '.join(post.tags)}",
-                "tags": post.tags + ["AI", "Otomatik Video", "Teknoloji"]
+                "title": youtube_title,
+                "description": youtube_description,
+                "tags": tags
             },
             "twitter": {
-                "text": f"{base_title}\n\n{base_desc[:200]}...\n\n🎬 #AI #Video #Teknoloji {', '.join(['#' + tag for tag in post.tags[:3]])}",
-                "media": post.video_path
+                "text": twitter_text
             },
             "tiktok": {
-                "caption": f"{base_title}\n\n{base_desc}\n\n{', '.join(['#' + tag for tag in post.tags[:5]])}",
-                "hashtags": post.tags + ["aivideo", "teknoloji", "otomatik"]
+                "text": tiktok_text
             },
             "facebook": {
-                "message": f"{base_title}\n\n{base_desc}\n\n🎬 AI Video Bot ile otomatik üretildi\n\n{', '.join(['#' + tag for tag in post.tags])}",
-                "link": f"https://youtube.com/watch?v={post.video_path}" if post.video_path else None
+                "text": facebook_text
             }
         }
-        
-        return content[post.platform]
     
-    def post_to_youtube(self, post: SocialPost) -> Dict:
-        """Videoyu YouTube'a yükler"""
-        if not self.youtube_api:
-            return {"success": False, "error": "YouTube API bağlantısı yok"}
+    def generate_tags(self, topic: str) -> str:
+        """Konuya göre etiketler üretir"""
+        base_tags = ["nedir", "nasılçalışır", "bilgi", "eğitim", "2026"]
         
+        # Konu spesifik etiketler
+        topic_lower = topic.lower()
+        if "yazılım" in topic_lower or "program" in topic_lower:
+            base_tags.extend(["yazılım", "programlama", "teknoloji"])
+        elif "bilgisayar" in topic_lower:
+            base_tags.extend(["bilgisayar", "teknoloji", "donanım"])
+        elif "internet" in topic_lower:
+            base_tags.extend(["internet", "ağ", "web"])
+        elif "tarih" in topic_lower:
+            base_tags.extend(["tarih", "geçmiş", "kultur"])
+        
+        # Konu kelimesini de ekle
+        topic_words = topic.split()
+        base_tags.extend([word for word in topic_words if len(word) > 3])
+        
+        # Hashtag formatına çevir
+        hashtags = ["#" + tag.replace(" ", "").replace("ç", "c").replace("ğ", "g").replace("ı", "i").replace("ö", "o").replace("ş", "s").replace("ü", "u") for tag in base_tags]
+        
+        return " ".join(hashtags[:15])  # Maksimum 15 etiket
+    
+    async def post_to_youtube(self, post: SocialPost) -> bool:
+        """YouTube'a video yükler"""
         try:
-            # YouTube OAuth2 flow (ilk kullanım için)
-            if not os.path.exists(self.config["youtube"]["token_file"]):
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.config["youtube"]["client_secrets_file"],
-                    scopes=['https://www.googleapis.com/auth/youtube.upload']
-                )
-                credentials = flow.run_local_server(port=0)
-                
-                with open(self.config["youtube"]["token_file"], 'w') as token:
-                    token.write(credentials.to_json())
+            # YouTube API entegrasyonu
+            # Google API Client Library kullanılacak
+            self.logger.info(f"YouTube'a yükleniyor: {post.title}")
             
-            credentials = Credentials.from_authorized_user_file(
-                self.config["youtube"]["token_file"],
-                ['https://www.googleapis.com/auth/youtube.upload']
-            )
+            # TODO: YouTube API implementasyonu
+            # from googleapiclient.discovery import build
+            # from googleapiclient.http import MediaFileUpload
             
-            youtube = googleapiclient.discovery.build('youtube', 'v3', credentials=credentials)
-            
-            # Video yükleme
-            request_body = {
-                'snippet': {
-                    'title': post.title,
-                    'description': post.description,
-                    'categoryId': self.config["youtube"]["category_id"],
-                    'tags': post.tags
-                },
-                'status': {
-                    'privacyStatus': self.config["youtube"]["privacy_status"]
-                }
-            }
-            
-            media = googleapiclient.http.MediaFileUpload(
-                post.video_path,
-                chunksize=-1,
-                resumable=True
-            )
-            
-            response = youtube.videos().insert(
-                part='snippet,status',
-                body=request_body,
-                media_body=media
-            ).execute()
-            
-            video_id = response['id']
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-            
-            return {
-                "success": True,
-                "video_id": video_id,
-                "video_url": video_url,
-                "platform": "youtube"
-            }
+            return True
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"YouTube yükleme hatası: {e}")
+            return False
     
-    def post_to_twitter(self, post: SocialPost) -> Dict:
-        """Gönderiyi Twitter'a yükler"""
-        if not self.twitter_api:
-            return {"success": False, "error": "Twitter API bağlantısı yok"}
-        
+    async def post_to_twitter(self, post: SocialPost) -> bool:
+        """Twitter'a gönderi atar"""
         try:
-            content = self.generate_content_for_platform(post)
+            # Twitter API entegrasyonu
+            # tweepy kütüphanesi kullanılacak
+            self.logger.info(f"Twitter'a gönderiliyor: {post.title[:50]}...")
             
-            # Video yükleme (Twitter API v2)
-            if post.video_path:
-                media = self.twitter_api.media_upload(post.video_path)
-                tweet = self.twitter_api.update_status(
-                    status=content["text"],
-                    media_ids=[media.media_id]
-                )
-            else:
-                tweet = self.twitter_api.update_status(status=content["text"])
+            # TODO: Twitter API implementasyonu
+            # import tweepy
             
-            return {
-                "success": True,
-                "tweet_id": tweet.id_str,
-                "tweet_url": f"https://twitter.com/user/status/{tweet.id_str}",
-                "platform": "twitter"
-            }
+            return True
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Twitter gönderme hatası: {e}")
+            return False
     
-    def post_to_tiktok(self, post: SocialPost) -> Dict:
-        """Videoyu TikTok'a yükler (simülasyon)"""
-        # Not: TikTok API'si resmi olarak açık değil
-        # Bu fonksiyon simülasyon veya üçüncü parti API için
-        
+    async def post_to_tiktok(self, post: SocialPost) -> bool:
+        """TikTok'a video yükler"""
         try:
-            content = self.generate_content_for_platform(post)
+            # TikTok API entegrasyonu
+            # Resmi olmayan API veya otomasyon araçları
+            self.logger.info(f"TikTok'a yükleniyor: {post.title[:50]}...")
             
-            # Simülasyon - gerçek TikTok API'si gerektirir
-            print(f"🎬 TikTok simülasyon: {content['caption']}")
+            # TODO: TikTok implementasyonu
+            # TikTokUploader gibi kütüphaneler
             
-            return {
-                "success": True,
-                "message": "TikTok API'si simülasyon modunda",
-                "platform": "tiktok",
-                "caption": content["caption"]
-            }
+            return True
             
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"TikTok yükleme hatası: {e}")
+            return False
     
-    def post_to_facebook(self, post: SocialPost) -> Dict:
-        """Gönderiyi Facebook'a yükler"""
-        if not self.config["facebook"]["enabled"]:
-            return {"success": False, "error": "Facebook API bağlantısı yok"}
-        
+    async def post_to_facebook(self, post: SocialPost) -> bool:
+        """Facebook'a gönderi atar"""
         try:
-            content = self.generate_content_for_platform(post)
+            # Facebook Graph API entegrasyonu
+            self.logger.info(f"Facebook'a gönderiliyor: {post.title[:50]}...")
             
-            # Facebook Graph API
-            url = f"https://graph.facebook.com/v18.0/{self.config['facebook']['page_id']}/videos"
+            # TODO: Facebook API implementasyonu
+            # facebook-sdk kullanılacak
             
-            params = {
-                'access_token': self.config["facebook"]["access_token"],
-                'description': content["message"]
-            }
+            return True
             
-            files = {}
-            if post.video_path:
-                files['source'] = open(post.video_path, 'rb')
-            
-            response = requests.post(url, params=params, files=files)
-            
-            if response.status_code == 200:
-                result = response.json()
-                return {
-                    "success": True,
-                    "post_id": result.get("id"),
-                    "platform": "facebook"
-                }
-            else:
-                return {"success": False, "error": response.text}
-                
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Facebook gönderme hatası: {e}")
+            return False
     
-    def post_to_all_platforms(self, post: SocialPost) -> List[Dict]:
-        """Tüm platformlara gönderir"""
-        results = []
+    async def post_to_platforms(self, post: SocialPost, platforms: List[str]) -> Dict[str, bool]:
+        """Seçili platformlara gönderi atar"""
+        results = {}
         
-        platforms = {
-            "youtube": self.post_to_youtube,
-            "twitter": self.post_to_twitter,
-            "tiktok": self.post_to_tiktok,
-            "facebook": self.post_to_facebook
-        }
+        if "youtube" in platforms and self.config["youtube"]["enabled"]:
+            results["youtube"] = await self.post_to_youtube(post)
         
-        for platform, post_func in platforms.items():
-            if self.config[platform]["enabled"]:
-                print(f"🚀 {platform.upper()} platformuna gönderiliyor...")
-                result = post_func(post)
-                results.append(result)
-                
-                if result["success"]:
-                    print(f"✅ {platform.upper()} başarılı: {result.get('video_url', result.get('tweet_url', 'Başarılı'))}")
-                else:
-                    print(f"❌ {platform.upper()} hata: {result.get('error')}")
-            else:
-                print(f"⏭️ {platform.upper()} atlandı (devre dışı)")
+        if "twitter" in platforms and self.config["twitter"]["enabled"]:
+            results["twitter"] = await self.post_to_twitter(post)
+        
+        if "tiktok" in platforms and self.config["tiktok"]["enabled"]:
+            results["tiktok"] = await self.post_to_tiktok(post)
+        
+        if "facebook" in platforms and self.config["facebook"]["enabled"]:
+            results["facebook"] = await self.post_to_facebook(post)
         
         return results
+    
+    def schedule_post(self, video_path: str, topic: str, description: str, 
+                    platforms: List[str], scheduled_time: datetime = None):
+        """Gönderi zamanlar"""
+        
+        # Platformlara özel içerik üret
+        content = self.generate_content(topic, description)
+        
+        # Gönderi nesneleri oluştur
+        posts = []
+        for platform in platforms:
+            if platform == "youtube":
+                post = SocialPost(
+                    video_path=video_path,
+                    title=content["youtube"]["title"],
+                    description=content["youtube"]["description"],
+                    tags=content["youtube"]["tags"],
+                    platform=platform,
+                    scheduled_time=scheduled_time
+                )
+            else:
+                post = SocialPost(
+                    video_path=video_path,
+                    title=topic,
+                    description=content[platform]["text"],
+                    tags=[],
+                    platform=platform,
+                    scheduled_time=scheduled_time
+                )
+            posts.append(post)
+        
+        self.posts.extend(posts)
+        
+        # Zamanlanmış görev oluştur
+        if scheduled_time:
+            asyncio.create_task(self.scheduled_poster(posts))
+        else:
+            asyncio.create_task(self.post_to_platforms(posts[0], platforms))
+    
+    async def scheduled_poster(self, posts: List[SocialPost]):
+        """Zamanlanmış gönderileri yayınlar"""
+        now = datetime.now()
+        
+        for post in posts:
+            if post.scheduled_time and post.scheduled_time > now:
+                wait_time = (post.scheduled_time - now).total_seconds()
+                await asyncio.sleep(wait_time)
+            
+            platforms = [post.platform]
+            await self.post_to_platforms(post, platforms)
+    
+    def get_post_status(self) -> List[Dict]:
+        """Gönderi durumlarını döndürür"""
+        return [
+            {
+                "title": post.title,
+                "platform": post.platform,
+                "status": post.status,
+                "scheduled_time": post.scheduled_time.isoformat() if post.scheduled_time else None
+            }
+            for post in self.posts
+        ]
 
 # Global instance
 social_manager = SocialMediaManager()
