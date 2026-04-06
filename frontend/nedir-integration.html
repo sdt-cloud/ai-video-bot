@@ -35,69 +35,51 @@
 
         <!-- Ana İçerik -->
         <main class="main-content">
-            <div class="section-header">
-                <h2><span class="material-symbols-rounded">integration_instructions</span> Nedir.me Entegrasyonu</h2>
-                <p>WordPress sitesinden kavramlar çekerek otomatik video üretin</p>
-            </div>
+            <div class="sections">
+                <div class="section" id="nedir-section" style="display: block;">
+                    <div class="section-header">
+                        <h2><span class="material-symbols-rounded">integration_instructions</span> Nedir.me Entegrasyonu</h2>
+                        <p>WordPress sitesinden kavramlar çekerek otomatik video üretin</p>
+                    </div>
 
-            <!-- Kontroller -->
-            <div class="nedir-controls">
-                <div class="control-group">
-                    <label for="nedir-category">Kategori</label>
-                    <select id="nedir-category">
-                        <option value="all">Tüm Kategoriler</option>
-                        <option value="teknoloji">Teknoloji</option>
-                        <option value="bilim">Bilim</option>
-                        <option value="tarih">Tarih</option>
-                        <option value="kültür">Kültür</option>
-                        <option value="spor">Spor</option>
-                    </select>
-                </div>
-                
-                <div class="control-group">
-                    <label for="nedir-limit">Kavram Sayısı</label>
-                    <select id="nedir-limit">
-                        <option value="10">10 Kavram</option>
-                        <option value="25">25 Kavram</option>
-                        <option value="50">50 Kavram</option>
-                        <option value="100">100 Kavram</option>
-                    </select>
-                </div>
-                
-                <button class="btn btn-primary" id="fetch-concepts">
-                    <i class="fas fa-download"></i>
-                    Kavramları Getir
-                </button>
-            </div>
+                    <div class="nedir-controls">
+                        <div class="control-group">
+                            <label for="nedir-category">Kategori</label>
+                            <select id="nedir-category">
+                                <option value="">Tüm Kategoriler</option>
+                                <option value="teknoloji">Teknoloji</option>
+                                <option value="bilim">Bilim</option>
+                                <option value="tarih">Tarih</option>
+                                <option value="sanat">Sanat</option>
+                                <option value="genel">Genel</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="nedir-limit">Kavram Sayısı</label>
+                            <input type="number" id="nedir-limit" min="1" max="50" value="10">
+                        </div>
+                        
+                        <button class="btn btn-primary" id="fetch-concepts">
+                            <i class="fas fa-download"></i>
+                            Kavramları Getir
+                        </button>
+                        
+                        <button class="btn btn-success" id="bulk-create-videos" style="display: none;">
+                            <i class="fas fa-video"></i>
+                            Toplu Video Üret
+                        </button>
+                    </div>
 
-            <!-- Kavramlar -->
-            <div id="concepts-container" style="display: none;">
-                <div class="section-header">
-                    <h3>İndirilen Kavramlar</h3>
-                    <p>Video üretmek için kavram seçin</p>
-                </div>
-                
-                <div class="concepts-grid" id="concepts-grid">
-                    <!-- Kavramlar burada yüklenecek -->
-                </div>
-            </div>
+                    <div id="concepts-container" style="display: none;">
+                        <h3>Bulunan Kavramlar</h3>
+                        <div id="concepts-list" class="concepts-grid"></div>
+                    </div>
 
-            <!-- Video Konuları -->
-            <div id="video-topics-container" style="display: none;">
-                <div class="section-header">
-                    <h3>Oluşturulan Video Konuları</h3>
-                    <p>Bu konularla video üretilecek</p>
-                </div>
-                
-                <div class="topics-list" id="video-topics-list">
-                    <!-- Konular burada gösterilecek -->
-                </div>
-                
-                <div class="bulk-actions">
-                    <button class="btn btn-success" id="bulk-create-videos" style="display: none;">
-                        <i class="fas fa-video"></i>
-                        Toplu Video Üret
-                    </button>
+                    <div id="video-topics-container" style="display: none;">
+                        <h3>Oluşturulacak Video Konuları</h3>
+                        <div id="video-topics-list" class="topics-list"></div>
+                    </div>
                 </div>
             </div>
         </main>
