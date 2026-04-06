@@ -8,4 +8,6 @@ fastapi
 uvicorn
 pydantic
 google-generativeai
+google-genai
 replicate
+psutil

@@ -21,7 +21,7 @@ def generate_image_openai(prompt, output_filename):
         image_url = response.data[0].url
         
         # Resmi URL'den indirip kaydetme
-        img_response = requests.get(image_url, stream=True)
+        img_response = requests.get(image_url, stream=True, timeout=30)
         if img_response.status_code == 200:
             with open(output_filename, 'wb') as f:
                 for chunk in img_response.iter_content(1024):
@@ -29,12 +29,14 @@ def generate_image_openai(prompt, output_filename):
             print(f"[+] Görsel kaydedildi: {output_filename}")
             return True
         else:
-            print(f"[-] DALL-E Görseli indirilemedi, HTTP Status: {img_response.status_code}")
+            print(f"[-] Görsel indirilemedi, HTTP {img_response.status_code}")
             return False
             
     except Exception as e:
         print(f"[-] DALL-E Görseli üretilirken hata oluştu: {e}")
-        return False
+        # Fallback: Pollinations kullan
+        print(f"[+] Fallback: Pollinations ile deneniyor...")
+        return generate_image_pollinations(prompt, output_filename)
 
 def generate_image_pollinations(prompt, output_filename):
     print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: Pollinations)")

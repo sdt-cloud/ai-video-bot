@@ -10,7 +10,7 @@ call .\venv\Scripts\activate
 
 :: Gerekli kutuphanelerin kurulu oldugundan emin ol
 echo Kutuphaneler kontrol ediliyor...
-pip install fastapi uvicorn pydantic google-generativeai -q
+pip install fastapi uvicorn pydantic google-generativeai requests psutil -q
 
 :: Sunucuyu baslat
 echo.

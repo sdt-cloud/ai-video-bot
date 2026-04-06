@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime
+from typing import List
 
 DB_NAME = "aivid_data.db"
 
@@ -77,6 +78,32 @@ def update_status(task_id, status, progress=None, error_message=None, video_path
     cursor.execute(query, params)
     conn.commit()
     conn.close()
+
+def get_pending_tasks(limit: int = 10) -> List[dict]:
+    """Bekleyen görevleri alır"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style, video_mode
+        FROM videos 
+        WHERE status = 'pending' 
+        ORDER BY created_at ASC 
+        LIMIT ?
+    """, (limit,))
+    
+    tasks = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return tasks
+
+def get_pending_tasks_count() -> int:
+    """Bekleyen görev sayısını döndürür"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE status = 'pending'")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
 
 def get_pending_task():
     conn = sqlite3.connect(DB_NAME)

@@ -9,11 +9,19 @@ import database
 import time
 import traceback
 
+# Connection error filter'ı import et
+from connection_filter import setup_connection_filter
+
+# Connection filter'ı kur
+setup_connection_filter()
+
 # Bot modüllerini içe aktar
 from script_generator import generate_script
 from voice_generator import generate_voice_async
 from image_generator import generate_image
 from video_maker import create_video
+from nedir_integration import NedirIntegration
+from queue_manager import start_queue_manager, get_queue_status
 
 app = FastAPI()
 
@@ -108,24 +116,6 @@ async def process_video(task):
     else:
         database.update_status(task_id, "failed", 85, "Video birleştirilemedi.")
 
-
-async def worker_loop():
-    print("[+] Arka Plan İşçisi (Worker) Başladı. Görev bekleniyor...")
-    while True:
-        try:
-            task = database.get_pending_task()
-            if task:
-                await process_video(task)
-            else:
-                await asyncio.sleep(3) # Görev yoksa 3 sn bekle
-        except Exception as e:
-            print(f"Worker Hatası: {e}")
-            traceback.print_exc()
-            await asyncio.sleep(5)
-
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(worker_loop())
 
 @app.post("/api/videos/single")
 async def add_single_video(req: VideoRequest):
@@ -228,6 +218,47 @@ async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):
     except Exception as e:
         return {"status": "error", "message": f"Veri çekilirken bağlantı hatası: {str(e)}"}
 
+@app.get("/api/nedir/concepts")
+async def get_nedir_concepts(category: Optional[str] = None, limit: int = 20):
+    """Nedir.me'den kavramları çeker"""
+    try:
+        integration = NedirIntegration()
+        concepts = integration.get_concepts(category=category, limit=limit)
+        return {
+            "status": "success",
+            "data": concepts,
+            "count": len(concepts)
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/nedir/bulk-videos")
+async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_concepts: int = 10):
+    """Nedir.me kavramlarından otomatik video konuları oluşturur"""
+    try:
+        integration = NedirIntegration()
+        video_topics = integration.batch_process_for_videos(max_concepts=max_concepts)
+        
+        if not video_topics:
+            return {"status": "error", "message": "Video konuları oluşturulamadı"}
+        
+        # Veritabanına ekle
+        task_ids = []
+        for topic in video_topics:
+            task_id = database.add_task(topic, category, "Otomatik", 60, "Türkçe", "T5", "Edge-TTS", "Pollinations", "tiktok", "slideshow")
+            task_ids.append(task_id)
+        
+        # NOT: Artık kuyruk yöneticisi otomatik işleyecek
+        # asyncio.create_task(process_video(task)) kaldırıldı
+        
+        return {
+            "status": "success", 
+            "message": f"{len(task_ids)} video kuyruğa eklendi",
+            "task_ids": task_ids
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/api/stats")
 async def get_stats():
     return database.get_stats()
@@ -256,8 +287,23 @@ async def delete_videos(req: DeleteRequest):
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
-def serve_home():
+async def serve_home():
     return FileResponse("frontend/index.html")
+
+@app.on_event("startup")
+async def startup_event():
+    """Uygulama başladığında kuyruk yöneticisini başlatır"""
+    # Veritabanını başlat
+    database.init_db()
+    
+    # Kuyruk yöneticisini arka planda başlat
+    asyncio.create_task(start_queue_manager())
+    print("🚀 Otomatik kuyruk yöneticisi başlatıldı!")
+
+@app.get("/api/queue-status")
+async def get_queue_status_api():
+    """Kuyruk durumunu döndürür"""
+    return get_queue_status()
 
 if __name__ == "__main__":
     import uvicorn

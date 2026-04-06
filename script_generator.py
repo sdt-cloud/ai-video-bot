@@ -40,7 +40,11 @@ def generate_script_openai(topic, duration=30):
     return response.choices[0].message.content
 
 def generate_script_gemini(topic, model_name="gemini-2.5-pro", duration=30):
-    import google.generativeai as genai
+    try:
+        import google.genai as genai
+    except ImportError:
+        # Yeni paket yüklü değilse eski paketi kullan
+        import google.generativeai as genai
     
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     model = genai.GenerativeModel(model_name)
