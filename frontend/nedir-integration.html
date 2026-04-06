@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nedir.me Entegrasyonu - AI Video Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/nedir-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sol Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="logo">
+                    <span class="material-symbols-rounded">movie</span>
+                    <h1>AI Video Bot</h1>
+                </div>
+            </div>
+            
+            <nav>
+                <a href="/" class="nav-item">
+                    <span class="material-symbols-rounded">dashboard</span>
+                    <span>Ana Sayfa</span>
+                </a>
+                <div class="nav-item active">
+                    <span class="material-symbols-rounded">integration_instructions</span>
+                    <span>Nedir.me</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Ana İçerik -->
+        <main class="main-content">
+            <div class="section-header">
+                <h2><span class="material-symbols-rounded">integration_instructions</span> Nedir.me Entegrasyonu</h2>
+                <p>WordPress sitesinden kavramlar çekerek otomatik video üretin</p>
+            </div>
+
+            <!-- Kontroller -->
+            <div class="nedir-controls">
+                <div class="control-group">
+                    <label for="nedir-category">Kategori</label>
+                    <select id="nedir-category">
+                        <option value="all">Tüm Kategoriler</option>
+                        <option value="teknoloji">Teknoloji</option>
+                        <option value="bilim">Bilim</option>
+                        <option value="tarih">Tarih</option>
+                        <option value="kültür">Kültür</option>
+                        <option value="spor">Spor</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="nedir-limit">Kavram Sayısı</label>
+                    <select id="nedir-limit">
+                        <option value="10">10 Kavram</option>
+                        <option value="25">25 Kavram</option>
+                        <option value="50">50 Kavram</option>
+                        <option value="100">100 Kavram</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" id="fetch-concepts">
+                    <i class="fas fa-download"></i>
+                    Kavramları Getir
+                </button>
+            </div>
+
+            <!-- Kavramlar -->
+            <div id="concepts-container" style="display: none;">
+                <div class="section-header">
+                    <h3>İndirilen Kavramlar</h3>
+                    <p>Video üretmek için kavram seçin</p>
+                </div>
+                
+                <div class="concepts-grid" id="concepts-grid">
+                    <!-- Kavramlar burada yüklenecek -->
+                </div>
+            </div>
+
+            <!-- Video Konuları -->
+            <div id="video-topics-container" style="display: none;">
+                <div class="section-header">
+                    <h3>Oluşturulan Video Konuları</h3>
+                    <p>Bu konularla video üretilecek</p>
+                </div>
+                
+                <div class="topics-list" id="video-topics-list">
+                    <!-- Konular burada gösterilecek -->
+                </div>
+                
+                <div class="bulk-actions">
+                    <button class="btn btn-success" id="bulk-create-videos" style="display: none;">
+                        <i class="fas fa-video"></i>
+                        Toplu Video Üret
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/nedir-integration.js"></script>
+</body>
+</html>
