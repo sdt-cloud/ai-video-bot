@@ -114,10 +114,10 @@ def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok
 
 def generate_video_clip_ai(image_path, output_path):
     """Görseli Replicate SVD kullanarak videoya çevirir."""
-    import replicate
-    print(f"[+] '{image_path}' video klibine dönüştürülüyor... (AI: SVD)")
-    
     try:
+        import replicate
+        print(f"[+] '{image_path}' video klibine dönüştürülüyor... (AI: SVD)")
+        
         # Görseli Replicate'e yüklemek için bir URL lazım, 
         # ancak yerel dosyayı doğrudan replicate.run ile gönderebiliriz.
         with open(image_path, "rb") as image_file:
@@ -127,7 +127,7 @@ def generate_video_clip_ai(image_path, output_path):
                     "image": image_file,
                     "video_length": "14_frames_with_svd",
                     "fps": 6,
-                    "motion_bucket_id": 127
+                    "motion_bucket_id": 127,
                 }
             )
         
@@ -137,18 +137,21 @@ def generate_video_clip_ai(image_path, output_path):
         video_resp = requests.get(video_url, stream=True)
         if video_resp.status_code == 200:
             with open(output_path, 'wb') as f:
-                for chunk in video_resp.iter_content(1024):
-                    f.write(chunk)
-            print(f"[+] Video klibi kaydedildi: {output_path}")
+                for chunk in video_resp.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+            print(f"[+] AI video klibi kaydedildi: {output_path}")
             return True
         else:
-            print(f"[-] Video klibi indirilemedi, HTTP Status: {video_resp.status_code}")
+            print(f"[-] AI video indirilemedi: {video_resp.status_code}")
             return False
             
-    except Exception as e:
-        print(f"[-] AI Video klibi üretilirken hata oluştu: {e}")
+    except ImportError:
+        print("[-] Replicate modülü bulunamadı, statik görsel kullanılıyor")
         return False
-
+    except Exception as e:
+        print(f"[-] AI video oluşturulurken hata: {e}")
+        return False
 
 def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None, subtitle_style="tiktok", video_mode="slideshow"):
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}): {output_filename}...")
