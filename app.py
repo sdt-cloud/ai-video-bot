@@ -1,16 +1,26 @@
 import asyncio
 import os
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+import os
+import json
+import asyncio
+import logging
+import uvicorn
 import database
 import time
 import traceback
-
-# Connection error filter'ı import et
+import script_generator
+import voice_generator
+import image_generator
+import video_maker
+import queue_manager
+import nedir_integration
 from connection_filter import setup_connection_filter
+from social_media_manager import social_manager
 
 # Connection filter'ı kur
 setup_connection_filter()
@@ -302,10 +312,106 @@ async def startup_event():
     asyncio.create_task(start_queue_manager())
     print("🚀 Otomatik kuyruk yöneticisi başlatıldı!")
 
-@app.get("/api/queue-status")
-async def get_queue_status_api():
-    """Kuyruk durumunu döndürür"""
-    return get_queue_status()
+@app.get("/social", response_class=HTMLResponse)
+async def social_dashboard():
+    """Sosyal medya dashboard sayfası"""
+    with open("frontend/social-dashboard.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
+
+@app.get("/api/social/status")
+async def get_social_status():
+    """Sosyal medya platform durumlarını döndürür"""
+    return {
+        "youtube": social_manager.config["youtube"]["enabled"],
+        "twitter": social_manager.config["twitter"]["enabled"],
+        "tiktok": social_manager.config["tiktok"]["enabled"],
+        "facebook": social_manager.config["facebook"]["enabled"]
+    }
+
+@app.post("/api/social/config")
+async def update_social_config(request: Request):
+    """Sosyal medya konfigürasyonunu günceller"""
+    try:
+        config = await request.json()
+        
+        # Konfigürasyonu güncelle
+        social_manager.config.update(config)
+        
+        # Dosyaya kaydet
+        import shutil
+        shutil.copy("config/social_media_config.json", "config/social_media_config.json.backup")
+        
+        with open("config/social_media_config.json", 'w', encoding='utf-8') as f:
+            json.dump(social_manager.config, f, indent=2, ensure_ascii=False)
+        
+        # API'leri yeniden kur
+        social_manager.setup_apis()
+        
+        return {"success": True, "message": "Konfigürasyon güncellendi"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/social/share")
+async def share_video(request: Request, background_tasks: BackgroundTasks):
+    """Videoyu sosyal medyada paylaşır"""
+    try:
+        data = await request.json()
+        
+        # Video bilgilerini al
+        video_id = data["video_id"]
+        video = database.get_video_by_id(video_id)
+        
+        if not video:
+            return {"success": False, "error": "Video bulunamadı"}
+        
+        # SocialPost objesi oluştur
+        from social_media_manager import SocialPost
+        post = SocialPost(
+            video_path=f"frontend/videos/{video['filename']}",
+            title=data["title"],
+            description=data["description"],
+            tags=data["tags"],
+            platform=data["platforms"][0] if data["platforms"] else "youtube",
+            scheduled_time=data.get("schedule_time")
+        )
+        
+        # Arka planda paylaşımı başlat
+        background_tasks.add_task(share_video_background, post, data["platforms"])
+        
+        return {"success": True, "message": "Video paylaşım için kuyruğa alındı"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+async def share_video_background(post: 'SocialPost', platforms: List[str]):
+    """Arka planda video paylaşımı yapar"""
+    try:
+        # Her platform için paylaşım yap
+        for platform in platforms:
+            post.platform = platform
+            result = social_manager.post_to_all_platforms([post])
+            
+            # Sonucu veritabanına kaydet
+            database.add_share_history(
+                video_id=post.video_path,
+                platforms=platforms,
+                success=result[0]["success"],
+                post_url=result[0].get("video_url", result[0].get("tweet_url", "")),
+                error=result[0].get("error", "")
+            )
+            
+            print(f"✅ {platform} paylaşımı: {result[0]['success']}")
+            
+    except Exception as e:
+        print(f"❌ Paylaşım hatası: {e}")
+
+@app.get("/api/social/history")
+async def get_share_history():
+    """Paylaşım geçmişini döndürür"""
+    try:
+        history = database.get_share_history()
+        return history
+    except Exception as e:
+        return []
 
 @app.post("/api/test-voice")
 async def test_voice_api(request):

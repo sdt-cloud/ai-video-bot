@@ -128,6 +128,71 @@ def get_stats():
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM videos")
     total = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE status = 'completed'")
+    completed = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE status = 'pending'")
+    pending = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE status = 'processing'")
+    processing = cursor.fetchone()[0]
+    conn.close()
+    return {"total": total, "completed": completed, "pending": pending, "processing": processing}
+
+def add_share_history(video_id: str, platforms: List[str], success: bool, post_url: str = "", error: str = ""):
+    """Paylaşım geçmişine kayıt ekler"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # Share history tablosu oluştur (yoksa)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS share_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            video_id TEXT NOT NULL,
+            platforms TEXT NOT NULL,
+            success BOOLEAN NOT NULL,
+            post_url TEXT,
+            error TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    
+    cursor.execute("""
+        INSERT INTO share_history (video_id, platforms, success, post_url, error, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (video_id, json.dumps(platforms), success, post_url, error, datetime.now().isoformat()))
+    
+    conn.commit()
+    conn.close()
+
+def get_share_history(limit: int = 50) -> List[Dict]:
+    """Paylaşım geçmişini döndürür"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM share_history 
+        ORDER BY created_at DESC 
+        LIMIT ?
+    """, (limit,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    history = []
+    for row in rows:
+        history.append({
+            'id': row['id'],
+            'video_id': row['video_id'],
+            'platforms': json.loads(row['platforms']),
+            'success': row['success'],
+            'post_url': row['post_url'],
+            'error': row['error'],
+            'created_at': row['created_at'],
+            'video_title': row['video_id']  # Basitleştirme
+        })
+    
+    return history
+    total = cursor.fetchone()[0]
     
     cursor.execute("SELECT COUNT(*) FROM videos WHERE status = 'pending'")
     pending = cursor.fetchone()[0]
