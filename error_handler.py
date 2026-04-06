@@ -75,24 +75,30 @@ class VideoProductionLogger:
             'timestamp': datetime.now().isoformat()
         }
         
-        # Boş hata mesajlarını önle
-        if not error_data['error_message'] or error_data['error_message'] == '{}':
+        # Boş veya geçersiz hata mesajlarını önle
+        if not error_data['error_message'] or error_data['error_message'] == '{}' or error_data['error_message'] == 'None':
             error_data['error_message'] = 'Bilinmeyen hata'
         
+        # JSON serialization hatasını önle
         try:
-            self.logger.error(f"ERROR: {json.dumps(error_data, ensure_ascii=False)}")
+            json_str = json.dumps(error_data, ensure_ascii=False)
+            if json_str == '{}' or json_str == 'null':
+                self.logger.error(f"ERROR: {error_data['error_type']} - Boş hata objesi")
+            else:
+                self.logger.error(f"ERROR: {json_str}")
         except Exception as log_error:
             # JSON hata verirse basit log kullan
             self.logger.error(f"ERROR: {error_data['error_type']} - {error_data['error_message']}")
         
-        # Hata raporu dosyasına yaz
-        error_report_file = f"{self.log_dir}/error_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        try:
-            os.makedirs(self.log_dir, exist_ok=True)
-            with open(error_report_file, 'w', encoding='utf-8') as f:
-                json.dump(error_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            self.logger.error(f"Hata raporu yazılamadı: {e}")
+        # Hata raporu dosyasına yaz (sadece anlamlı hatalar için)
+        if error_data['error_message'] != 'Bilinmeyen hata':
+            error_report_file = f"{self.log_dir}/error_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            try:
+                os.makedirs(self.log_dir, exist_ok=True)
+                with open(error_report_file, 'w', encoding='utf-8') as f:
+                    json.dump(error_data, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                self.logger.error(f"Hata raporu yazılamadı: {e}")
     
     def log_performance_metrics(self, metrics: Dict):
         """Performans metriklerini loglar"""
