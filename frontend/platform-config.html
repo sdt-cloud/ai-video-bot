@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Ayarları - AI Video Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+    <style>
+        .config-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .platform-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .platform-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        .file-input {
+            padding: 0.5rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .save-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .help-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 2rem;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-container">
+        <a href="/social" class="back-link">
+            <span class="material-symbols-rounded">arrow_back</span>
+            Sosyal Medya Sayfasına Dön
+        </a>
+        
+        <h1>Platform API Ayarları</h1>
+        
+        <!-- YouTube -->
+        <div class="platform-section">
+            <div class="platform-title">
+                <span style="color: #FF0000;">▶</span>
+                YouTube API Ayarları
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Client Secrets Dosyası:</label>
+                <input type="file" id="youtube-client-secrets" class="file-input" accept=".json">
+                <div class="help-text">Google Cloud Console'dan indirdiğiniz client_secrets.json dosyasını seçin.</div>
+            </div>
+        </div>
+        
+        <!-- Twitter -->
+        <div class="platform-section">
+            <div class="platform-title">
+                <span style="color: #1DA1F2;">🐦</span>
+                Twitter API Ayarları
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">API Key:</label>
+                <input type="text" id="twitter-api-key" class="form-input" placeholder="Twitter API Key">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">API Secret:</label>
+                <input type="password" id="twitter-api-secret" class="form-input" placeholder="Twitter API Secret">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Access Token:</label>
+                <input type="text" id="twitter-access-token" class="form-input" placeholder="Twitter Access Token">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Access Token Secret:</label>
+                <input type="password" id="twitter-access-token-secret" class="form-input" placeholder="Twitter Access Token Secret">
+            </div>
+        </div>
+        
+        <!-- Facebook -->
+        <div class="platform-section">
+            <div class="platform-title">
+                <span style="color: #1877F2;">📘</span>
+                Facebook API Ayarları
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Sayfa ID:</label>
+                <input type="text" id="facebook-page-id" class="form-input" placeholder="Facebook Sayfa ID">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Access Token:</label>
+                <input type="password" id="facebook-access-token" class="form-input" placeholder="Facebook Access Token">
+            </div>
+        </div>
+        
+        <!-- TikTok -->
+        <div class="platform-section">
+            <div class="platform-title">
+                <span style="color: #000000;">🎵</span>
+                TikTok Ayarları
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Kullanıcı Adı:</label>
+                <input type="text" id="tiktok-username" class="form-input" placeholder="TikTok kullanıcı adı">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Session ID:</label>
+                <input type="text" id="tiktok-session-id" class="form-input" placeholder="TikTok Session ID">
+            </div>
+        </div>
+        
+        <button class="save-btn" onclick="saveConfig()">Ayarları Kaydet</button>
+    </div>
+    
+    <script>
+        async function saveConfig() {
+            const config = {
+                youtube: {
+                    enabled: true,
+                    client_secrets_file: document.getElementById('youtube-client-secrets').files[0]?.name || ''
+                },
+                twitter: {
+                    enabled: true,
+                    api_key: document.getElementById('twitter-api-key').value,
+                    api_secret: document.getElementById('twitter-api-secret').value,
+                    access_token: document.getElementById('twitter-access-token').value,
+                    access_token_secret: document.getElementById('twitter-access-token-secret').value
+                },
+                facebook: {
+                    enabled: true,
+                    page_id: document.getElementById('facebook-page-id').value,
+                    access_token: document.getElementById('facebook-access-token').value
+                },
+                tiktok: {
+                    enabled: true,
+                    username: document.getElementById('tiktok-username').value,
+                    session_id: document.getElementById('tiktok-session-id').value
+                }
+            };
+            
+            try {
+                const response = await fetch('/api/social/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    alert('Ayarlar başarıyla kaydedildi!');
+                    window.location.href = '/social';
+                } else {
+                    alert('Ayarlar kaydedilemedi!');
+                }
+            } catch (error) {
+                alert('Hata oluştu: ' + error.message);
+            }
+        }
+        
+        // Dosya yükleme
+        document.getElementById('youtube-client-secrets').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Dosya içeriğini işle
+                    console.log('Client secrets dosyası yüklendi:', file.name);
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+</body>
+</html>
