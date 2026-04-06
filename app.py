@@ -20,8 +20,6 @@ from script_generator import generate_script
 from voice_generator import generate_voice_async
 from image_generator import generate_image
 from video_maker import create_video
-from social_media_manager import social_manager
-from platform_connectors import platform_manager
 from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
 
@@ -294,32 +292,6 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 async def serve_home():
     return FileResponse("frontend/index.html")
 
-@app.get("/social")
-async def serve_social():
-    return FileResponse("frontend/social-media.html")
-
-@app.post("/api/social/config")
-async def save_social_config(request):
-    """Sosyal medya konfigürasyonunu kaydeder"""
-    try:
-        config_data = await request.json()
-        
-        # Konfigürasyon dosyasına yaz
-        with open('social_config.json', 'w', encoding='utf-8') as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
-        
-        # Platform manager'ı yeniden yükle
-        platform_manager.load_config()
-        
-        return {"success": True, "message": "Konfigürasyon kaydedildi"}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
-@app.get("/config")
-async def config_page():
-    """Platform ayarları sayfası"""
-    return FileResponse("frontend/platform-config.html")
-
 @app.on_event("startup")
 async def startup_event():
     """Uygulama başladığında kuyruk yöneticisini başlatır"""
@@ -334,110 +306,6 @@ async def startup_event():
 async def get_queue_status_api():
     """Kuyruk durumunu döndürür"""
     return get_queue_status()
-
-@app.get("/api/social/platforms")
-async def get_social_platforms():
-    """Sosyal medya platformlarının durumunu döndürür"""
-    return platform_manager.get_platform_status()
-
-@app.post("/api/social/connect/{platform}")
-async def connect_platform(platform: str, request: dict = None):
-    """Platforma bağlanır"""
-    try:
-        # Platform konfigürasyonunu al
-        if request is None:
-            request = {}
-        
-        # Platformu güncelle
-        platform_config = {
-            'enabled': True,
-            **request
-        }
-        
-        platform_manager.update_config(platform, platform_config)
-        
-        # Bağlanmayı dene
-        if platform == 'youtube':
-            if platform_manager.youtube:
-                success = platform_manager.youtube.connect()
-                return {"success": success, "message": f"YouTube {'bağlandı' if success else 'bağlanamadı'}"}
-        elif platform == 'twitter':
-            if platform_manager.twitter:
-                success = platform_manager.twitter.connect()
-                return {"success": success, "message": f"Twitter {'bağlandı' if success else 'bağlanamadı'}"}
-        elif platform == 'facebook':
-            if platform_manager.facebook:
-                success = platform_manager.facebook.connect()
-                return {"success": success, "message": f"Facebook {'bağlandı' if success else 'bağlanamadı'}"}
-        elif platform == 'tiktok':
-            if platform_manager.tiktok:
-                success = platform_manager.tiktok.connect()
-                return {"success": success, "message": f"TikTok {'bağlandı' if success else 'bağlanamadı'}"}
-        
-        return {"success": False, "message": "Platform bulunamadı"}
-        
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
-@app.post("/api/social/test/{platform}")
-async def test_platform(platform: str):
-    """Platform bağlantısını test eder"""
-    try:
-        # TODO: Platform test implementasyonu
-        return {"success": True, "message": f"{platform} test başarılı"}
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
-@app.post("/api/social/preview")
-async def preview_content(request):
-    """İçerik önizlemesi üretir"""
-    try:
-        content = social_manager.generate_content(
-            request.get("topic", ""), 
-            request.get("description", "")
-        )
-        return content
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.post("/api/social/post")
-async def post_to_social(request):
-    """Sosyal medyaya gönderi atar"""
-    try:
-        video_id = request.get("video_id")
-        platforms = request.get("platforms", [])
-        schedule_time = request.get("schedule_time")
-        
-        # Video bilgilerini al
-        video_info = database.get_video_by_id(video_id)
-        if not video_info:
-            return {"error": "Video bulunamadı"}
-        
-        # Gönderi zamanla
-        scheduled_time = None
-        if schedule_time:
-            from datetime import datetime
-            scheduled_time = datetime.fromisoformat(schedule_time.replace('Z', '+00:00'))
-        
-        social_manager.schedule_post(
-            video_info["video_path"],
-            video_info["topic"],
-            video_info["description"],
-            platforms,
-            scheduled_time
-        )
-        
-        return {"success": True, "message": "Gönderi planlandı"}
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.get("/api/social/posts")
-async def get_social_posts():
-    """Sosyal medya gönderilerini döndürür"""
-    try:
-        return social_manager.get_post_status()
-    except Exception as e:
-        return {"error": str(e)}
 
 @app.post("/api/test-voice")
 async def test_voice_api(request):

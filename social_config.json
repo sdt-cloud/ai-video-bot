@@ -1,25 +1,14 @@
 {
   "youtube": {
-    "enabled": false,
-    "api_key": "",
-    "channel_id": "",
-    "client_secrets_file": ""
+    "enabled": true
   },
   "twitter": {
-    "enabled": false,
-    "api_key": "",
-    "api_secret": "",
-    "access_token": "",
-    "access_token_secret": ""
+    "enabled": true
   },
   "tiktok": {
-    "enabled": false,
-    "username": "",
-    "session_id": ""
+    "enabled": true
   },
   "facebook": {
-    "enabled": false,
-    "page_id": "",
-    "access_token": ""
+    "enabled": true
   }
 }
