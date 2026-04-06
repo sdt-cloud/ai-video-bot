@@ -1,0 +1,28 @@
+{
+  "youtube": {
+    "enabled": false,
+    "api_key": null,
+    "client_secrets_file": "config/youtube_client_secrets.json",
+    "token_file": "config/youtube_token.json",
+    "category_id": "22",
+    "privacy_status": "public"
+  },
+  "twitter": {
+    "enabled": false,
+    "api_key": null,
+    "api_secret": null,
+    "access_token": null,
+    "access_token_secret": null,
+    "bearer_token": null
+  },
+  "tiktok": {
+    "enabled": false,
+    "session_id": null,
+    "username": null
+  },
+  "facebook": {
+    "enabled": false,
+    "page_id": null,
+    "access_token": null
+  }
+}

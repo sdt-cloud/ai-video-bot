@@ -163,7 +163,7 @@ def add_share_history(video_id: str, platforms: List[str], success: bool, post_u
     conn.commit()
     conn.close()
 
-def get_share_history(limit: int = 50) -> List[Dict]:
+def get_share_history(limit: int = 50) -> List[dict]:
     """Paylaşım geçmişini döndürür"""
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
