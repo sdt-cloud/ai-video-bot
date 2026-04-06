@@ -318,6 +318,12 @@ async def social_dashboard():
     with open("frontend/social-dashboard.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read(), status_code=200)
 
+@app.get("/nedir", response_class=HTMLResponse)
+async def nedir_dashboard():
+    """Nedir.me dashboard sayfası"""
+    with open("frontend/nedir-integration.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
+
 @app.get("/api/social/status")
 async def get_social_status():
     """Sosyal medya platform durumlarını döndürür"""
