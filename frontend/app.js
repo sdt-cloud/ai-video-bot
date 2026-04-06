@@ -268,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     language: document.getElementById('opt-language').value,
                     script_ai: document.getElementById('opt-script-ai').value,
                     voice_ai: document.getElementById('opt-voice-ai').value,
+                    voice_type: document.getElementById('voice-type').value, // Ses tipi eklendi
                     image_ai: document.getElementById('opt-image-ai').value,
                     subtitle_style: document.getElementById('opt-subtitle-style').value,
                     video_mode: document.getElementById('opt-video-mode').value
