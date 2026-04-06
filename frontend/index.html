@@ -7,6 +7,7 @@
     <meta name="description" content="AI destekli otomatik video üretim sistemi. Konu gir, video al.">
     <link rel="stylesheet" href="/static/style.css?v=2">
     <link rel="stylesheet" href="/static/nedir-styles.css">
+    <link rel="stylesheet" href="/static/voice-selector.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -182,6 +183,22 @@
                                         <option value="Edge-TTS">Edge-TTS (Free)</option>
                                         <option value="ElevenLabs">ElevenLabs (Premium)</option>
                                     </select>
+                                </div>
+                                <div class="option-group">
+                                    <label data-i18n="voice_type">Ses Tipi</label>
+                                    <select id="voice-type">
+                                        <option value="erkek">Erkek Ses</option>
+                                        <option value="kadin">Kadın Ses</option>
+                                        <option value="cocuk">Çocuk Ses</option>
+                                        <option value="dramatik">Dramatik Ses</option>
+                                        <option value="gulucu">Gülücü Ses</option>
+                                        <option value="profesyonel">Profesyonel Ses</option>
+                                        <option value="sakin">Sakin Ses</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label>Ses Testi</label>
+                                    <div id="voice-preview"></div>
                                 </div>
                                 <div class="option-group">
                                     <label data-i18n="opt_image_ai">Image AI</label>
@@ -452,6 +469,7 @@
     </div>
 
     <script src="/static/app.js?v=3"></script>
+    <script src="/static/voice-selector.js"></script>
     <script src="/static/nedir-integration.js"></script>
 </body>
 </html>

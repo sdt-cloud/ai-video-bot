@@ -33,6 +33,7 @@ class VideoRequest(BaseModel):
     language: Optional[str] = "tr"
     script_ai: Optional[str] = "Gemini"
     voice_ai: Optional[str] = "Edge-TTS"
+    voice_type: Optional[str] = "erkek"  # Ses tipi seçeneği
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
@@ -71,7 +72,8 @@ async def process_video(task):
     
     voice_file = f"assets/narration_{task_id}.mp3"
     voice_ai_provider = task.get("voice_ai", "Edge-TTS")
-    voice_success = await generate_voice_async(full_narration, voice_file, voice_ai_provider)
+    voice_type = task.get("voice_type", "erkek")
+    voice_success = await generate_voice_async(full_narration, voice_file, voice_ai_provider, voice_type)
     
     if not voice_success:
         database.update_status(task_id, "failed", 30, "Ses sentezlenemedi.")
@@ -304,6 +306,32 @@ async def startup_event():
 async def get_queue_status_api():
     """Kuyruk durumunu döndürür"""
     return get_queue_status()
+
+@app.post("/api/test-voice")
+async def test_voice_api(request):
+    """Ses test API endpoint'i"""
+    try:
+        data = await request.json()
+        text = data.get("text", "Test metni")
+        voice_type = data.get("voice_type", "erkek")
+        
+        # Geçici ses dosyası oluştur
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_file:
+            tmp_filename = tmp_file.name
+            
+            # Ses üret
+            success = await generate_voice_async(text, tmp_filename, "ElevenLabs", voice_type)
+            
+            if success and os.path.exists(tmp_filename):
+                # Dosyayı binary olarak geri döndür
+                from fastapi.responses import FileResponse
+                return FileResponse(tmp_filename, media_type="audio/mpeg", filename=f"test_voice_{voice_type}.mp3")
+            else:
+                return {"error": "Ses üretilemedi"}
+                
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

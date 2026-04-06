@@ -1,0 +1,99 @@
+/**
+ * Ses Seçici Stilleri
+ */
+
+#voice-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.voice-preview-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.voice-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.voice-info {
+    flex: 1;
+}
+
+.voice-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.voice-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.test-voice-btn {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 100px;
+    justify-content: center;
+}
+
+.test-voice-btn:hover:not(:disabled) {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.test-voice-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.test-voice-btn .fa-play {
+    transition: transform 0.3s ease;
+}
+
+.test-voice-btn .fa-check {
+    color: #28a745;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #voice-preview {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .voice-preview-content {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .test-voice-btn {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}

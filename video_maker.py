@@ -5,6 +5,7 @@ import os
 import requests
 import numpy as np
 import video_effects
+from subtitle_enhancer import subtitle_enhancer
 
 def apply_clip_resize(clip, width=None, height=None):
     """MoviePy v1'de resize(), v2'de resized() kullanılır."""
@@ -165,8 +166,11 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             # 1. Altyazı veya Efekt Uygula
             processed_img = img
             if narrations and i < len(narrations) and subtitle_style != "none":
+                # Metni seslendirmeye uygun hale getir
+                enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
+                
                 subtitle_img = f"assets/sub_{os.path.basename(img)}"
-                burn_subtitle_on_image(img, narrations[i], subtitle_img, subtitle_style)
+                burn_subtitle_on_image(img, enhanced_narration, subtitle_img, subtitle_style)
                 processed_img = subtitle_img
             
             # 2. Mod Seçimine Göre Klip Oluştur
