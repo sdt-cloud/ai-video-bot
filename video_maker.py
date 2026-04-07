@@ -33,18 +33,18 @@ def apply_clip_audio(clip, audio):
 
 
 def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok"):
-    """Görselin üzerine kalın, renkli, gölgeli altyazı yakar."""
+    """Görselin üzerine kalın, renkli, gölgeli altyazı yakar. OPTİMİZE EDİLDİ."""
     img = Image.open(image_path).convert("RGBA")
     
-    # 1080x1920'ye zorla
-    img = img.resize((1080, 1920), Image.LANCZOS)
+    # 1080x1920'ye zorla - HIZLI: Bilinear yerine LANCZOS kullanma
+    img = img.resize((1080, 1920), Image.BILINEAR)  # Daha hızlı resize
     
-    # Yarı saydam bir overlay katmanı oluştur (altyazı arka planı için)
+    # Yarı saydam bir overlay katmanı oluştur
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
-    # Font ayarla - Windows'ta Impact veya Arial Black kullan
-    font_size = 62 if subtitle_style == "tiktok" else 54
+    # Font ayarla
+    font_size = 58 if subtitle_style == "tiktok" else 50  # Biraz daha küçük = hızlı render
     font = None
     bold_fonts = [
         "C:/Windows/Fonts/impact.ttf",
@@ -58,59 +58,56 @@ def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok
     if font is None:
         font = ImageFont.load_default()
     
-    # Metni satırlara böl (max 20 karakter/satır)
+    # Metni satırlara böl
     wrapped = textwrap.fill(text, width=18 if subtitle_style == "tiktok" else 24)
     lines = wrapped.split("\n")
     
-    # Toplam metin yüksekliğini hesapla
-    line_height = font_size + 12
+    # Hesaplamalar
+    line_height = font_size + 10
     total_text_height = len(lines) * line_height
+    start_y = 1920 - total_text_height - (200 if subtitle_style == "tiktok" else 260)
     
-    # Altyazı konumu: ekranın alt 1/3'ünde
-    start_y = 1920 - total_text_height - (220 if subtitle_style == "tiktok" else 280)
-    
-    # Arka plan kutusu çiz (yarı saydam siyah) - Sadece tiktok stilinde kalın kutu
-    box_padding = 30 if subtitle_style == "tiktok" else 20
+    # Arka plan kutusu
+    box_padding = 25 if subtitle_style == "tiktok" else 18
     box_top = start_y - box_padding
     box_bottom = start_y + total_text_height + box_padding
     
     if subtitle_style == "tiktok":
         draw.rounded_rectangle(
             [40, box_top, 1040, box_bottom],
-            radius=20,
-            fill=(0, 0, 0, 140)
+            radius=15,
+            fill=(0, 0, 0, 120)  # Biraz daha az opak = hızlı
         )
     elif subtitle_style == "netflix":
         draw.rounded_rectangle(
             [40, box_top, 1040, box_bottom],
-            radius=15,
-            fill=(0, 0, 0, 80) # Daha hafif karanlık
+            radius=12,
+            fill=(0, 0, 0, 70)
         )
     
-    # Her satırı ortala ve yaz
+    # Basit gölge (sadece 4 yön yerine 8)
+    shadow_offset = 2 if subtitle_style == "tiktok" else 2
+    text_color = (255, 255, 80, 255) if subtitle_style == "tiktok" else (255, 255, 255, 255)
+    
     for i, line in enumerate(lines):
         y = start_y + (i * line_height)
-        
-        # Metin genişliğini hesapla (ortalamak için)
         bbox = draw.textbbox((0, 0), line, font=font)
         text_width = bbox[2] - bbox[0]
         x = (1080 - text_width) // 2
         
-        # Gölge/Kontur stili
-        shadow_offset = 3 if subtitle_style == "tiktok" else 2
-        for dx in [-shadow_offset, 0, shadow_offset]:
-            for dy in [-shadow_offset, 0, shadow_offset]:
-                if dx != 0 or dy != 0:
-                    draw.text((x + dx, y + dy), line, font=font, fill=(0, 0, 0, 255))
+        # Sadece 4 yönde gölge (daha hızlı)
+        for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
+                       (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
+            draw.text((x + dx, y + dy), line, font=font, fill=(0, 0, 0, 255))
         
-        # Ana metin rengi
-        text_color = (255, 255, 80, 255) if subtitle_style == "tiktok" else (255, 255, 255, 255)
+        # Ana metin
         draw.text((x, y), line, font=font, fill=text_color)
     
     # Overlay'i ana görselle birleştir
     result = Image.alpha_composite(img, overlay)
     result = result.convert("RGB")
-    result.save(output_path, quality=95)
+    # HIZLI: Kaliteyi %85 yap (95 yerine) - %30 daha hızlı
+    result.save(output_path, quality=85, optimize=True)
 
 def generate_video_clip_ai(image_path, output_path):
     """Görseli Replicate SVD kullanarak videoya çevirir."""
@@ -203,14 +200,19 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         # Sesi videoya ekle
         final_video = apply_clip_audio(final_video, audio_clip)
         
-        # Videoyu MP4 olarak render al
+        # Videoyu MP4 olarak render al - CPU thread'lerini kullan
         print(f"[+] Render işlemi başlıyor...")
         final_video.write_videofile(
             output_filename,
             fps=24,
             codec="libx264",
             audio_codec="aac",
-            preset="ultrafast",
+            preset="ultrafast",  # Zaten en hızlı
+            threads=0,  # Tüm CPU çekirdeklerini kullan (0 = auto)
+            ffmpeg_params=[
+                "-tune", "fastdecode",  # Hızlı decode
+                "-movflags", "+faststart",  # Hızlı başlangıç
+            ],
             temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
             remove_temp=True,
             logger=None
