@@ -1,0 +1,38 @@
+{
+  "facebook": {
+    "app_id": "",
+    "app_secret": "",
+    "access_token": "",
+    "page_id": "",
+    "enabled": false
+  },
+  "twitter": {
+    "api_key": "VZnm4T4K51P2ufulYLymNr1eG",
+    "api_secret": "gF93hNfjRtMOcsTFzqdHJCqIVNDvRWXYNRSiDGbSuCK9gzLHRq",
+    "access_token": "",
+    "access_token_secret": "",
+    "bearer_token": "AAAAAAAAAAAAAAAAAAAAAM5q8wEAAAAAJDn0MUENSSaC%2BqRz3USvdSkWDhk%3DLGYvMEXwKRYPpA3UUvZNrxLWYP9zMSc4Dzz6p1SCrr7FAb3mBj",
+    "enabled": true
+  },
+  "instagram": {
+    "app_id": "",
+    "app_secret": "",
+    "access_token": "",
+    "instagram_business_account_id": "",
+    "enabled": false
+  },
+  "tiktok": {
+    "client_key": "",
+    "client_secret": "",
+    "access_token": "",
+    "enabled": false
+  },
+  "youtube": {
+    "api_key": "",
+    "client_id": "",
+    "client_secret": "",
+    "refresh_token": "",
+    "channel_id": "",
+    "enabled": false
+  }
+}

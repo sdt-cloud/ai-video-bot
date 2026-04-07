@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sosyal Medya Platform Kurulum Rehberleri</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .platform-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .platform-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .platform-header {
+            padding: 2rem;
+            border-radius: 15px 15px 0 0;
+            color: white;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .code-field {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 0.5rem 0;
+        }
+        .step-card {
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .link-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .required-field {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin: 0.25rem 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/custom-social">
+                <i class="fas fa-arrow-left"></i> Sosyal Medya Paneline Dön
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold">
+                <i class="fas fa-book-open"></i> Platform Kurulum Rehberleri
+            </h1>
+            <p class="lead text-muted">Adım adım sosyal medya API'lerini nasıl yapılandıracağınızı öğrenin</p>
+        </div>
+
+        <!-- FACEBOOK KURULUM -->
+        <div class="platform-card">
+            <div class="platform-header" style="background: linear-gradient(135deg, #1877f2 0%, #0c5cd6 100%);">
+                <div class="text-center">
+                    <i class="fab fa-facebook fa-3x mb-3"></i>
+                    <h2>Facebook Graph API</h2>
+                    <p class="mb-0">200 request/saat • Ücretsiz</p>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-key"></i> Gerekli Alanlar:</h5>
+                        <div class="required-field">
+                            <strong>App ID:</strong> Uygulama kimliği
+                        </div>
+                        <div class="required-field">
+                            <strong>App Secret:</strong> Uygulama gizli anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Access Token:</strong> Erişim token'ı
+                        </div>
+                        <div class="required-field">
+                            <strong>Page ID:</strong> Facebook sayfa ID'si
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="https://developers.facebook.com" target="_blank" class="link-button">
+                                <i class="fas fa-external-link-alt"></i> Facebook Developer
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-list-ol"></i> Kurulum Adımları:</h5>
+                        
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h6>Developer Hesabı Oluştur</h6>
+                            <p><a href="https://developers.facebook.com" target="_blank">https://developers.facebook.com</a> adresine gidin ve "Create App" butonuna tıklayın.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h6>App Tipi Seçin</h6>
+                            <p><strong>Business</> tipini seçin ve gerekli bilgileri doldurun.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h6>Facebook Login Ekleyin</h6>
+                            <p>"Add Product" → "Facebook Login" seçin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <h6>API Bilgilerini Alın</h6>
+                            <p>Settings → Basic bölümünden App ID ve App Secret'ı kopyalayın.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <h6>Access Token Oluşturun</h6>
+                            <p>Tools → Graph API Explorer gidin ve "Get User Access Token" tıklayın. İzinleri seçin:</p>
+                            <ul>
+                                <li>pages_read_engagement</li>
+                                <li>pages_manage_posts</li>
+                                <li>publish_to_groups</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <h6>Page ID Bulun</h6>
+                            <p>Graph API Explorer'da: <code>me/accounts</code> sorgusunu çalıştırın.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TWITTER KURULUM -->
+        <div class="platform-card">
+            <div class="platform-header" style="background: linear-gradient(135deg, #1da1f2 0%, #0c85d0 100%);">
+                <div class="text-center">
+                    <i class="fab fa-x-twitter fa-3x mb-3"></i>
+                    <h2>Twitter/X API v2</h2>
+                    <p class="mb-0">500,000 tweet/ay • Ücretsiz</p>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-key"></i> Gerekli Alanlar:</h5>
+                        <div class="required-field">
+                            <strong>API Key:</strong> API anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>API Secret:</strong> API gizli anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Access Token:</strong> Erişim token'ı
+                        </div>
+                        <div class="required-field">
+                            <strong>Access Token Secret:</strong> Erişim token gizli anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Bearer Token:</strong> Taşıyıcı token
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="https://developer.twitter.com" target="_blank" class="link-button">
+                                <i class="fas fa-external-link-alt"></i> Twitter Developer
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-list-ol"></i> Kurulum Adımları:</h5>
+                        
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h6>Developer Hesabı Oluştur</h6>
+                            <p><a href="https://developer.twitter.com" target="_blank">https://developer.twitter.com</a> adresine gidin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h6>Free Account Başvurusu</h6>
+                            <p>"Sign up for Free Account" seçin ve formu doldurun.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h6>Project Oluşturun</h6>
+                            <p>"Create Project" butonuna tıklayın ve project bilgilerini girin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <h6>App Oluşturun</h6>
+                            <p>"Create App" seçin ve app ayarlarını yapın.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <h6>API Anahtarlarını Alın</h6>
+                            <p>"Keys and tokens" bölümünde:</p>
+                            <ul>
+                                <li>API Key ve API Secret'ı kopyalayın</li>
+                                <li>"Generate" ile Access Token ve Secret'ı oluşturun</li>
+                                <li>Bearer Token'ı da kopyalayın</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <h6>İzinleri Ayarlayın</h6>
+                            <p>App permissions'ı "Read and Write" olarak ayarlayın.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INSTAGRAM KURULUM -->
+        <div class="platform-card">
+            <div class="platform-header" style="background: linear-gradient(135deg, #e4405f 0%, #c13584 100%);">
+                <div class="text-center">
+                    <i class="fab fa-instagram fa-3x mb-3"></i>
+                    <h2>Instagram Basic Display API</h2>
+                    <p class="mb-0">200 request/saat • Ücretsiz</p>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-key"></i> Gerekli Alanlar:</h5>
+                        <div class="required-field">
+                            <strong>App ID:</strong> Facebook App ID (aynısı)
+                        </div>
+                        <div class="required-field">
+                            <strong>App Secret:</strong> Facebook App Secret (aynısı)
+                        </div>
+                        <div class="required-field">
+                            <strong>Access Token:</strong> Instagram access token
+                        </div>
+                        <div class="required-field">
+                            <strong>Instagram Business Account ID:</strong> Instagram işletme hesabı ID
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="https://developers.facebook.com/docs/instagram-basic-display-api" target="_blank" class="link-button">
+                                <i class="fas fa-external-link-alt"></i> Instagram API Docs
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-list-ol"></i> Kurulum Adımları:</h5>
+                        
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h6>Facebook Developer Kullanın</h6>
+                            <p>Facebook developer hesabınızı kullanın (Instagram için ayrı hesap gerekmez).</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h6>Instagram Basic Display Ekleyin</h6>
+                            <p>App'inize "Instagram Basic Display" ürününü ekleyin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h6>Platform Ayarları</h6>
+                            <p>"Add Platform" → "Website" seçip sitenizi girin (localhost da olabilir).</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <h6>Test Kullanıcıları</h6>
+                            <p>Instagram Basic Display ayarlarından test kullanıcıları ekleyin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <h6>Access Token Alın</h6>
+                            <p>"App Review" bölümünden access token'ı生成ın.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <h6>Business Account ID</h6>
+                            <p>Graph API Explorer'da Instagram Business Account ID'yi bulun.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YOUTUBE KURULUM -->
+        <div class="platform-card">
+            <div class="platform-header" style="background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);">
+                <div class="text-center">
+                    <i class="fab fa-youtube fa-3x mb-3"></i>
+                    <h2>YouTube Data API v3</h2>
+                    <p class="mb-0">10,000 units/gün • Ücretsiz</p>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-key"></i> Gerekli Alanlar:</h5>
+                        <div class="required-field">
+                            <strong>API Key:</strong> YouTube API anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Client ID:</strong> OAuth2 client ID
+                        </div>
+                        <div class="required-field">
+                            <strong>Client Secret:</strong> OAuth2 client secret
+                        </div>
+                        <div class="required-field">
+                            <strong>Refresh Token:</strong> OAuth2 refresh token
+                        </div>
+                        <div class="required-field">
+                            <strong>Channel ID:</strong> YouTube kanal ID'niz
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="https://console.cloud.google.com" target="_blank" class="link-button">
+                                <i class="fas fa-external-link-alt"></i> Google Cloud Console
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-list-ol"></i> Kurulum Adımları:</h5>
+                        
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h6>Google Cloud Projesi</h6>
+                            <p><a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>'da yeni proje oluşturun.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h6>API'yi Etkinleştirin</h6>
+                            <p>"APIs & Services" → "Library" gidin ve "YouTube Data API v3" aratıp etkinleştirin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h6>OAuth2 Credentials</h6>
+                            <p>"APIs & Services" → "Credentials" gidin ve "OAuth 2.0 Client ID" oluşturun.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <h6>Application Type</h6>
+                            <p>"Web application" seçin ve "Authorized redirect URIs" ekleyin: <code>http://localhost:8080/callback</code></p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <h6>Refresh Token Alın</h6>
+                            <p><a href="https://developers.google.com/oauthplayground" target="_blank">OAuth2 Playground</a>'da:</p>
+                            <ul>
+                                <li>YouTube Data API v3 seçin</li>
+                                <li>Authorize APIs butonuna tıklayın</li>
+                                <li>Access token ve refresh token'ı alın</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <h6>Channel ID Bulun</h6>
+                            <p>YouTube kanalınızın URL'sindeki channel ID'yi kopyalayın.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TIKTOK KURULUM -->
+        <div class="platform-card">
+            <div class="platform-header" style="background: linear-gradient(135deg, #000000 0%, #333333 100%);">
+                <div class="text-center">
+                    <i class="fab fa-tiktok fa-3x mb-3"></i>
+                    <h2>TikTok API</h2>
+                    <p class="mb-0">Business onayı gerektirir • Sınırlı</p>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-key"></i> Gerekli Alanlar:</h5>
+                        <div class="required-field">
+                            <strong>Client Key:</strong> TikTok client anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Client Secret:</strong> TikTok client gizli anahtarı
+                        </div>
+                        <div class="required-field">
+                            <strong>Access Token:</strong> TikTok access token
+                        </div>
+                        
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <strong>Not:</strong> TikTok API'si business account onayı gerektirir. Manuel upload daha pratik olabilir.
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="https://developers.tiktok.com" target="_blank" class="link-button">
+                                <i class="fas fa-external-link-alt"></i> TikTok Developer
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-list-ol"></i> Kurulum Adımları:</h5>
+                        
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h6>Developer Hesabı</h6>
+                            <p><a href="https://developers.tiktok.com" target="_blank">TikTok Developer</a> hesabı oluşturun.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h6>Business Account</h6>
+                            <p>Business account başvurusu yapın ve onay bekleyin.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h6>App Oluşturun</h6>
+                            <p>Onay geldikten sonra app oluşturun ve Client Key/Secret alın.</p>
+                        </div>
+                        
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <h6>Access Token</h6>
+                            <p>OAuth2 flow ile access token alın.</p>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Alternatif:</strong> TikTok Creative Center kullanarak manuel upload daha hızlı olabilir.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YARDIM VE İPUÇLARI -->
+        <div class="card mt-5">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-lightbulb"></i> İpuçları ve Yardım</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check-circle text-success"></i> İyi Pratikler:</h6>
+                        <ul>
+                            <li>Başlangıçta tek platform ile test edin</li>
+                            <li>Rate limiting hatalarına karşı retry logic ekleyin</li>
+                            <li>API anahtarlarını güvenli saklayın (.env dosyası)</li>
+                            <li>Test gönderileri yaparak çalıştığından emin olun</li>
+                            <li>Her platformun limitlerini takip edin</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-exclamation-triangle text-warning"></i> Sorun Giderme:</h6>
+                        <ul>
+                            <li>401/403 hataları: API anahtarlarını kontrol edin</li>
+                            <li>429 hataları: Rate limit aşıldı, bekleyin</li>
+                            <li>500 hataları: Platform sorunu, daha sonra deneyin</li>
+                            <li>Video upload hataları: Dosya boyutunu ve formatı kontrol edin</li>
+                            <li>Permission hataları: İzinleri doğru ayarladığınızdan emin olun</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="/custom-social" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Yapılandırma Paneline Dön
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

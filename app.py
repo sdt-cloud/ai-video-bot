@@ -3,7 +3,7 @@ import os
 import tempfile
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from typing import List, Optional
 import database
@@ -25,13 +25,11 @@ from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
 from performance_optimizer import parallel_process_images, get_optimized_settings
 from error_handler import error_recovery, video_logger
-from social_api import social_router
 from custom_social_api import custom_social_router
 
 app = FastAPI()
 
 # Sosyal medya yönetimi route'larını ekle
-app.include_router(social_router)
 app.include_router(custom_social_router)
 
 class VideoRequest(BaseModel):
@@ -339,13 +337,18 @@ async def get_completed_videos():
 
 @app.get("/social")
 async def social_dashboard():
-    """Serve social media dashboard HTML"""
-    return FileResponse("social_dashboard.html")
+    """Serve the new social media dashboard HTML"""
+    return FileResponse("custom_social_dashboard.html")
 
 @app.get("/custom-social")
 async def custom_social_dashboard():
-    """Serve custom social media dashboard HTML"""
+    """Alias for the new social media dashboard HTML"""
     return FileResponse("custom_social_dashboard.html")
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Return no content for missing favicon to prevent browser 404 logs."""
+    return Response(status_code=204)
 
 @app.get("/platform_setup_guides.html")
 async def platform_setup_guides():

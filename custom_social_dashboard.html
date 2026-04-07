@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sosyal Medya Yönetimi - Modern Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .dark {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .platform-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .platform-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark .platform-card:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .dark .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-active { background-color: #10b981; }
+        .status-inactive { background-color: #ef4444; }
+
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+        }
+
+        .dark .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="text-gray-900 dark:text-gray-100">
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="flex items-center space-x-2 text-white hover:text-blue-200 transition-colors">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        <span class="font-medium">Ana Sayfa</span>
+                    </a>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-bold text-white">Sosyal Medya Yönetimi</h1>
+                    <button id="theme-toggle" class="p-2 rounded-lg glass hover:bg-white/10 transition-colors">
+                        <i data-lucide="sun" class="w-5 h-5 text-white"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Hero Section -->
+        <div class="text-center mb-12 slide-in">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-6">
+                <i data-lucide="share-2" class="w-10 h-10 text-white"></i>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                Modern Sosyal Medya <span class="gradient-text">Yönetimi</span>
+            </h1>
+            <p class="text-xl text-gray-300 max-w-2xl mx-auto">
+                Tüm platformlarınızı tek yerden yönetin. Ücretsiz, hızlı ve güvenilir.
+            </p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+            <div class="glass rounded-xl p-6 text-center slide-in">
+                <div class="text-3xl font-bold text-white mb-2">200</div>
+                <div class="text-sm text-gray-300">Facebook/Saat</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center slide-in" style="animation-delay: 0.1s">
+                <div class="text-3xl font-bold text-white mb-2">500K</div>
+                <div class="text-sm text-gray-300">Twitter/Ay</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center slide-in" style="animation-delay: 0.2s">
+                <div class="text-3xl font-bold text-white mb-2">200</div>
+                <div class="text-sm text-gray-300">Instagram/Saat</div>
+            </div>
+            <div class="glass rounded-xl p-6 text-center slide-in" style="animation-delay: 0.3s">
+                <div class="text-3xl font-bold text-white mb-2">10K</div>
+                <div class="text-sm text-gray-300">YouTube/Gün</div>
+            </div>
+        </div>
+
+        <!-- Platform Status -->
+        <div class="glass rounded-xl p-8 mb-8 slide-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white flex items-center">
+                    <i data-lucide="zap" class="w-6 h-6 mr-3"></i>
+                    Platform Durumları
+                </h2>
+                <button onclick="loadPlatformStatus()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+                    Yenile
+                </button>
+            </div>
+            <div id="platform-status" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Platform cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <div class="glass rounded-xl overflow-hidden">
+            <div class="border-b border-gray-200 dark:border-gray-700">
+                <nav class="flex">
+                    <button onclick="showTab('config')" id="config-tab" class="tab-button active px-6 py-4 text-white border-b-2 border-blue-500 font-medium">
+                        <i data-lucide="settings" class="w-5 h-5 inline mr-2"></i>
+                        Yapılandırma
+                    </button>
+                    <button onclick="showTab('post')" id="post-tab" class="tab-button px-6 py-4 text-gray-300 hover:text-white font-medium">
+                        <i data-lucide="send" class="w-5 h-5 inline mr-2"></i>
+                        Gönderi Paylaş
+                    </button>
+                    <button onclick="showTab('history')" id="history-tab" class="tab-button px-6 py-4 text-gray-300 hover:text-white font-medium">
+                        <i data-lucide="history" class="w-5 h-5 inline mr-2"></i>
+                        Geçmiş
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-8">
+                <!-- Configuration Tab -->
+                <div id="config-content" class="tab-content active">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Platform Setup -->
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-6">Platform Kurulumu</h3>
+                            <div id="platform-setup" class="space-y-4">
+                                <!-- Setup cards will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- API Configuration -->
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-6">API Yapılandırması</h3>
+                            <div id="api-config" class="space-y-6">
+                                <!-- Config forms will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post Tab -->
+                <div id="post-content" class="tab-content hidden">
+                    <div class="max-w-2xl mx-auto">
+                        <h3 class="text-2xl font-bold text-white mb-6 text-center">Video Paylaş</h3>
+
+                        <div class="space-y-6">
+                            <!-- Video Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Video Seç</label>
+                                <div class="flex gap-3">
+                                    <select id="video_select" class="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white input-focus">
+                                        <option value="">Video seçin...</option>
+                                    </select>
+                                    <button onclick="generateAITitleDescription()" id="ai-generate-btn" class="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                        <i data-lucide="sparkles" class="w-5 h-5 mr-2"></i>
+                                        AI Başlık
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- AI Generated Title & Description -->
+                            <div id="ai-content-section" class="hidden space-y-4">
+                                <div class="glass rounded-xl p-4">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-lg font-semibold text-white flex items-center">
+                                            <i data-lucide="sparkles" class="w-5 h-5 mr-2 text-purple-400"></i>
+                                            AI Üretilen İçerik
+                                        </h4>
+                                        <button onclick="regenerateAITitleDescription()" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center">
+                                            <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>
+                                            Yenile
+                                        </button>
+                                    </div>
+
+                                    <!-- Title -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Video Başlığı</label>
+                                        <input type="text" id="video_title" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white input-focus" placeholder="AI tarafından oluşturulacak...">
+                                    </div>
+
+                                    <!-- Description -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Video Açıklaması</label>
+                                        <textarea id="video_description" rows="3" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white input-focus resize-none" placeholder="AI tarafından oluşturulacak..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Platforms -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-3">Platformlar</label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="platform-checkboxes">
+                                    <!-- Checkboxes will be loaded here -->
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Gönderi Metni</label>
+                                <textarea id="post_content" rows="4" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white input-focus resize-none" placeholder="Gönderi metnini yazın..."></textarea>
+                            </div>
+
+                            <!-- Post Button -->
+                            <button onclick="postVideo()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center">
+                                <i data-lucide="send" class="w-5 h-5 mr-2"></i>
+                                Gönderi Paylaş
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="history-content" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold text-white">Gönderi Geçmişi</h3>
+                        <button onclick="loadPostHistory()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center">
+                            <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+                            Yenile
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="pb-3 text-gray-300 font-medium">Tarih</th>
+                                    <th class="pb-3 text-gray-300 font-medium">Video</th>
+                                    <th class="pb-3 text-gray-300 font-medium">Platformlar</th>
+                                    <th class="pb-3 text-gray-300 font-medium">Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody id="posts-history" class="divide-y divide-gray-700">
+                                <!-- History will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2">
+        <!-- Toasts will appear here -->
+    </div>
+
+    <script>
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            const icon = this.querySelector('i');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.setAttribute('data-lucide', 'moon');
+            } else {
+                icon.setAttribute('data-lucide', 'sun');
+            }
+            lucide.createIcons();
+        });
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active', 'text-white', 'border-blue-500');
+                button.classList.add('text-gray-300');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-content').classList.remove('hidden');
+            document.getElementById(tabName + '-tab').classList.add('active', 'text-white', 'border-blue-500');
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 max-w-sm ${
+                type === 'success' ? 'bg-green-500' :
+                type === 'error' ? 'bg-red-500' :
+                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            } text-white`;
+
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i data-lucide="${
+                        type === 'success' ? 'check-circle' :
+                        type === 'error' ? 'x-circle' :
+                        type === 'warning' ? 'alert-triangle' : 'info'
+                    }" class="w-5 h-5 mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            document.getElementById('toast-container').appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+
+            // Remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+
+            lucide.createIcons();
+        }
+
+        // Load platform status
+        async function loadPlatformStatus() {
+            try {
+                const response = await fetch('/social/api/status');
+                const platforms = await response.json();
+
+                const container = document.getElementById('platform-status');
+                container.innerHTML = '';
+
+                Object.entries(platforms).forEach(([platform, info]) => {
+                    const card = document.createElement('div');
+                    card.className = `platform-card glass rounded-xl p-6 ${info.enabled ? 'ring-2 ring-green-500' : ''}`;
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <div class="status-dot ${info.enabled ? 'status-active' : 'status-inactive'}"></div>
+                                <span class="font-semibold text-white capitalize">${platform}</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${
+                                info.enabled ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                            }">
+                                ${info.enabled ? 'Aktif' : 'Pasif'}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-300 mb-3">${info.cost}</div>
+                        <div class="text-xs text-gray-400">
+                            Gerekenler: ${info.requirements.join(', ')}
+                        </div>
+                    `;
+
+                    container.appendChild(card);
+                });
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Platform status yüklenemedi:', error);
+                showToast('Platform durumları yüklenemedi', 'error');
+            }
+        }
+
+        function getPlatformInfo(platform) {
+            const platformNames = {
+                facebook: 'Facebook',
+                twitter: 'Twitter',
+                instagram: 'Instagram',
+                youtube: 'YouTube',
+                tiktok: 'TikTok'
+            };
+            return {
+                name: platformNames[platform] || platform,
+            };
+        }
+
+        async function loadConfigUI() {
+            try {
+                const [statusResponse, configResponse] = await Promise.all([
+                    fetch('/social/api/status'),
+                    fetch('/social/api/config')
+                ]);
+
+                const platforms = await statusResponse.json();
+                const savedConfig = await configResponse.json();
+                const setupContainer = document.getElementById('platform-setup');
+                const apiConfig = document.getElementById('api-config');
+                setupContainer.innerHTML = '';
+                apiConfig.innerHTML = '';
+
+                const platformFields = {
+                    facebook: [
+                        {name: 'app_id', label: 'App ID', placeholder: 'Facebook App ID'},
+                        {name: 'app_secret', label: 'App Secret', placeholder: 'Facebook App Secret'},
+                        {name: 'access_token', label: 'Access Token', placeholder: 'Facebook Access Token'},
+                        {name: 'page_id', label: 'Page ID', placeholder: 'Facebook Page ID'}
+                    ],
+                    twitter: [
+                        {name: 'api_key', label: 'API Key', placeholder: 'Twitter API Key'},
+                        {name: 'api_secret', label: 'API Secret', placeholder: 'Twitter API Secret'},
+                        {name: 'access_token', label: 'Access Token', placeholder: 'Twitter Access Token'},
+                        {name: 'access_token_secret', label: 'Access Token Secret', placeholder: 'Twitter Access Token Secret'},
+                        {name: 'bearer_token', label: 'Bearer Token', placeholder: 'Twitter Bearer Token'}
+                    ],
+                    instagram: [
+                        {name: 'app_id', label: 'App ID', placeholder: 'Instagram App ID'},
+                        {name: 'app_secret', label: 'App Secret', placeholder: 'Instagram App Secret'},
+                        {name: 'access_token', label: 'Access Token', placeholder: 'Instagram Access Token'},
+                        {name: 'instagram_business_account_id', label: 'Business Account ID', placeholder: 'Instagram Business Account ID'}
+                    ],
+                    youtube: [
+                        {name: 'api_key', label: 'API Key', placeholder: 'YouTube API Key'},
+                        {name: 'client_id', label: 'Client ID', placeholder: 'YouTube Client ID'},
+                        {name: 'client_secret', label: 'Client Secret', placeholder: 'YouTube Client Secret'},
+                        {name: 'refresh_token', label: 'Refresh Token', placeholder: 'YouTube Refresh Token'},
+                        {name: 'channel_id', label: 'Channel ID', placeholder: 'YouTube Channel ID'}
+                    ],
+                    tiktok: [
+                        {name: 'client_key', label: 'Client Key', placeholder: 'TikTok Client Key'},
+                        {name: 'client_secret', label: 'Client Secret', placeholder: 'TikTok Client Secret'},
+                        {name: 'access_token', label: 'Access Token', placeholder: 'TikTok Access Token'}
+                    ]
+                };
+
+                Object.entries(platformFields).forEach(([platform, fields]) => {
+                    const platformInfo = getPlatformInfo(platform);
+                    const status = platforms[platform]?.enabled;
+                    const saved = savedConfig[platform] || {};
+
+                    const setupCard = document.createElement('div');
+                    setupCard.className = 'glass rounded-xl p-6';
+                    setupCard.innerHTML = `
+                        <div class="flex items-start justify-between gap-4 mb-4">
+                            <div>
+                                <h4 class="text-lg font-semibold text-white capitalize">${platformInfo.name}</h4>
+                                <p class="text-sm text-gray-400">${platformInfo.name} API anahtarlarını buradan girin ve kaydedin.</p>
+                            </div>
+                            <span class="text-xs px-3 py-1 rounded-full ${status ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}">
+                                ${status ? 'Aktif' : 'Pasif'}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-400 mb-3">Gerekenler: ${fields.map(field => field.label).join(', ')}</div>
+                        <button onclick="savePlatformConfig('${platform}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                            ${status ? 'Güncelle' : 'Kaydet ve Aktif Et'}
+                        </button>
+                    `;
+                    setupContainer.appendChild(setupCard);
+
+                    const configCard = document.createElement('div');
+                    configCard.className = 'glass rounded-xl p-6';
+                    configCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-semibold text-white capitalize">${platformInfo.name} API Ayarları</h4>
+                            <span class="text-sm text-gray-400">${status ? 'Aktif' : 'Pasif'}</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" id="config-fields-${platform}"></div>
+                    `;
+                    apiConfig.appendChild(configCard);
+
+                    const fieldsContainer = configCard.querySelector(`#config-fields-${platform}`);
+                    fields.forEach(field => {
+                        const fieldEl = document.createElement('div');
+                        fieldEl.className = 'space-y-2';
+                        fieldEl.innerHTML = `
+                            <label class="block text-sm font-medium text-gray-300">${field.label}</label>
+                            <input type="text" id="config-${platform}-${field.name}" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white input-focus" placeholder="${field.placeholder}" value="${saved[field.name] || ''}" />
+                        `;
+                        fieldsContainer.appendChild(fieldEl);
+                    });
+                });
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Config UI yüklenemedi:', error);
+                showToast('API yapılandırma arayüzü yüklenemedi', 'error');
+            }
+        }
+
+        async function savePlatformConfig(platform) {
+            const platformFields = {
+                facebook: ['app_id', 'app_secret', 'access_token', 'page_id'],
+                twitter: ['api_key', 'api_secret', 'access_token', 'access_token_secret', 'bearer_token'],
+                instagram: ['app_id', 'app_secret', 'access_token', 'instagram_business_account_id'],
+                youtube: ['api_key', 'client_id', 'client_secret', 'refresh_token', 'channel_id'],
+                tiktok: ['client_key', 'client_secret', 'access_token']
+            };
+
+            const configData = {};
+            platformFields[platform].forEach(field => {
+                const input = document.getElementById(`config-${platform}-${field}`);
+                if (input) {
+                    configData[field] = input.value.trim();
+                }
+            });
+
+            try {
+                const response = await fetch('/social/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        platform,
+                        enabled: true,
+                        config_data: configData
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(`${platform.charAt(0).toUpperCase() + platform.slice(1)} API ayarları kaydedildi!`, 'success');
+                    loadPlatformStatus();
+                    loadConfigUI();
+                } else {
+                    showToast('API yapılandırma hatası: ' + (result.detail || result.error || 'Bilinmeyen hata'), 'error');
+                }
+            } catch (error) {
+                showToast('API yapılandırma hatası: ' + error.message, 'error');
+            }
+        }
+
+        // Load videos
+        async function loadVideos() {
+            try {
+                const response = await fetch('/api/videos/completed');
+                const videos = await response.json();
+
+                const select = document.getElementById('video_select');
+                select.innerHTML = '<option value="">Video seçin...</option>';
+
+                videos.forEach(video => {
+                    const option = document.createElement('option');
+                    option.value = video.id;
+                    option.textContent = `${video.topic} (${video.created_at})`;
+                    select.appendChild(option);
+                });
+
+                // Video seçimi değişikliği olayı
+                select.addEventListener('change', function() {
+                    const aiBtn = document.getElementById('ai-generate-btn');
+                    if (this.value) {
+                        aiBtn.disabled = false;
+                        aiBtn.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+                    } else {
+                        aiBtn.disabled = true;
+                        aiBtn.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
+                        // AI içerik bölümünü gizle
+                        document.getElementById('ai-content-section').classList.add('hidden');
+                    }
+                });
+            } catch (error) {
+                console.error('Videolar yüklenemedi:', error);
+                showToast('Videolar yüklenemedi', 'error');
+            }
+        }
+
+        // Load platform checkboxes
+        function loadPlatformCheckboxes() {
+            const platforms = ['facebook', 'twitter', 'instagram', 'youtube', 'tiktok'];
+            const container = document.getElementById('platform-checkboxes');
+
+            platforms.forEach(platform => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2';
+                div.innerHTML = `
+                    <input type="checkbox" id="platform_${platform}" value="${platform}"
+                           class="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                    <label for="platform_${platform}" class="text-white capitalize cursor-pointer">
+                        ${platform}
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Generate AI title and description
+        async function generateAITitleDescription() {
+            const videoId = document.getElementById('video_select').value;
+            if (!videoId) {
+                showToast('Lütfen önce video seçin!', 'warning');
+                return;
+            }
+
+            const aiBtn = document.getElementById('ai-generate-btn');
+            const originalText = aiBtn.innerHTML;
+            aiBtn.disabled = true;
+            aiBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i>Üretiliyor...';
+
+            try {
+                const response = await fetch('/social/api/generate-content', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({video_id: parseInt(videoId)})
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('video_title').value = result.title;
+                    document.getElementById('video_description').value = result.description;
+                    document.getElementById('ai-content-section').classList.remove('hidden');
+
+                    // Başlığı post_content'e de ekle
+                    const postContent = document.getElementById('post_content');
+                    if (!postContent.value.trim()) {
+                        postContent.value = result.title;
+                    }
+
+                    showToast('AI içerik başarıyla oluşturuldu!', 'success');
+                } else {
+                    showToast('AI içerik oluşturulamadı: ' + (result.error || 'Bilinmeyen hata'), 'error');
+                }
+            } catch (error) {
+                showToast('AI içerik oluşturma hatası: ' + error.message, 'error');
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.innerHTML = originalText;
+                lucide.createIcons();
+            }
+        }
+
+        // Regenerate AI title and description
+        async function regenerateAITitleDescription() {
+            await generateAITitleDescription();
+        }
+
+        // Post video
+        async function postVideo() {
+            const videoId = document.getElementById('video_select').value;
+            const content = document.getElementById('post_content').value;
+
+            const platforms = [];
+            ['facebook', 'twitter', 'instagram', 'youtube', 'tiktok'].forEach(platform => {
+                if (document.getElementById(`platform_${platform}`).checked) {
+                    platforms.push(platform);
+                }
+            });
+
+            if (!videoId) {
+                showToast('Lütfen video seçin!', 'warning');
+                return;
+            }
+
+            if (platforms.length === 0) {
+                showToast('Lütfen en az bir platform seçin!', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/social/api/post', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        video_id: parseInt(videoId),
+                        platforms,
+                        content
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Gönderiler başarıyla oluşturuldu!', 'success');
+                    loadPostHistory();
+                    // Reset form
+                    document.getElementById('post_content').value = '';
+                    platforms.forEach(platform => {
+                        document.getElementById(`platform_${platform}`).checked = false;
+                    });
+                } else {
+                    showToast('Hata: ' + (result.error || 'Bilinmeyen hata'), 'error');
+                }
+            } catch (error) {
+                showToast('Gönderi başarısız: ' + error.message, 'error');
+            }
+        }
+
+        // Load post history
+        async function loadPostHistory() {
+            try {
+                const response = await fetch('/social/api/history');
+                const posts = await response.json();
+
+                const tbody = document.getElementById('posts-history');
+                tbody.innerHTML = '';
+
+                if (posts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Henüz gönderi yok</td></tr>';
+                    return;
+                }
+
+                posts.forEach(post => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-800/50 transition-colors';
+
+                    const platforms = Array.isArray(post.platforms) ? post.platforms.join(', ') : post.platforms;
+
+                    row.innerHTML = `
+                        <td class="py-3 text-gray-300">${new Date(post.created_at).toLocaleDateString('tr-TR')}</td>
+                        <td class="py-3 text-white">${post.topic}</td>
+                        <td class="py-3 text-gray-300">${platforms}</td>
+                        <td class="py-3">
+                            <span class="px-2 py-1 rounded-full text-xs ${
+                                post.status === 'posted' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                            }">
+                                ${post.status === 'posted' ? 'Başarılı' : 'Başarısız'}
+                            </span>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Geçmiş yüklenemedi:', error);
+                showToast('Gönderi geçmişi yüklenemedi', 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+            loadPlatformStatus();
+            loadConfigUI();
+            loadVideos();
+            loadPlatformCheckboxes();
+            loadPostHistory();
+        });
+    </script>
+</body>
+</html>
