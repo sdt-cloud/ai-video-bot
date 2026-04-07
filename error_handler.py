@@ -47,10 +47,14 @@ class VideoProductionLogger:
         
         # Root logger'ı yapılandır
         root_logger = logging.getLogger()
+        if getattr(root_logger, '_video_production_logger_configured', False):
+            self.logger = logging.getLogger('video_production')
+            return
         root_logger.setLevel(logging.INFO)
         root_logger.addHandler(file_handler)
         root_logger.addHandler(error_handler)
         root_logger.addHandler(console_handler)
+        root_logger._video_production_logger_configured = True
         
         # Video production logger
         self.logger = logging.getLogger('video_production')

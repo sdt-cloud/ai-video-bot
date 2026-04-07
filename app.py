@@ -25,8 +25,14 @@ from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
 from performance_optimizer import parallel_process_images, get_optimized_settings
 from error_handler import error_recovery, video_logger
+from social_api import social_router
+from custom_social_api import custom_social_router
 
 app = FastAPI()
+
+# Sosyal medya yönetimi route'larını ekle
+app.include_router(social_router)
+app.include_router(custom_social_router)
 
 class VideoRequest(BaseModel):
     topic: str
@@ -108,22 +114,18 @@ async def process_video(task):
         
         # Paralel görsel üretimi
         image_ai_provider = task.get("image_ai", "Pollinations")
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         image_results = await loop.run_in_executor(
-            None, 
-            parallel_process_images_with_provider,
-            prompts, 
+            None,
+            parallel_process_images,
+            prompts,
             output_paths,
             image_ai_provider
         )
         
         # Başarılı görselleri filtrele
-        image_paths = []
-        for i, success in enumerate(image_results):
-            if success:
-                image_paths.append(output_paths[i])
+        image_paths = [output_paths[i] for i, success in enumerate(image_results) if success]
         
-        # İlerleme güncellemesi
         success_rate = len(image_paths) / len(scenes) * 100 if scenes else 0
         database.update_status(task_id, "media", 50 + int(success_rate * 0.3))
             
@@ -166,27 +168,6 @@ async def process_video(task):
     finally:
         # Temp dosyaları temizle (başarılı olsa da olmasa da)
         cleanup_temp_files(temp_files, task_id)
-
-
-def parallel_process_images_with_provider(prompts: List[str], output_paths: List[str], provider: str):
-    """Belirli provider ile paralel görsel işleme wrapper'ı"""
-    from concurrent.futures import ThreadPoolExecutor
-    
-    def generate_single_image(args):
-        prompt, output_path = args
-        try:
-            return generate_image(prompt, output_path, provider)
-        except Exception as e:
-            print(f"[-] Görsel üretim hatası: {e}")
-            return False
-    
-    tasks = list(zip(prompts, output_paths))
-    max_workers = min(4, len(tasks))
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(executor.map(generate_single_image, tasks))
-        
-    return results
 
 
 def cleanup_temp_files(temp_files: List[str], task_id: int):
@@ -351,6 +332,26 @@ async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_conc
 async def get_stats():
     return database.get_stats()
 
+@app.get("/api/videos/completed")
+async def get_completed_videos():
+    """Get completed videos for social media posting"""
+    return database.get_tasks_by_status("completed")
+
+@app.get("/social")
+async def social_dashboard():
+    """Serve social media dashboard HTML"""
+    return FileResponse("social_dashboard.html")
+
+@app.get("/custom-social")
+async def custom_social_dashboard():
+    """Serve custom social media dashboard HTML"""
+    return FileResponse("custom_social_dashboard.html")
+
+@app.get("/platform_setup_guides.html")
+async def platform_setup_guides():
+    """Serve platform setup guides HTML"""
+    return FileResponse("platform_setup_guides.html")
+
 @app.get("/api/videos")
 async def get_videos():
     return database.get_all_tasks()
@@ -392,6 +393,13 @@ async def startup_event():
 async def get_queue_status_api():
     """Kuyruk durumunu döndürür"""
     return get_queue_status()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Uygulama kapanırken kuyruk yöneticisini durdurur"""
+    from queue_manager import stop_queue_manager
+    stop_queue_manager()
+    print("🛑 Kuyruk yöneticisi durduruldu.")
 
 @app.post("/api/test-voice")
 async def test_voice_api(request):

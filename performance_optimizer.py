@@ -17,20 +17,23 @@ class PerformanceOptimizer:
         self.results = {}
         self.logger = logging.getLogger(__name__)
         
-    def parallel_image_generation(self, prompts: List[str], output_paths: List[str]) -> List[bool]:
+    def parallel_image_generation(self, prompts: List[str], output_paths: List[str], provider: str = "Pollinations") -> List[bool]:
         """Görselleri paralel olarak indirir"""
         from image_generator import generate_image
         
         def generate_single_image(args):
             prompt, output_path = args
             try:
-                return generate_image(prompt, output_path)
+                return generate_image(prompt, output_path, provider)
             except Exception as e:
                 self.logger.error(f"Görsel üretim hatası: {e}")
                 return False
         
         # Paralel işlem için argümanları hazırla
         tasks = list(zip(prompts, output_paths))
+        
+        if not tasks:
+            return []
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(self.max_workers, len(tasks))) as executor:
             results = list(executor.map(generate_single_image, tasks))
@@ -173,6 +176,6 @@ def get_optimized_settings():
     """Optimize edilmiş ayarları döndürür"""
     return optimizer.adaptive_quality_settings()
 
-def parallel_process_images(prompts: List[str], output_paths: List[str]) -> List[bool]:
+def parallel_process_images(prompts: List[str], output_paths: List[str], provider: str = "Pollinations") -> List[bool]:
     """Görselleri paralel işler"""
-    return optimizer.parallel_image_generation(prompts, output_paths)
+    return optimizer.parallel_image_generation(prompts, output_paths, provider)

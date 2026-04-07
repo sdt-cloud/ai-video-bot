@@ -152,66 +152,59 @@ def generate_video_clip_ai(image_path, output_path):
 
 def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None, subtitle_style="tiktok", video_mode="slideshow"):
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}): {output_filename}...")
-    
+    temp_files = []
+    clips = []
+    audio_clip = None
     try:
         # Sesi yükle
         audio_clip = AudioFileClip(audio_path)
         total_duration = audio_clip.duration
         
+        if not image_paths:
+            raise ValueError("image_paths listesi boş olamaz")
+        
         # Her görselin ekranda kalma süresini hesapla
         slide_duration = total_duration / len(image_paths)
         
-        clips = []
         for i, img in enumerate(image_paths):
-            # 1. Altyazı veya Efekt Uygula
             processed_img = img
             if narrations and i < len(narrations) and subtitle_style != "none":
-                # Metni seslendirmeye uygun hale getir
                 enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
-                
                 subtitle_img = f"assets/sub_{os.path.basename(img)}"
                 burn_subtitle_on_image(img, enhanced_narration, subtitle_img, subtitle_style)
                 processed_img = subtitle_img
+                temp_files.append(subtitle_img)
             
-            # 2. Mod Seçimine Göre Klip Oluştur
             if video_mode == "ai_video":
                 video_clip_path = f"assets/clip_{os.path.basename(img)}.mp4"
                 if generate_video_clip_ai(processed_img, video_clip_path):
                     clip = VideoFileClip(video_clip_path)
-                    # Ses süresine uydurmak için klibi loop yap veya hızlandır
                     clip = apply_clip_resize(clip, width=1080, height=1920)
                     clip = apply_clip_duration(clip, slide_duration)
+                    temp_files.append(video_clip_path)
                 else:
-                    # Hata olursa statik görsele dön
                     clip = ImageClip(processed_img, duration=slide_duration)
             else:
-                # Cinematic veya Slideshow
                 clip = ImageClip(processed_img, duration=slide_duration)
                 clip = apply_clip_resize(clip, width=1080, height=1920)
-                
                 if video_mode == "cinematic":
                     clip = video_effects.apply_random_effect(clip)
             
             clips.append(clip)
         
-        # Klipleri birleştir
         final_video = concatenate_videoclips(clips, method="compose")
-        
-        # Sesi videoya ekle
         final_video = apply_clip_audio(final_video, audio_clip)
         
-        # Videoyu MP4 olarak render al - CPU thread'lerini kullan
         print(f"[+] Render işlemi başlıyor...")
         final_video.write_videofile(
             output_filename,
-            fps=24,
+            fps=20,
             codec="libx264",
             audio_codec="aac",
-            preset="ultrafast",  # Zaten en hızlı
-            threads=0,  # Tüm CPU çekirdeklerini kullan (0 = auto)
+            preset="superfast",
+            threads=4,
             ffmpeg_params=[
-                "-tune", "fastdecode",  # Hızlı decode
-                "-movflags", "+faststart",  # Hızlı başlangıç
+                "-movflags", "+faststart",
             ],
             temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
             remove_temp=True,
@@ -220,12 +213,28 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         
         print(f"[+] ŞAHANE! Videonuz hazırlandı: {output_filename}")
         return True
-        
     except Exception as e:
         print(f"[-] Video birleştirilirken hata oluştu: {e}")
         import traceback
         traceback.print_exc()
         return False
+    finally:
+        for clip in clips:
+            try:
+                clip.close()
+            except Exception:
+                pass
+        if audio_clip is not None:
+            try:
+                audio_clip.close()
+            except Exception:
+                pass
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     test_imgs = ["test_image.jpg"]

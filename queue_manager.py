@@ -80,9 +80,8 @@ class QueueManager:
             # Görevi aktif listeden çıkar
             self.current_tasks.discard(task_id)
             
-            # 1 saniye bekle ve yeni görev kontrol et
+            # Yeni görevlerin işlenmesi için kısa bir gecikme bırak
             await asyncio.sleep(1)
-            await self.process_queue()
     
     def stop_queue_processor(self):
         """Kuyruk işlemcisini durdurur"""
