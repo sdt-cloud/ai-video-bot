@@ -11,3 +11,6 @@ google-generativeai
 google-genai
 replicate
 psutil
+supabase
+aiohttp
+websockets

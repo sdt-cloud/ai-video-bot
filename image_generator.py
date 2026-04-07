@@ -142,20 +142,38 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
         return False
 
 def generate_image(prompt, output_filename, ai_provider="Pollinations"):
+    """Cache-enabled görsel üretimi"""
+    from cache_manager import cache_manager
+
+    # Önce cache'i kontrol et
+    cached_path = cache_manager.get_cached_image(prompt, ai_provider)
+    if cached_path:
+        import shutil
+        shutil.copy(cached_path, output_filename)
+        return True
+
+    # Cache miss - yeni görsel üret
     provider_lower = ai_provider.lower()
+    success = False
+
     if "dall-e" in provider_lower or "openai" in provider_lower:
-        return generate_image_openai(prompt, output_filename)
+        success = generate_image_openai(prompt, output_filename)
     elif "flux" in provider_lower:
-        # flux, flux-schnell, flux-pro gibi varyasyonları destekle
         model = "black-forest-labs/flux-schnell"
         if "pro" in provider_lower: model = "black-forest-labs/flux-pro"
-        return generate_image_replicate(prompt, output_filename, model)
+        success = generate_image_replicate(prompt, output_filename, model)
     elif "sdxl" in provider_lower:
-        return generate_image_replicate(prompt, output_filename, "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7f23bb69422f281454559869502b4")
+        success = generate_image_replicate(prompt, output_filename, "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7f23bb69422f281454559869502b4")
     elif "replicate" in provider_lower:
-        return generate_image_replicate(prompt, output_filename)
+        success = generate_image_replicate(prompt, output_filename)
     else:
-        return generate_image_pollinations(prompt, output_filename)
+        success = generate_image_pollinations(prompt, output_filename)
+
+    # Başarılıysa cache'e ekle
+    if success and os.path.exists(output_filename):
+        cache_manager.cache_image(prompt, ai_provider, output_filename)
+
+    return success
 
 if __name__ == "__main__":
     # Test

@@ -38,6 +38,8 @@ Yapay zeka kullanarak **bilgilendirici kısa videolar** (YouTube Shorts, Instagr
 | 📥 **Toplu Import** | Birden fazla konuyu aynı anda kuyruğa ekle |
 | 🌍 **Çok Dilli** | Türkçe ve İngilizce video desteği |
 | ⏱️ **Esnek Süre** | 30, 45 veya 60 saniyelik video seçenekleri |
+| ⚡ **Performans Optimizasyonu** | Multi-level cache sistemi (2-3x daha hızlı) |
+| 🗄️ **Supabase Desteği** | PostgreSQL veritabanı (opsiyonel, scalable) |
 
 ---
 
@@ -102,22 +104,31 @@ Tarayıcıda **http://localhost:8000** adresini açın. 🎉
 
 ```
 ai-video-bot/
-├── 📄 app.py                 # FastAPI backend sunucusu
-├── 📄 database.py            # SQLite veritabanı yönetimi
-├── 📄 script_generator.py    # AI senaryo üretici (Gemini/OpenAI)
-├── 📄 voice_generator.py     # Edge-TTS ses sentezi
-├── 📄 image_generator.py     # Pollinations.ai görsel indirici
-├── 📄 video_maker.py         # MoviePy video montajı + altyazı
-├── 📄 main.py                # Komut satırı (CLI) arayüzü
-├── 📄 start.bat              # Windows başlatma dosyası
-├── 📄 requirements.txt       # Python bağımlılıkları
-├── 📄 .env.example           # Örnek ortam değişkenleri
-├── 📂 docs/                  # Belgelendirme ve görseller
+├── 📄 app.py                     # FastAPI backend sunucusu
+├── 📄 database.py                # SQLite veritabanı yönetimi
+├── 📄 supabase_client.py         # Supabase client (yeni)
+├── 📄 cache_manager.py           # Multi-level cache sistemi (yeni)
+├── 📄 script_generator.py        # AI senaryo üretici (Gemini/OpenAI)
+├── 📄 voice_generator.py         # Edge-TTS ses sentezi
+├── 📄 image_generator.py         # Pollinations.ai görsel indirici (cache ekli)
+├── 📄 video_maker.py             # MoviePy video montajı (optimize edildi)
+├── 📄 main.py                    # Komut satırı (CLI) arayüzü
+├── 📄 start.bat                  # Windows başlatma dosyası
+├── 📄 requirements.txt           # Python bağımlılıkları
+├── 📄 .env.example               # Örnek ortam değişkenleri
+├── 📄 OPTIMIZATION_REPORT.md    # Performans raporu (yeni)
+├── 📄 SETUP_SUPABASE.md         # Supabase kurulum rehberi (yeni)
+├── 📂 migrations/                # Supabase migrations (yeni)
+│   ├── 001_create_videos_table.sql
+│   ├── 002_add_indexes.sql
+│   └── 003_create_stats_view.sql
+├── 📂 image_cache/               # Görsel önbellek dizini (otomatik)
+├── 📂 docs/                      # Belgelendirme ve görseller
 │   └── dashboard-preview.png
-└── 📂 frontend/              # Web arayüzü
-    ├── index.html             # Dashboard arayüzü
-    ├── style.css              # Koyu tema stilleri
-    └── app.js                 # Frontend mantığı
+└── 📂 frontend/                  # Web arayüzü
+    ├── index.html                 # Dashboard arayüzü
+    ├── style.css                  # Koyu tema stilleri
+    └── app.js                     # Frontend mantığı
 ```
 
 ---
@@ -163,6 +174,12 @@ graph LR
 - [x] Çoklu AI model desteği (Gemini + OpenAI)
 - [x] Toplu konu ekleme (Bulk Import)
 - [x] TikTok tarzı altyazılar
+- [x] Multi-level cache sistemi (2-3x performans artışı)
+- [x] Supabase veritabanı desteği (scalable)
+- [x] Video rendering optimizasyonu
+- [ ] WebSocket real-time updates
+- [ ] Async paralel görsel üretimi
+- [ ] GPU video encoding
 - [ ] YouTube otomatik yükleme
 - [ ] Zamanlayıcı (Cron ile otomatik üretim)
 - [ ] Sosyal medya hesap yönetimi

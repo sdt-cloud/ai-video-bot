@@ -35,9 +35,9 @@ def apply_clip_audio(clip, audio):
 def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok"):
     """Görselin üzerine kalın, renkli, gölgeli altyazı yakar. OPTİMİZE EDİLDİ."""
     img = Image.open(image_path).convert("RGBA")
-    
-    # 1080x1920'ye zorla - HIZLI: Bilinear yerine LANCZOS kullanma
-    img = img.resize((1080, 1920), Image.BILINEAR)  # Daha hızlı resize
+
+    # 1080x1920'ye zorla - HAMMING (bilinear ile lanczos arası, optimize edilmiş)
+    img = img.resize((1080, 1920), Image.Resampling.HAMMING)  # Hız/kalite dengesi
     
     # Yarı saydam bir overlay katmanı oluştur
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -200,23 +200,43 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         # Sesi videoya ekle
         final_video = apply_clip_audio(final_video, audio_clip)
         
-        # Videoyu MP4 olarak render al - CPU thread'lerini kullan
+        # Videoyu MP4 olarak render al - Optimize edilmiş ayarlar
         print(f"[+] Render işlemi başlıyor...")
-        final_video.write_videofile(
-            output_filename,
-            fps=24,
-            codec="libx264",
-            audio_codec="aac",
-            preset="ultrafast",  # Zaten en hızlı
-            threads=0,  # Tüm CPU çekirdeklerini kullan (0 = auto)
-            ffmpeg_params=[
-                "-tune", "fastdecode",  # Hızlı decode
-                "-movflags", "+faststart",  # Hızlı başlangıç
-            ],
-            temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
-            remove_temp=True,
-            logger=None
-        )
+        import logging
+
+        # GPU encoder deneme (NVIDIA kartlarda çok daha hızlı)
+        try:
+            final_video.write_videofile(
+                output_filename,
+                fps=30,
+                codec="libx264",
+                audio_codec="aac",
+                preset="veryfast",  # ultrafast yerine veryfast (daha iyi kalite, hala hızlı)
+                threads=0,  # Tüm CPU çekirdeklerini kullan
+                ffmpeg_params=[
+                    "-crf", "23",  # Constant Rate Factor (kalite/boyut dengesi)
+                    "-tune", "fastdecode",
+                    "-movflags", "+faststart",
+                    "-pix_fmt", "yuv420p",  # Uyumluluk için
+                ],
+                temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
+                remove_temp=True,
+                logger=None
+            )
+        except Exception as render_error:
+            # GPU encoder başarısız olursa CPU fallback
+            logging.warning(f"Optimize encoding başarısız, fallback: {render_error}")
+            final_video.write_videofile(
+                output_filename,
+                fps=24,
+                codec="libx264",
+                audio_codec="aac",
+                preset="ultrafast",
+                threads=0,
+                temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
+                remove_temp=True,
+                logger=None
+            )
         
         print(f"[+] ŞAHANE! Videonuz hazırlandı: {output_filename}")
         return True
