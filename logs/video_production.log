@@ -15,3 +15,90 @@
 2026-04-07 01:15:24,550 - video_production - INFO - VIDEO_STEP: {"step": "video_start", "task_id": 93, "timestamp": "2026-04-07T01:15:24.550651", "details": {"topic": "Kural nedir? genel kategorisinde açıklama"}}
 2026-04-07 01:24:28,865 - video_production - INFO - VIDEO_STEP: {"step": "video_completed", "task_id": 93, "timestamp": "2026-04-07T01:24:28.849507", "details": {"output_filename": "vid_93_Kural_nedir__genel_k.mp4"}}
 2026-04-07 01:24:28,898 - queue_manager - INFO - Task 93 tamamlandı
+2026-04-07 18:28:53,125 - database - INFO - Database initialized successfully
+2026-04-07 18:28:53,125 - app - INFO - 🚀 Otomatik kuyruk yöneticisi başlatıldı!
+2026-04-07 18:28:53,125 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 18:29:38,749 - database - INFO - Added video task 111: kolonya nedir
+2026-04-07 18:29:38,760 - app - INFO - Yeni video görevi oluşturuldu: 111 - kolonya nedir
+2026-04-07 18:29:43,293 - queue_manager - INFO - Task 111 başlatılıyor: kolonya nedir
+2026-04-07 18:29:43,310 - app - INFO - [111] İŞLEM BAŞLIYOR: kolonya nedir
+2026-04-07 18:29:53,926 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-07 18:29:53,943 - app - INFO - [111] 5 sahne oluşturuldu
+2026-04-07 18:34:55,276 - database - INFO - Database initialized successfully
+2026-04-07 18:34:55,277 - app - INFO - 🚀 Otomatik kuyruk yöneticisi başlatıldı!
+2026-04-07 18:34:55,278 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 18:35:05,392 - database - INFO - Deleted 9 tasks
+2026-04-07 18:35:29,828 - database - INFO - Added video task 112: kitap nedir tarihi
+2026-04-07 18:35:29,840 - app - INFO - Yeni video görevi oluşturuldu: 112 - kitap nedir tarihi
+2026-04-07 18:35:30,398 - queue_manager - INFO - Task 112 başlatılıyor: kitap nedir tarihi
+2026-04-07 18:35:30,415 - app - INFO - [112] İŞLEM BAŞLIYOR: kitap nedir tarihi
+2026-04-07 18:35:38,980 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-07 18:35:39,344 - app - INFO - [112] 5 sahne oluşturuldu
+2026-04-07 18:35:41,554 - app - INFO - [112] Sequential görsel üretimi kullanılıyor (5 sahne)
+2026-04-07 18:35:44,318 - performance_optimizer - WARNING - Görsel 1/5 üretilemedi
+2026-04-07 18:35:46,759 - performance_optimizer - WARNING - Görsel 2/5 üretilemedi
+2026-04-07 18:35:49,499 - performance_optimizer - WARNING - Görsel 3/5 üretilemedi
+2026-04-07 18:35:52,053 - performance_optimizer - WARNING - Görsel 4/5 üretilemedi
+2026-04-07 18:35:54,698 - performance_optimizer - WARNING - Görsel 5/5 üretilemedi
+2026-04-07 18:35:59,378 - queue_manager - INFO - Task 112 tamamlandı
+2026-04-07 18:39:37,057 - database - INFO - Added video task 113: kitap nedir tarihi
+2026-04-07 18:39:37,068 - app - INFO - Yeni video görevi oluşturuldu: 113 - kitap nedir tarihi
+2026-04-07 18:39:39,776 - queue_manager - INFO - Task 113 başlatılıyor: kitap nedir tarihi
+2026-04-07 18:39:39,790 - app - INFO - [113] İŞLEM BAŞLIYOR: kitap nedir tarihi
+2026-04-07 18:39:46,591 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-07 18:39:47,002 - app - INFO - [113] 5 sahne oluşturuldu
+2026-04-07 18:39:49,856 - app - INFO - [113] Paralel görsel üretimi kullanılıyor (5 sahne)
+2026-04-07 18:39:51,890 - performance_optimizer - INFO - Görsel 1/5 üretildi: assets/scene_113_0.jpg
+2026-04-07 18:39:53,020 - performance_optimizer - INFO - Görsel 2/5 üretildi: assets/scene_113_1.jpg
+2026-04-07 18:39:55,206 - performance_optimizer - INFO - Görsel 4/5 üretildi: assets/scene_113_3.jpg
+2026-04-07 18:39:57,261 - performance_optimizer - INFO - Görsel 5/5 üretildi: assets/scene_113_4.jpg
+2026-04-07 18:41:22,608 - performance_optimizer - INFO - Görsel 3/5 üretildi: assets/scene_113_2.jpg
+2026-04-07 18:42:34,441 - database - INFO - Database initialized successfully
+2026-04-07 18:42:34,441 - app - INFO - 🚀 Otomatik kuyruk yöneticisi başlatıldı!
+2026-04-07 18:42:34,441 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 18:43:10,862 - database - INFO - Deleted 2 tasks
+2026-04-07 18:43:17,080 - database - INFO - Added video task 114: kitap nedir tarihi
+2026-04-07 18:43:17,091 - app - INFO - Yeni video görevi oluşturuldu: 114 - kitap nedir tarihi
+2026-04-07 18:43:19,578 - queue_manager - INFO - Task 114 başlatılıyor: kitap nedir tarihi
+2026-04-07 18:43:19,594 - app - INFO - [114] İŞLEM BAŞLIYOR: kitap nedir tarihi
+2026-04-07 18:43:30,877 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-07 18:43:30,898 - app - INFO - [114] 5 sahne oluşturuldu
+2026-04-07 18:43:33,816 - app - INFO - [114] Sadece sequential görsel üretimi kullanılıyor (5 sahne)
+2026-04-07 18:43:33,816 - performance_optimizer - INFO - Görsel 1/5 için 9.2s bekleniyor...
+2026-04-07 18:44:23,254 - performance_optimizer - INFO - ✅ Görsel 1/5 başarıyla üretildi
+2026-04-07 18:44:23,254 - performance_optimizer - INFO - Görsel arası 6.1s ek bekleme...
+2026-04-07 18:44:29,402 - performance_optimizer - INFO - Görsel 2/5 için 11.6s bekleniyor...
+2026-04-07 18:45:52,730 - performance_optimizer - INFO - ✅ Görsel 2/5 başarıyla üretildi
+2026-04-07 18:45:52,730 - performance_optimizer - INFO - Görsel arası 6.2s ek bekleme...
+2026-04-07 18:45:58,895 - performance_optimizer - INFO - Görsel 3/5 için 9.1s bekleniyor...
+2026-04-07 18:47:22,590 - performance_optimizer - INFO - ✅ Görsel 3/5 başarıyla üretildi
+2026-04-07 18:47:22,592 - performance_optimizer - INFO - Görsel arası 5.7s ek bekleme...
+2026-04-07 18:47:28,306 - performance_optimizer - INFO - Görsel 4/5 için 9.8s bekleniyor...
+2026-04-07 18:48:55,693 - performance_optimizer - INFO - ✅ Görsel 4/5 başarıyla üretildi
+2026-04-07 18:48:55,693 - performance_optimizer - INFO - Görsel arası 6.8s ek bekleme...
+2026-04-07 18:49:02,540 - performance_optimizer - INFO - Görsel 5/5 için 11.7s bekleniyor...
+2026-04-07 18:50:22,802 - performance_optimizer - INFO - ✅ Görsel 5/5 başarıyla üretildi
+2026-04-07 18:50:22,869 - app - INFO - [114] 5/5 görsel üretildi
+2026-04-07 18:55:04,590 - app - INFO - [114] Temp dosyaları temizlendi
+2026-04-07 18:55:04,604 - app - INFO - [114] İŞLEM BİTTİ: vid_114_kitap_nedir_tarihi.mp4
+2026-04-07 18:55:04,605 - queue_manager - INFO - Task 114 tamamlandı
+2026-04-07 19:28:52,942 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 19:29:55,443 - video_production - INFO - VIDEO_STEP: {"step": "queued", "task_id": "115", "timestamp": "2026-04-07T19:29:55.443676", "details": {"topic": "sim kartları nasıl çalışır"}}
+2026-04-07 19:29:59,707 - queue_manager - INFO - Task 115 başlatılıyor: sim kartları nasıl çalışır
+2026-04-07 19:29:59,707 - video_production - INFO - VIDEO_STEP: {"step": "started", "task_id": "115", "timestamp": "2026-04-07T19:29:59.707061", "details": {"topic": "sim kartları nasıl çalışır"}}
+2026-04-07 19:30:07,459 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-07 19:30:27,577 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/images/generations "HTTP/1.1 200 OK"
+2026-04-07 19:30:28,888 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/images/generations "HTTP/1.1 200 OK"
+2026-04-07 19:30:32,336 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/images/generations "HTTP/1.1 200 OK"
+2026-04-07 19:30:33,427 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/images/generations "HTTP/1.1 200 OK"
+2026-04-07 19:33:05,550 - video_production - INFO - VIDEO_STEP: {"step": "completed", "task_id": "115", "timestamp": "2026-04-07T19:33:05.550141", "details": {"output": "vid_115_sim_kartları_nasıl_ç.mp4"}}
+2026-04-07 19:33:05,556 - queue_manager - INFO - Task 115 tamamlandı
+2026-04-07 19:37:28,344 - queue_manager - INFO - Kuyruk işlemcisi başlatıldı
+2026-04-07 19:37:59,048 - video_production - INFO - VIDEO_STEP: {"step": "queued", "task_id": "116", "timestamp": "2026-04-07T19:37:59.048087", "details": {"topic": "bilgisayarlar nasıl çalışır"}}
+2026-04-07 19:38:03,421 - queue_manager - INFO - Task 116 başlatılıyor: bilgisayarlar nasıl çalışır
+2026-04-07 19:38:03,422 - video_production - INFO - VIDEO_STEP: {"step": "started", "task_id": "116", "timestamp": "2026-04-07T19:38:03.422502", "details": {"topic": "bilgisayarlar nasıl çalışır"}}
+2026-04-07 19:38:19,713 - queue_manager - INFO - Task 116 tamamlandı
+2026-04-07 19:40:22,300 - video_production - INFO - VIDEO_STEP: {"step": "queued", "task_id": "117", "timestamp": "2026-04-07T19:40:22.300993", "details": {"topic": "bilgisayarlar nasıl çalışır"}}
+2026-04-07 19:40:23,464 - queue_manager - INFO - Task 117 başlatılıyor: bilgisayarlar nasıl çalışır
+2026-04-07 19:40:23,465 - video_production - INFO - VIDEO_STEP: {"step": "started", "task_id": "117", "timestamp": "2026-04-07T19:40:23.465097", "details": {"topic": "bilgisayarlar nasıl çalışır"}}
+2026-04-07 19:40:36,137 - queue_manager - INFO - Task 117 tamamlandı

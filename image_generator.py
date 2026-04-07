@@ -2,8 +2,37 @@ import requests
 import urllib.parse
 import os
 from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 load_dotenv()
+
+# Global session with connection pooling and retry strategy
+_session = None
+
+def get_session():
+    """Connection pooling ile requests session oluştur"""
+    global _session
+    if _session is None:
+        _session = requests.Session()
+        
+        # Retry stratejisi
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=10,
+            pool_maxsize=20
+        )
+        
+        _session.mount("http://", adapter)
+        _session.mount("https://", adapter)
+    
+    return _session
 
 def generate_image_openai(prompt, output_filename):
     from openai import OpenAI
@@ -20,8 +49,9 @@ def generate_image_openai(prompt, output_filename):
         )
         image_url = response.data[0].url
         
-        # Resmi URL'den indirip kaydetme
-        img_response = requests.get(image_url, stream=True, timeout=30)
+        # Resmi URL'den indirip kaydetme - session kullan
+        session = get_session()
+        img_response = session.get(image_url, stream=True, timeout=30)
         if img_response.status_code == 200:
             with open(output_filename, 'wb') as f:
                 for chunk in img_response.iter_content(1024):
@@ -48,7 +78,8 @@ def generate_image_pollinations(prompt, output_filename):
     url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"
     
     try:
-        response = requests.get(url, stream=True)
+        session = get_session()
+        response = session.get(url, stream=True, timeout=60)
         if response.status_code == 200:
             with open(output_filename, 'wb') as f:
                 for chunk in response.iter_content(1024):
@@ -93,8 +124,9 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
         # Çıktı genelde bir liste olur (URL'ler)
         image_url = output[0] if isinstance(output, list) else output
         
-        # Resmi indir
-        img_response = requests.get(image_url, stream=True)
+        # Resmi indir - session kullan
+        session = get_session()
+        img_response = session.get(image_url, stream=True, timeout=30)
         if img_response.status_code == 200:
             with open(output_filename, 'wb') as f:
                 for chunk in img_response.iter_content(1024):

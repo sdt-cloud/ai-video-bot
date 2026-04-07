@@ -9,8 +9,36 @@ import time
 from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 load_dotenv()
+
+# Global session with connection pooling
+_wp_session = None
+
+def get_wp_session():
+    """WordPress API için connection pooling session"""
+    global _wp_session
+    if _wp_session is None:
+        _wp_session = requests.Session()
+        
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=5,
+            pool_maxsize=10
+        )
+        
+        _wp_session.mount("http://", adapter)
+        _wp_session.mount("https://", adapter)
+    
+    return _wp_session
 
 class NedirIntegration:
     def __init__(self):
@@ -32,8 +60,10 @@ class NedirIntegration:
             
             if category:
                 params['ana-kategori'] = category
-                
-            response = requests.get(url, params=params, timeout=30)
+            
+            # Session kullan
+            session = get_wp_session()
+            response = session.get(url, params=params, timeout=30)
             
             if response.status_code == 200:
                 concepts = response.json()
@@ -69,7 +99,8 @@ class NedirIntegration:
         """Tek bir kavramın detaylarını çeker"""
         try:
             url = f"{self.wp_base_url}/wp-json/wp/v2/kavram/{concept_id}"
-            response = requests.get(url, timeout=30)
+            session = get_wp_session()
+            response = session.get(url, timeout=30)
             
             if response.status_code == 200:
                 return response.json()
@@ -128,6 +159,9 @@ class NedirIntegration:
             url = f"{self.wp_base_url}/wp-json/wp/v2/kavram/{concept_id}"
             headers = {'Content-Type': 'application/json'}
             
+            # Session al
+            session = get_wp_session()
+            
             # Video meta bilgisini güncelle
             meta_data = {
                 'video_url': video_path,
@@ -139,7 +173,7 @@ class NedirIntegration:
                 'meta': meta_data
             }
             
-            response = requests.post(url, json=data, headers=headers, 
+            response = session.post(url, json=data, headers=headers, 
                                   auth=(self.wp_username, self.wp_password), timeout=30)
             
             if response.status_code == 200:

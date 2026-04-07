@@ -1,5 +1,6 @@
 import asyncio
 import os
+import tempfile
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -22,6 +23,8 @@ from image_generator import generate_image
 from video_maker import create_video
 from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
+from performance_optimizer import parallel_process_images, get_optimized_settings
+from error_handler import error_recovery, video_logger
 
 app = FastAPI()
 
@@ -51,92 +54,175 @@ class BulkVideoRequest(BaseModel):
 async def process_video(task):
     task_id = task["id"]
     topic = task["topic"]
+    temp_files = []  # Temizlik için temp dosyaları takip et
+    
     print(f"[{task_id}] İŞLEM BAŞLIYOR: {topic}")
+    video_logger.log_video_production_step("started", str(task_id), {"topic": topic})
     
-    # 1. Senaryo Aşaması
-    database.update_status(task_id, "scripting", 10)
-    script_data = generate_script(topic, task.get("script_ai", "Gemini"), task.get("duration", 30))
-    
-    if not script_data or "scenes" not in script_data:
-        database.update_status(task_id, "failed", 10, "Senaryo üretilemedi API hatası.")
-        return
+    try:
+        # 1. Senaryo Aşaması
+        database.update_status(task_id, "scripting", 10)
+        script_data = await error_recovery.retry_with_backoff(
+            generate_script,
+            topic, 
+            task.get("script_ai", "Gemini"), 
+            task.get("duration", 30)
+        )
         
-    scenes = script_data.get("scenes", [])
-    
-    # 2. Medya Aşaması (Ses)
-    database.update_status(task_id, "media", 30)
-    full_narration = " ".join([scene.get("narration", "") for scene in scenes])
-    
-    os.makedirs("frontend/videos", exist_ok=True)
-    os.makedirs("assets", exist_ok=True)
-    
-    voice_file = f"assets/narration_{task_id}.mp3"
-    voice_ai_provider = task.get("voice_ai", "Edge-TTS")
-    voice_type = task.get("voice_type", "erkek")
-    voice_success = await generate_voice_async(full_narration, voice_file, voice_ai_provider, voice_type)
-    
-    if not voice_success:
-        database.update_status(task_id, "failed", 30, "Ses sentezlenemedi.")
-        return
-        
-    # 3. Medya Aşaması (Görseller)
-    database.update_status(task_id, "media", 50)
-    image_paths = []
-    total_imgs = len(scenes)
-    for i, scene in enumerate(scenes):
-        prompt = scene.get("image_prompt", "")
-        img_name = f"assets/scene_{task_id}_{i}.jpg"
-        image_ai_provider = task.get("image_ai", "Pollinations")
-        img_success = generate_image(prompt, img_name, image_ai_provider)
-        if img_success:
-            image_paths.append(img_name)
-        
-        # Sadece ilerleme barı için % hesapla (50 ile 80 arası resimlere gitsin)
-        current_progress = 50 + int((i / total_imgs) * 30)
-        database.update_status(task_id, "media", current_progress)
+        if not script_data or "scenes" not in script_data:
+            database.update_status(task_id, "failed", 10, "Senaryo üretilemedi API hatası.")
+            return
             
-    if not image_paths:
-        database.update_status(task_id, "failed", 80, "Hiç görsel indirilemedi.")
-        return
+        scenes = script_data.get("scenes", [])
         
-    # 4. Video Kurgu (Render)
-    database.update_status(task_id, "rendering", 85)
-    safe_topic = "".join([c if c.isalnum() else "_" for c in topic])[:20]
-    output_filename = f"vid_{task_id}_{safe_topic}.mp4"
-    output_video_path = f"frontend/videos/{output_filename}"
+        # 2. Medya Aşaması (Ses)
+        database.update_status(task_id, "media", 30)
+        full_narration = " ".join([scene.get("narration", "") for scene in scenes])
+        
+        os.makedirs("frontend/videos", exist_ok=True)
+        os.makedirs("assets", exist_ok=True)
+        
+        voice_file = f"assets/narration_{task_id}.mp3"
+        temp_files.append(voice_file)
+        
+        voice_ai_provider = task.get("voice_ai", "Edge-TTS")
+        voice_type = task.get("voice_type", "erkek")
+        voice_success = await generate_voice_async(full_narration, voice_file, voice_ai_provider, voice_type)
+        
+        if not voice_success:
+            database.update_status(task_id, "failed", 30, "Ses sentezlenemedi.")
+            return
+            
+        # 3. Medya Aşaması (Görseller) - PARALEL İŞLEME
+        database.update_status(task_id, "media", 50)
+        
+        # Paralel görsel üretimi için hazırlık
+        prompts = []
+        output_paths = []
+        for i, scene in enumerate(scenes):
+            prompt = scene.get("image_prompt", "")
+            img_name = f"assets/scene_{task_id}_{i}.jpg"
+            prompts.append(prompt)
+            output_paths.append(img_name)
+            temp_files.append(img_name)
+        
+        # Paralel görsel üretimi
+        image_ai_provider = task.get("image_ai", "Pollinations")
+        loop = asyncio.get_event_loop()
+        image_results = await loop.run_in_executor(
+            None, 
+            parallel_process_images_with_provider,
+            prompts, 
+            output_paths,
+            image_ai_provider
+        )
+        
+        # Başarılı görselleri filtrele
+        image_paths = []
+        for i, success in enumerate(image_results):
+            if success:
+                image_paths.append(output_paths[i])
+        
+        # İlerleme güncellemesi
+        success_rate = len(image_paths) / len(scenes) * 100 if scenes else 0
+        database.update_status(task_id, "media", 50 + int(success_rate * 0.3))
+            
+        if not image_paths:
+            database.update_status(task_id, "failed", 80, "Hiç görsel indirilemedi.")
+            return
+            
+        # 4. Video Kurgu (Render)
+        database.update_status(task_id, "rendering", 85)
+        safe_topic = "".join([c if c.isalnum() else "_" for c in topic])[:20]
+        output_filename = f"vid_{task_id}_{safe_topic}.mp4"
+        output_video_path = f"frontend/videos/{output_filename}"
+        
+        # Sahne metinlerini topla (altyazı için)
+        narrations = [scene.get("narration", "") for scene in scenes]
+        subtitle_style = task.get("subtitle_style", "tiktok")
+        video_mode = task.get("video_mode", "slideshow")
+        
+        video_success = await error_recovery.retry_with_backoff(
+            create_video,
+            image_paths, 
+            voice_file, 
+            output_video_path, 
+            narrations=narrations, 
+            subtitle_style=subtitle_style, 
+            video_mode=video_mode
+        )
+        
+        if video_success:
+            database.update_status(task_id, "completed", 100, None, output_filename)
+            video_logger.log_video_production_step("completed", str(task_id), {"output": output_filename})
+            print(f"[{task_id}] İŞLEM BİTTİ: {output_filename}")
+        else:
+            database.update_status(task_id, "failed", 85, "Video birleştirilemedi.")
+            
+    except Exception as e:
+        video_logger.log_error(e, {"task_id": task_id, "topic": topic})
+        database.update_status(task_id, "failed", 0, f"İşlem hatası: {str(e)}")
+        
+    finally:
+        # Temp dosyaları temizle (başarılı olsa da olmasa da)
+        cleanup_temp_files(temp_files, task_id)
+
+
+def parallel_process_images_with_provider(prompts: List[str], output_paths: List[str], provider: str):
+    """Belirli provider ile paralel görsel işleme wrapper'ı"""
+    from concurrent.futures import ThreadPoolExecutor
     
-    # Sahne metinlerini topla (altyazı için)
-    narrations = [scene.get("narration", "") for scene in scenes]
-    subtitle_style = task.get("subtitle_style", "tiktok")
-    video_mode = task.get("video_mode", "slideshow")
+    def generate_single_image(args):
+        prompt, output_path = args
+        try:
+            return generate_image(prompt, output_path, provider)
+        except Exception as e:
+            print(f"[-] Görsel üretim hatası: {e}")
+            return False
     
-    video_success = create_video(image_paths, voice_file, output_video_path, narrations=narrations, subtitle_style=subtitle_style, video_mode=video_mode)
+    tasks = list(zip(prompts, output_paths))
+    max_workers = min(4, len(tasks))
     
-    if video_success:
-        database.update_status(task_id, "completed", 100, None, output_filename)
-        print(f"[{task_id}] İŞLEM BİTTİ: {output_filename}")
-    else:
-        database.update_status(task_id, "failed", 85, "Video birleştirilemedi.")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(generate_single_image, tasks))
+        
+    return results
+
+
+def cleanup_temp_files(temp_files: List[str], task_id: int):
+    """Temp dosyaları temizler, video dosyalarını korur"""
+    for file_path in temp_files:
+        try:
+            if os.path.exists(file_path) and not file_path.startswith("frontend/videos/"):
+                os.remove(file_path)
+                print(f"[{task_id}] Temizlendi: {file_path}")
+        except Exception as e:
+            print(f"[{task_id}] Temizlik hatası: {file_path} - {e}")
 
 
 @app.post("/api/videos/single")
 async def add_single_video(req: VideoRequest):
     task_id = database.add_video_task(
         req.topic, req.category, req.tone, req.duration, req.language,
-        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode
+        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type
     )
+    video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
 
 @app.post("/api/videos/bulk")
 async def add_bulk_videos(req: BulkVideoRequest):
+    task_ids = []
     for topic in req.topics:
         topic = topic.strip()
         if topic:
-            database.add_video_task(
+            task_id = database.add_video_task(
                 topic, "Genel", "Enerjik", req.duration, req.language,
                 req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode
             )
-    return {"status": "success", "count": len(req.topics)}
+            task_ids.append(task_id)
+    
+    video_logger.log_video_production_step("bulk_queued", "bulk", {"count": len(task_ids)})
+    return {"status": "success", "count": len(req.topics), "task_ids": task_ids}
 
 @app.get("/api/nedir/fetch")
 async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):
@@ -247,7 +333,7 @@ async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_conc
         # Veritabanına ekle
         task_ids = []
         for topic in video_topics:
-            task_id = database.add_task(topic, category, "Otomatik", 60, "Türkçe", "T5", "Edge-TTS", "Pollinations", "tiktok", "slideshow")
+            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek")
             task_ids.append(task_id)
         
         # NOT: Artık kuyruk yöneticisi otomatik işleyecek
