@@ -37,7 +37,7 @@ Yapay zeka kullanarak **bilgilendirici kısa videolar** (YouTube Shorts, Instagr
 | 📊 **Web Dashboard** | Konu ekle, ilerlemeyi takip et, videoları izle ve indir |
 | 📥 **Toplu Import** | Birden fazla konuyu aynı anda kuyruğa ekle |
 | 🌍 **Çok Dilli** | Türkçe ve İngilizce video desteği |
-| ⏱️ **Esnek Süre** | 30, 45 veya 60 saniyelik video seçenekleri |
+| ⏱️ **Esnek Süre** | 15 sn'den 5 dakikaya kadar (3 ve 5 dakika dahil) video seçenekleri |
 
 ---
 

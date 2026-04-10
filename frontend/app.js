@@ -360,6 +360,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Videos Fetch
     function fetchVideos() {
+        const formatDuration = (seconds) => {
+            const totalSeconds = Number(seconds) || 0;
+            const minutes = Math.floor(totalSeconds / 60);
+            const remaining = totalSeconds % 60;
+
+            if (minutes === 0) {
+                return `${totalSeconds}s`;
+            }
+            if (remaining === 0) {
+                return `${minutes}m`;
+            }
+            return `${minutes}m ${remaining}s`;
+        };
+
+        const fallbackInfo = (task) => {
+            const msg = (task.error_message || "").trim();
+            return msg.startsWith("Bilgi:") ? msg : "";
+        };
+
         const langData = translations[currentLang];
         fetch('/api/videos').then(res => res.json()).then(data => {
             // Queue Grid
@@ -380,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     activeTasks.forEach(task => {
                         let statusText = langData.status_pending;
                         let isProcessing = false;
+                        const infoMessage = fallbackInfo(task);
                         
                         if (task.status === "scripting") { statusText = langData.status_scripting; isProcessing = true; }
                         else if (task.status === "media") { statusText = langData.status_media; isProcessing = true; }
@@ -398,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span>${statusText}</span>
                                     <span>${task.progress || 0}%</span>
                                 </div>
+                                ${infoMessage ? `<div style="margin-top:8px;padding:6px 8px;border-radius:8px;background:rgba(99,102,241,0.15);color:#c7d2fe;font-size:12px;line-height:1.35;">${infoMessage}</div>` : ''}
                             </div>
                         `;
                     });
@@ -412,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.forEach((task, index) => {
                     let badgeClass = "warning";
                     let statusLabel = langData.status_pending;
+                    const infoMessage = fallbackInfo(task);
 
                     if(task.status === "completed") { badgeClass = "completed"; statusLabel = langData.status_completed; }
                     else if(task.status === "failed") { badgeClass = "failed"; statusLabel = langData.status_failed; }
@@ -426,7 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td style="text-align:center;"><input type="checkbox" class="project-cb" value="${task.id}" ${isChecked} style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color);"></td>
                             <td>${index + 1}</td>
-                            <td>${task.topic}</td>
+                            <td>
+                                <div>${task.topic}</div>
+                                ${infoMessage ? `<div style="margin-top:6px;color:#c7d2fe;font-size:12px;line-height:1.3;">${infoMessage}</div>` : ''}
+                            </td>
                             <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
                             <td>${task.progress || 0}%</td>
                             <td>${(task.language || 'TR').toUpperCase()}</td>
@@ -461,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="video-details">
                                 <h4 class="video-title" title="${task.topic}">${task.topic}</h4>
                                 <div class="video-meta">
-                                    <span>${task.duration}s</span>
+                                    <span>${formatDuration(task.duration)}</span>
                                     <span>${(task.language || 'TR').toUpperCase()}</span>
                                 </div>
                                 <div class="video-actions">

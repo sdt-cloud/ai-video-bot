@@ -72,7 +72,7 @@ class QueueManager:
         try:
             process_video = get_process_video_function()
             await process_video(task)
-            self.logger.info(f"Task {task_id} tamamlandı")
+            self.logger.info(f"Task {task_id} işlendi (nihai durum veritabanında güncellendi)")
         except Exception as e:
             self.logger.error(f"Task {task_id} başarısız: {e}")
             database.update_status(task_id, "failed", 0, str(e))

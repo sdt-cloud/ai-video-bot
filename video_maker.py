@@ -7,6 +7,46 @@ import numpy as np
 import video_effects
 from subtitle_enhancer import subtitle_enhancer
 
+
+def is_target_resolution_image(image_path, target_size=(1080, 1920)):
+    """Gorsel zaten hedef cozumlukteyse ekstra resize maliyetinden kacin."""
+    try:
+        with Image.open(image_path) as img:
+            return img.size == target_size
+    except Exception:
+        return False
+
+
+def get_render_settings(video_mode, total_duration):
+    """Süreye ve moda gore hiz/kalite dengesini otomatik ayarla."""
+    cpu_threads = max(2, min(8, (os.cpu_count() or 4)))
+
+    # Varsayilan kalite profili (mevcut davranisa yakin)
+    settings = {
+        "fps": 20,
+        "preset": "superfast",
+        "threads": cpu_threads,
+        "ffmpeg_params": ["-movflags", "+faststart", "-crf", "24"],
+    }
+
+    # Uzun videolarda encode suresi ciddi uzadigi icin daha agresif hiz profili
+    if total_duration >= 180:
+        settings.update({
+            "fps": 16,
+            "preset": "ultrafast",
+            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "30"],
+        })
+
+    # AI video modu en maliyetli mod oldugu icin ek hizlandirma
+    if video_mode == "ai_video":
+        settings.update({
+            "fps": 15,
+            "preset": "ultrafast",
+            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "32"],
+        })
+
+    return settings
+
 def apply_clip_resize(clip, width=None, height=None):
     """MoviePy v1'de resize(), v2'de resized() kullanılır."""
     if hasattr(clip, 'resized'):
@@ -186,7 +226,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     clip = ImageClip(processed_img, duration=slide_duration)
             else:
                 clip = ImageClip(processed_img, duration=slide_duration)
-                clip = apply_clip_resize(clip, width=1080, height=1920)
+                if not is_target_resolution_image(processed_img):
+                    clip = apply_clip_resize(clip, width=1080, height=1920)
                 if video_mode == "cinematic":
                     clip = video_effects.apply_random_effect(clip)
             
@@ -195,17 +236,19 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         final_video = concatenate_videoclips(clips, method="compose")
         final_video = apply_clip_audio(final_video, audio_clip)
         
-        print(f"[+] Render işlemi başlıyor...")
+        render_settings = get_render_settings(video_mode, total_duration)
+        print(
+            f"[+] Render işlemi başlıyor... "
+            f"(fps={render_settings['fps']}, preset={render_settings['preset']}, threads={render_settings['threads']})"
+        )
         final_video.write_videofile(
             output_filename,
-            fps=20,
+            fps=render_settings["fps"],
             codec="libx264",
             audio_codec="aac",
-            preset="superfast",
-            threads=4,
-            ffmpeg_params=[
-                "-movflags", "+faststart",
-            ],
+            preset=render_settings["preset"],
+            threads=render_settings["threads"],
+            ffmpeg_params=render_settings["ffmpeg_params"],
             temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
             remove_temp=True,
             logger=None

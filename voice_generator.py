@@ -1,6 +1,7 @@
 import edge_tts
 import os
 import asyncio
+import re
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -47,6 +48,11 @@ EDGE_TTS_VOICES = {
 # Varsayılan ses
 DEFAULT_VOICE = EDGE_TTS_VOICES["erkek"]
 
+# Edge-TTS otomatik hız ayarı için temel değerler
+EDGE_BASE_WPM = int(os.environ.get("EDGE_BASE_WPM", "145"))
+EDGE_RATE_MIN_PERCENT = int(os.environ.get("EDGE_RATE_MIN_PERCENT", "-35"))
+EDGE_RATE_MAX_PERCENT = int(os.environ.get("EDGE_RATE_MAX_PERCENT", "40"))
+
 # ElevenLabs Türkçe ses seçenekleri - Free Tier erişilebilir sesler
 TURKISH_VOICES = {
     "erkek": "pNInz6obpgDQGcFmaJgB",      # Adam - Multilingual
@@ -57,6 +63,27 @@ TURKISH_VOICES = {
     "profesyonel": "pNInz6obpgDQGcFmaJgB", # Adam - Profesyonel erkek
     "sakin": "JBFqnCBsd6RMkjVDRZzb",      # Daniel - Sakin erkek
 }
+
+
+def _count_words(text: str) -> int:
+    return len(re.findall(r"\b\w+\b", text, flags=re.UNICODE))
+
+
+def _calculate_edge_rate(text: str, target_duration_seconds: int) -> str:
+    """Hedef süreye göre Edge rate değeri üretir (örn: +12% / -8%)."""
+    if target_duration_seconds <= 0:
+        return "+0%"
+
+    words = _count_words(text)
+    if words == 0:
+        return "+0%"
+
+    target_wpm = words / (target_duration_seconds / 60)
+    rate_percent = int(round(((target_wpm / EDGE_BASE_WPM) - 1) * 100))
+    rate_percent = max(EDGE_RATE_MIN_PERCENT, min(EDGE_RATE_MAX_PERCENT, rate_percent))
+
+    sign = "+" if rate_percent >= 0 else ""
+    return f"{sign}{rate_percent}%"
 
 def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
     print(f"[+] '{output_filename}' için ses sentezleniyor (AI: ElevenLabs)...")
@@ -105,14 +132,19 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-async def generate_voice_edge(text, output_filename, voice_type="erkek"):
+async def generate_voice_edge(text, output_filename, voice_type="erkek", target_duration_seconds=None):
     print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS)...")
     try:
         # Ses tipine göre voice seç
         voice = EDGE_TTS_VOICES.get(voice_type, DEFAULT_VOICE)
         print(f"[+] Edge-TTS ses tipi: {voice_type} (Voice: {voice})")
+
+        rate = "+0%"
+        if target_duration_seconds is not None:
+            rate = _calculate_edge_rate(text, int(target_duration_seconds))
+            print(f"[i] Otomatik TTS hızı: hedef {target_duration_seconds} sn için rate={rate}")
         
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate=rate)
         await communicate.save(output_filename)
         print(f"[+] Ses dosyası kaydedildi: {output_filename}")
         return True
@@ -120,20 +152,20 @@ async def generate_voice_edge(text, output_filename, voice_type="erkek"):
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek"):
+async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None):
     """Async ortamdan (FastAPI gibi) çağrılacak versiyon."""
     if "elevenlabs" in ai_provider.lower():
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, generate_voice_elevenlabs, text, output_filename, voice_type)
     else:
-        return await generate_voice_edge(text, output_filename, voice_type)
+        return await generate_voice_edge(text, output_filename, voice_type, target_duration_seconds)
 
-def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek"):
+def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None):
     """Senkron ortamdan çağrılacak versiyon (test için)."""
     if "elevenlabs" in ai_provider.lower():
         return generate_voice_elevenlabs(text, output_filename, voice_type)
     else:
-        return asyncio.run(generate_voice_edge(text, output_filename, voice_type))
+        return asyncio.run(generate_voice_edge(text, output_filename, voice_type, target_duration_seconds))
 
 if __name__ == "__main__":
     test_text = "Dünya sadece bir kum tanesi mi yoksa sonsuz bir okyanus mu?"

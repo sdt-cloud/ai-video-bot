@@ -9,6 +9,25 @@ load_dotenv()
 
 # Global session with connection pooling and retry strategy
 _session = None
+_replicate_checked = False
+_replicate_available = False
+
+
+def is_replicate_available():
+    """Replicate paketinin kurulu olup olmadığını bir kez kontrol eder."""
+    global _replicate_checked, _replicate_available
+    if _replicate_checked:
+        return _replicate_available
+
+    try:
+        import replicate  # noqa: F401
+        _replicate_available = True
+    except ImportError:
+        _replicate_available = False
+        print("[!] 'replicate' modülü kurulu değil. Replicate tabanlı görsellerde Pollinations fallback kullanılacak.")
+
+    _replicate_checked = True
+    return _replicate_available
 
 def get_session():
     """Connection pooling ile requests session oluştur"""
@@ -95,10 +114,15 @@ def generate_image_pollinations(prompt, output_filename):
         return False
 
 def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell"):
-    import replicate
+    if not is_replicate_available():
+        print(f"[+] Fallback: '{output_filename}' için Pollinations deneniyor...")
+        return generate_image_pollinations(prompt, output_filename)
+
     print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: Replicate - {model_name})")
     
     try:
+        import replicate
+
         # Replicate modelleri için en boy oranı ayarları (portre moduna zorla)
         input_data = {
             "prompt": prompt,
@@ -139,7 +163,8 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
             
     except Exception as e:
         print(f"[-] Replicate hatası: {e}")
-        return False
+        print(f"[+] Fallback: Pollinations ile yeniden deneniyor...")
+        return generate_image_pollinations(prompt, output_filename)
 
 def generate_image(prompt, output_filename, ai_provider="Pollinations"):
     provider_lower = ai_provider.lower()

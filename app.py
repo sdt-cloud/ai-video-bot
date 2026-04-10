@@ -4,7 +4,7 @@ import tempfile
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import database
 import time
@@ -36,7 +36,7 @@ class VideoRequest(BaseModel):
     topic: str
     category: Optional[str] = "Genel"
     tone: Optional[str] = "Enerjik"
-    duration: Optional[int] = 30
+    duration: int = Field(default=30, ge=15, le=300)
     language: Optional[str] = "tr"
     script_ai: Optional[str] = "Gemini"
     voice_ai: Optional[str] = "Edge-TTS"
@@ -47,7 +47,7 @@ class VideoRequest(BaseModel):
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
-    duration: Optional[int] = 30
+    duration: int = Field(default=30, ge=15, le=300)
     language: Optional[str] = "tr"
     script_ai: Optional[str] = "Gemini"
     voice_ai: Optional[str] = "Edge-TTS"
@@ -76,6 +76,15 @@ async def process_video(task):
         if not script_data or "scenes" not in script_data:
             database.update_status(task_id, "failed", 10, "Senaryo üretilemedi API hatası.")
             return
+
+        fallback_provider = script_data.get("_meta", {}).get("fallback_provider")
+        if fallback_provider:
+            database.update_status(
+                task_id,
+                "scripting",
+                15,
+                f"Bilgi: OpenAI kotası nedeniyle otomatik {fallback_provider} fallback kullanıldı."
+            )
             
         scenes = script_data.get("scenes", [])
         
@@ -91,7 +100,14 @@ async def process_video(task):
         
         voice_ai_provider = task.get("voice_ai", "Edge-TTS")
         voice_type = task.get("voice_type", "erkek")
-        voice_success = await generate_voice_async(full_narration, voice_file, voice_ai_provider, voice_type)
+        target_duration_seconds = int(task.get("duration", 30) or 30)
+        voice_success = await generate_voice_async(
+            full_narration,
+            voice_file,
+            voice_ai_provider,
+            voice_type,
+            target_duration_seconds=target_duration_seconds,
+        )
         
         if not voice_success:
             database.update_status(task_id, "failed", 30, "Ses sentezlenemedi.")
