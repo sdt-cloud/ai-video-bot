@@ -45,6 +45,7 @@ def init_db():
                 voice_ai TEXT,
                 voice_type TEXT DEFAULT 'erkek',
                 image_ai TEXT,
+                custom_script TEXT,
                 subtitle_style TEXT DEFAULT 'tiktok',
                 status TEXT DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
@@ -71,19 +72,24 @@ def init_db():
             cursor.execute("ALTER TABLE videos ADD COLUMN voice_type TEXT DEFAULT 'erkek'")
         except sqlite3.OperationalError:
             pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN custom_script TEXT")
+        except sqlite3.OperationalError:
+            pass
         
         # Index oluştur - performans için
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON videos(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON videos(created_at)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_topic ON videos(topic)")
 
-def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek"):
+def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek", custom_script=None):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode))
+            INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script))
         return cursor.lastrowid
 
 def update_status(task_id, status, progress=None, error_message=None, video_path=None):
@@ -113,7 +119,7 @@ def get_pending_tasks(limit: int = 10) -> List[dict]:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode
+            SELECT id, topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script
             FROM videos 
             WHERE status = 'pending' 
             ORDER BY created_at ASC 

@@ -125,10 +125,16 @@
                             <span class="create-subtitle" data-i18n="dash_video_topic">Video Topic / Prompt</span>
                         </div>
                         <div class="create-form">
-                            <div class="input-area">
-                                <input type="text" id="topic-input" class="topic-input" placeholder="Describe your video concept here..." data-i18n-placeholder="dash_input_placeholder">
+                            <div class="create-inputs">
+                                <div class="input-area">
+                                    <input type="text" id="topic-input" class="topic-input" placeholder="Describe your video concept here..." data-i18n-placeholder="dash_input_placeholder">
+                                </div>
+                                <div class="input-area custom-script-area">
+                                    <label for="custom-script-input" class="custom-script-label">İsteğe Bağlı Özel Script</label>
+                                    <textarea id="custom-script-input" rows="6" class="topic-input custom-script-input" placeholder="Script'i kendin yazmak istersen buraya yapıştır. Doluysa AI script yazmaz, bunu sahnelere bölüp videoyu üretir."></textarea>
+                                </div>
                             </div>
-                            <button class="generate-btn" id="generate-btn">
+                            <button class="generate-btn create-submit-btn" id="generate-btn">
                                 <span class="material-symbols-rounded">bolt</span>
                                 <span data-i18n="dash_gen_btn">GENERATE VIDEO</span>
                             </button>
@@ -321,6 +327,51 @@
                                 <option value="Gemini-3.1-Pro">Gemini (3.1 Pro)</option>
                                 <option value="Gemini">Gemini (2.5 Pro)</option>
                                 <option value="OpenAI">OpenAI (GPT-4o-mini)</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label data-i18n="opt_voice_ai">Voice AI</label>
+                            <select id="bulk-voice-ai">
+                                <option value="Edge-TTS">Edge-TTS (Free)</option>
+                                <option value="ElevenLabs">ElevenLabs (Premium)</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>Ses Tipi</label>
+                            <select id="bulk-voice-type">
+                                <option value="erkek">Erkek Ses</option>
+                                <option value="kadin">Kadın Ses</option>
+                                <option value="cocuk">Çocuk Ses</option>
+                                <option value="dramatik">Dramatik Ses</option>
+                                <option value="gulucu">Gülücü Ses</option>
+                                <option value="profesyonel">Profesyonel Ses</option>
+                                <option value="sakin">Sakin Ses</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label data-i18n="opt_image_ai">Image AI</label>
+                            <select id="bulk-image-ai">
+                                <option value="Pollinations">Pollinations (Free)</option>
+                                <option value="OpenAI">OpenAI (DALL-E 3)</option>
+                                <option value="Flux">Flux (Schnell - High Quality)</option>
+                                <option value="Flux-Pro">Flux (Pro - Ultra Quality)</option>
+                                <option value="SDXL">SDXL (Classic HD)</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label data-i18n="opt_subtitle">Subtitle Style</label>
+                            <select id="bulk-subtitle-style">
+                                <option value="tiktok">TikTok (Sarı / Kutu)</option>
+                                <option value="netflix">Netflix (Beyaz)</option>
+                                <option value="none">Altyazı Yok</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label data-i18n="opt_video_mode">Video Animation</label>
+                            <select id="bulk-video-mode">
+                                <option value="slideshow">Statik (Slideshow)</option>
+                                <option value="cinematic">Sinematik (Zoom/Pan)</option>
+                                <option value="ai_video">AI Video (Görselden Hareket)</option>
                             </select>
                         </div>
                     </div>

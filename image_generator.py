@@ -1,6 +1,7 @@
 import requests
 import urllib.parse
 import os
+import time
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -37,8 +38,10 @@ def get_session():
         
         # Retry stratejisi
         retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
+            total=2,
+            connect=2,
+            read=2,
+            backoff_factor=0.4,
             status_forcelist=[429, 500, 502, 503, 504],
         )
         
@@ -92,26 +95,33 @@ def generate_image_pollinations(prompt, output_filename):
     
     # URL Encode the prompt
     encoded_prompt = urllib.parse.quote(prompt)
-    
-    # Pollinations AI URL (width=1080, height=1920 for Shorts/Reels, nologo=true to remove watermark)
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"
-    
-    try:
-        session = get_session()
-        response = session.get(url, stream=True, timeout=60)
-        if response.status_code == 200:
-            with open(output_filename, 'wb') as f:
-                for chunk in response.iter_content(1024):
-                    f.write(chunk)
-            print(f"[+] Görsel kaydedildi: {output_filename}")
-            return True
-        else:
-            print(f"[-] Görsel indirilemedi, HTTP Status: {response.status_code}")
-            return False
-            
-    except Exception as e:
-        print(f"[-] Görsel indirilirken hata oluştu: {e}")
-        return False
+
+    # Timeout durumlarında farklı URL varyantlarıyla yeniden dene.
+    seed = int(time.time() * 1000) % 1000000
+    urls = [
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true&seed={seed}",
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&seed={seed + 1}",
+    ]
+
+    session = get_session()
+    for attempt, url in enumerate(urls, start=1):
+        try:
+            response = session.get(url, stream=True, timeout=(10, 40))
+            if response.status_code == 200:
+                with open(output_filename, 'wb') as f:
+                    for chunk in response.iter_content(1024):
+                        if chunk:
+                            f.write(chunk)
+                print(f"[+] Görsel kaydedildi: {output_filename}")
+                return True
+
+            print(f"[-] Pollinations denemesi {attempt} başarısız, HTTP Status: {response.status_code}")
+        except requests.exceptions.ReadTimeout:
+            print(f"[!] Pollinations denemesi {attempt} timeout oldu, yeniden deneniyor...")
+        except Exception as e:
+            print(f"[-] Pollinations denemesi {attempt} hata: {e}")
+
+    return False
 
 def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell"):
     if not is_replicate_available():

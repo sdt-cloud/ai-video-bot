@@ -17,7 +17,7 @@ from connection_filter import setup_connection_filter
 setup_connection_filter()
 
 # Bot modüllerini içe aktar
-from script_generator import generate_script
+from script_generator import generate_script, generate_script_from_custom_text
 from voice_generator import generate_voice_async
 from image_generator import generate_image
 from video_maker import create_video
@@ -34,6 +34,7 @@ app.include_router(custom_social_router)
 
 class VideoRequest(BaseModel):
     topic: str
+    custom_script: Optional[str] = None
     category: Optional[str] = "Genel"
     tone: Optional[str] = "Enerjik"
     duration: int = Field(default=30, ge=15, le=300)
@@ -51,6 +52,7 @@ class BulkVideoRequest(BaseModel):
     language: Optional[str] = "tr"
     script_ai: Optional[str] = "Gemini"
     voice_ai: Optional[str] = "Edge-TTS"
+    voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
@@ -66,12 +68,23 @@ async def process_video(task):
     try:
         # 1. Senaryo Aşaması
         database.update_status(task_id, "scripting", 10)
-        script_data = await error_recovery.retry_with_backoff(
-            generate_script,
-            topic, 
-            task.get("script_ai", "Gemini"), 
-            task.get("duration", 30)
-        )
+        custom_script = (task.get("custom_script") or "").strip()
+        if custom_script:
+            database.update_status(task_id, "scripting", 12, "Özel script kullanılıyor: sahneler hazırlanıyor.")
+            script_data = await error_recovery.retry_with_backoff(
+                generate_script_from_custom_text,
+                topic,
+                custom_script,
+                task.get("script_ai", "Gemini"),
+                task.get("duration", 30),
+            )
+        else:
+            script_data = await error_recovery.retry_with_backoff(
+                generate_script,
+                topic, 
+                task.get("script_ai", "Gemini"), 
+                task.get("duration", 30)
+            )
         
         if not script_data or "scenes" not in script_data:
             database.update_status(task_id, "failed", 10, "Senaryo üretilemedi API hatası.")
@@ -199,7 +212,7 @@ def cleanup_temp_files(temp_files: List[str], task_id: int):
 async def add_single_video(req: VideoRequest):
     task_id = database.add_video_task(
         req.topic, req.category, req.tone, req.duration, req.language,
-        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type
+        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, req.custom_script
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -212,7 +225,7 @@ async def add_bulk_videos(req: BulkVideoRequest):
         if topic:
             task_id = database.add_video_task(
                 topic, "Genel", "Enerjik", req.duration, req.language,
-                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode
+                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type
             )
             task_ids.append(task_id)
     

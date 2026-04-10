@@ -55,8 +55,8 @@ EDGE_RATE_MAX_PERCENT = int(os.environ.get("EDGE_RATE_MAX_PERCENT", "40"))
 
 # ElevenLabs Türkçe ses seçenekleri - Free Tier erişilebilir sesler
 TURKISH_VOICES = {
-    "erkek": "pNInz6obpgDQGcFmaJgB",      # Adam - Multilingual
-    "kadin": "XrExE9yKIg1WjnnlVkGX",      # Matilda - Multilingual (kadın)
+    "erkek": "HGokgaAG6y586a3fAmcA",      # Kullanıcı tarafından sağlanan erkek ses ID
+    "kadin": "TASY7VCrU29rEMoYFTGG",      # Kullanıcı tarafından sağlanan kadın ses ID
     "cocuk": "TX3LPQmX4UJuhhS52t",        # Domi - Multilingual
     "dramatik": "ZQe5CxyNwgrlbJ1iI0zB",   # Lewis - Dramatik erkek
     "gulucu": "XrExE9yKIg1WjnnlVkGX",     # Matilda - Neşeli kadın

@@ -85,6 +85,171 @@ def _script_stats(script_data: dict) -> dict:
         "estimated_seconds": estimated_seconds,
     }
 
+
+def _clean_json_response(raw_content: str) -> str:
+    """Model yanıtındaki markdown codeblock sarmalayıcılarını temizler."""
+    content = raw_content.strip()
+    if content.startswith("```"):
+        lines = content.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        content = "\n".join(lines)
+    return content
+
+
+def _split_custom_script_to_narrations(custom_script: str, target_scene_count: int) -> list[str]:
+    """Kullanıcının script metnini sahnelere böl."""
+    raw_lines = [line.strip() for line in custom_script.replace("\r", "").split("\n") if line.strip()]
+    if len(raw_lines) >= 3:
+        return raw_lines
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", custom_script.strip()) if s.strip()]
+    if not sentences:
+        return [custom_script.strip()]
+
+    total_words = sum(_count_words(s) for s in sentences)
+    target_scene_count = max(3, target_scene_count)
+    target_words_per_scene = max(10, int(total_words / target_scene_count))
+
+    chunks = []
+    buffer = []
+    buffer_words = 0
+    for sentence in sentences:
+        sentence_words = _count_words(sentence)
+        if buffer and (buffer_words + sentence_words > target_words_per_scene):
+            chunks.append(" ".join(buffer).strip())
+            buffer = [sentence]
+            buffer_words = sentence_words
+        else:
+            buffer.append(sentence)
+            buffer_words += sentence_words
+
+    if buffer:
+        chunks.append(" ".join(buffer).strip())
+
+    return [c for c in chunks if c]
+
+
+def _select_gemini_model(ai_provider: str) -> str:
+    provider_lower = ai_provider.lower()
+    if "3.1-flash" in provider_lower or "3.1 flash" in provider_lower:
+        return "gemini-2.5-flash"
+    return "gemini-2.5-pro"
+
+
+def _generate_image_prompts_openai(topic: str, narrations: list[str]) -> list[str]:
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    list_text = "\n".join([f"{i+1}. {n}" for i, n in enumerate(narrations)])
+    system_prompt = (
+        "You generate English image prompts for video scenes. "
+        "Return JSON only with this schema: {\"prompts\": [{\"image_prompt\": \"...\"}]}"
+    )
+    user_prompt = (
+        f"Topic: {topic}\n"
+        f"Generate exactly {len(narrations)} cinematic, high-detail image prompts for these narrations. "
+        "Each prompt must be English and visual-only (no on-screen text).\n"
+        f"Narrations:\n{list_text}"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        response_format={"type": "json_object"},
+    )
+    content = _clean_json_response(response.choices[0].message.content)
+    data = json.loads(content)
+    prompts = data.get("prompts", [])
+    return [p.get("image_prompt", "") for p in prompts if isinstance(p, dict)]
+
+
+def _generate_image_prompts_gemini(topic: str, narrations: list[str], model_name: str) -> list[str]:
+    try:
+        import google.genai as genai
+    except ImportError:
+        import google.generativeai as genai
+
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    model = genai.GenerativeModel(model_name)
+    list_text = "\n".join([f"{i+1}. {n}" for i, n in enumerate(narrations)])
+    prompt = (
+        "You generate English image prompts for video scenes. "
+        "Return only valid JSON with schema {\"prompts\": [{\"image_prompt\": \"...\"}]}.\n"
+        f"Topic: {topic}\n"
+        f"Generate exactly {len(narrations)} prompts, one per narration. "
+        "Prompts must be cinematic, visual-only, no text overlays.\n"
+        f"Narrations:\n{list_text}"
+    )
+    response = model.generate_content(prompt)
+    content = _clean_json_response(response.text)
+    data = json.loads(content)
+    prompts = data.get("prompts", [])
+    return [p.get("image_prompt", "") for p in prompts if isinstance(p, dict)]
+
+
+def _build_fallback_image_prompt(topic: str, narration: str) -> str:
+    short = narration.strip()[:140]
+    return (
+        f"A cinematic, highly detailed scene about {topic}, illustrating: {short}, "
+        "dramatic lighting, realistic composition, 9:16 portrait frame, 8k"
+    )
+
+
+def generate_script_from_custom_text(topic, custom_script, ai_provider="Gemini", duration=30):
+    """Kullanıcının yazdığı script'i koruyup sadece sahne/görsel promptlarını hazırlar."""
+    print(f"[+] Özel script işleniyor... (AI: {ai_provider})")
+    try:
+        cleaned_script = (custom_script or "").strip()
+        if not cleaned_script:
+            return None
+
+        target_scenes = _calculate_min_scenes(duration)
+        narrations = _split_custom_script_to_narrations(cleaned_script, target_scenes)
+        narrations = [n for n in narrations if n.strip()]
+        if not narrations:
+            return None
+
+        image_prompts = []
+        provider_lower = ai_provider.lower()
+        try:
+            if "openai" in provider_lower or "gpt" in provider_lower:
+                image_prompts = _generate_image_prompts_openai(topic, narrations)
+            else:
+                image_prompts = _generate_image_prompts_gemini(topic, narrations, _select_gemini_model(ai_provider))
+        except Exception as prompt_error:
+            logger.warning(f"Özel script için image_prompt üretimi AI ile başarısız oldu, fallback kullanılacak: {prompt_error}")
+
+        scenes = []
+        for i, narration in enumerate(narrations):
+            image_prompt = ""
+            if i < len(image_prompts):
+                image_prompt = (image_prompts[i] or "").strip()
+            if not image_prompt:
+                image_prompt = _build_fallback_image_prompt(topic, narration)
+
+            scenes.append({
+                "narration": narration,
+                "image_prompt": image_prompt,
+            })
+
+        script_data = {
+            "scenes": scenes,
+            "_meta": {
+                "source": "custom_script",
+                "target_duration_seconds": duration,
+                "word_count": _count_words(cleaned_script),
+            },
+        }
+
+        print(f"[+] Özel script sahnelere dönüştürüldü! ({len(scenes)} sahne)")
+        return script_data
+    except Exception as e:
+        print(f"[-] Özel script işlenirken hata oluştu: {e}")
+        return None
+
 def generate_script_openai(topic, duration=30, min_words=60, min_scenes=3, extra_instructions=""):
     from openai import OpenAI
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))

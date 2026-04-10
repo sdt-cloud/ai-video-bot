@@ -21,6 +21,7 @@ const translations = {
         "opt_script_ai": "Senaryo YZ",
         "opt_voice_ai": "Ses YZ",
         "opt_image_ai": "Görsel YZ",
+        "opt_subtitle": "Altyazı Stili",
         "opt_video_mode": "Video Animasyon",
         "tone_energetic": "Enerjik ve Hızlı",
         "tone_mysterious": "Gizemli ve Derin",
@@ -86,6 +87,7 @@ const translations = {
         "opt_script_ai": "Script AI",
         "opt_voice_ai": "Voice AI",
         "opt_image_ai": "Image AI",
+        "opt_subtitle": "Subtitle Style",
         "opt_video_mode": "Video Animation",
         "tone_energetic": "Energetic & Fast",
         "tone_mysterious": "Mysterious & Deep",
@@ -248,7 +250,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (generateBtn) {
         generateBtn.addEventListener('click', async () => {
             const topicInput = document.getElementById('topic-input');
+            const customScriptInput = document.getElementById('custom-script-input');
             const topic = topicInput.value.trim();
+            const customScript = customScriptInput ? customScriptInput.value.trim() : "";
             
             if(!topic) {
                 alert(currentLang === 'tr' ? "Lütfen bir konu / prompt giriniz!" : "Please enter a topic / prompt!");
@@ -267,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: parseInt(document.getElementById('opt-duration').value),
                     language: document.getElementById('opt-language').value,
                     script_ai: document.getElementById('opt-script-ai').value,
+                    custom_script: customScript || null,
                     voice_ai: document.getElementById('opt-voice-ai').value,
                     voice_type: document.getElementById('voice-type').value, // Ses tipi eklendi
                     image_ai: document.getElementById('opt-image-ai').value,
@@ -282,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if(res.ok) {
                     topicInput.value = '';
+                    if (customScriptInput) customScriptInput.value = '';
                     showToast(currentLang === 'tr' ? "Video başarıyla kuyruğa eklendi!" : "Video successfully added to queue!");
                     fetchStats();
                     fetchVideos();
@@ -320,6 +326,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     duration: parseInt(document.getElementById('bulk-duration').value),
                     language: document.getElementById('bulk-language').value,
                     script_ai: document.getElementById('bulk-script-ai').value,
+                    voice_ai: document.getElementById('bulk-voice-ai').value,
+                    voice_type: document.getElementById('bulk-voice-type').value,
+                    image_ai: document.getElementById('bulk-image-ai').value,
+                    subtitle_style: document.getElementById('bulk-subtitle-style').value,
                     video_mode: document.getElementById('bulk-video-mode').value
                 };
 
