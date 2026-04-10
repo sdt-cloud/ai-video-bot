@@ -10,11 +10,13 @@ venv/
 # Üretilen dosyalar
 assets/
 frontend/videos/
+logs/*.log
 test_*.json
 test_*.mp3
 test_*.jpg
 test_*.mp4
 temp-audio.m4a
+temp-audio-*.m4a
 
 # Python cache
 __pycache__/
