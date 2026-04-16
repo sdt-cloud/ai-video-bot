@@ -45,6 +45,7 @@ class VideoRequest(BaseModel):
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
+    sentence_pause: Optional[float] = 0.0
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
@@ -56,6 +57,7 @@ class BulkVideoRequest(BaseModel):
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
+    sentence_pause: Optional[float] = 0.0
 
 async def process_video(task):
     task_id = task["id"]
@@ -113,6 +115,7 @@ async def process_video(task):
         
         voice_ai_provider = task.get("voice_ai", "Edge-TTS")
         voice_type = task.get("voice_type", "erkek")
+        sentence_pause = task.get("sentence_pause", 0.0)
         target_duration_seconds = int(task.get("duration", 30) or 30)
         voice_success = await generate_voice_async(
             full_narration,
@@ -120,6 +123,7 @@ async def process_video(task):
             voice_ai_provider,
             voice_type,
             target_duration_seconds=target_duration_seconds,
+            sentence_pause=sentence_pause
         )
         
         if not voice_success:
@@ -212,7 +216,7 @@ def cleanup_temp_files(temp_files: List[str], task_id: int):
 async def add_single_video(req: VideoRequest):
     task_id = database.add_video_task(
         req.topic, req.category, req.tone, req.duration, req.language,
-        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, req.custom_script
+        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, req.custom_script, req.sentence_pause
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -225,7 +229,7 @@ async def add_bulk_videos(req: BulkVideoRequest):
         if topic:
             task_id = database.add_video_task(
                 topic, "Genel", "Enerjik", req.duration, req.language,
-                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type
+                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, None, req.sentence_pause
             )
             task_ids.append(task_id)
     
@@ -238,15 +242,46 @@ async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):
     import re
     import html
     import random
+    import math
     
     wp_api_base = os.environ.get("NEDIR_WP_API_URL", "http://localhost/wp-json/wp/v2")
+
+    # Bu secenekler sitelerde cogunlukla post type degil kategori slug olarak tanimlidir.
+    category_slug_aliases = {
+        "kavram": "kavram",
+        "kisaltma": "kisaltma",
+        "kisi": "kisi",
+        "terim": "terim",
+        "gunluk-dil": "gunluk-dil",
+        "yeni-kavram": "yeni-kavramlar",
+        "yeni-kavramlar": "yeni-kavramlar",
+    }
     
     # Daha önce kuyruğa alınmış / tamamlanmış başlıkları al
     existing_topics = database.get_existing_topics()
     
     try:
-        # Önce toplam post sayısını öğren (per_page=1 ile sadece header bilgisi için)
-        head_url = f"{wp_api_base}/{post_type.strip()}?per_page=1"
+        selected = post_type.strip().lower()
+        endpoint = selected if selected else "posts"
+        query_parts = ["per_page=1"]
+
+        if selected in category_slug_aliases:
+            category_slug = category_slug_aliases[selected]
+            cat_url = f"{wp_api_base}/categories?slug={category_slug}"
+            cat_resp = requests.get(cat_url, timeout=10)
+            if cat_resp.status_code != 200:
+                return {"status": "error", "message": f"Kategori bilgisi alinamadi: {cat_resp.status_code}"}
+
+            cat_data = cat_resp.json()
+            if not cat_data:
+                return {"status": "error", "message": f"'{category_slug}' kategorisi bulunamadi."}
+
+            category_id = cat_data[0].get("id")
+            endpoint = "posts"
+            query_parts.append(f"categories={category_id}")
+
+        # Once toplam post sayisini ogren (header bilgisi icin per_page=1)
+        head_url = f"{wp_api_base}/{endpoint}?{'&'.join(query_parts)}"
         head_resp = requests.get(head_url, timeout=10)
         if head_resp.status_code != 200:
             return {"status": "error", "message": f"WordPress API Hatası: {head_resp.status_code}"}
@@ -256,20 +291,26 @@ async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):
         if total_posts == 0:
             return {"status": "error", "message": f"'{post_type}' tipinde içerik bulunamadı. show_in_rest ayarını kontrol edin."}
         
-        # Sayfa sayısını ASIL limit değerine göre hesapla
-        import math
+        # Sayfa sayisini asil limit degerine gore hesapla
         total_pages = math.ceil(total_posts / limit)
         
         # Rastgele bir sayfa seç
         random_page = random.randint(1, max(1, total_pages))
         
-        fetch_url = f"{wp_api_base}/{post_type.strip()}?per_page={limit}" + f"&page={random_page}"
+        fetch_query = [f"per_page={limit}", f"page={random_page}"]
+        if len(query_parts) > 1:
+            fetch_query.extend(query_parts[1:])
+
+        fetch_url = f"{wp_api_base}/{endpoint}?{'&'.join(fetch_query)}"
         response = requests.get(fetch_url, timeout=10)
         
         # Sayfa aşımı olursa son sayfayı dene
         if response.status_code == 400:
             random_page = 1
-            fetch_url = f"{wp_api_base}/{post_type.strip()}?per_page={limit}" + "&page=1"
+            fetch_query = [f"per_page={limit}", "page=1"]
+            if len(query_parts) > 1:
+                fetch_query.extend(query_parts[1:])
+            fetch_url = f"{wp_api_base}/{endpoint}?{'&'.join(fetch_query)}"
             response = requests.get(fetch_url, timeout=10)
         
         if response.status_code != 200:
@@ -341,7 +382,7 @@ async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_conc
         # Veritabanına ekle
         task_ids = []
         for topic in video_topics:
-            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek")
+            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek", None, 1.0)
             task_ids.append(task_id)
         
         # NOT: Artık kuyruk yöneticisi otomatik işleyecek

@@ -274,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     custom_script: customScript || null,
                     voice_ai: document.getElementById('opt-voice-ai').value,
                     voice_type: document.getElementById('voice-type').value, // Ses tipi eklendi
+                    sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                     image_ai: document.getElementById('opt-image-ai').value,
                     subtitle_style: document.getElementById('opt-subtitle-style').value,
                     video_mode: document.getElementById('opt-video-mode').value
@@ -328,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     script_ai: document.getElementById('bulk-script-ai').value,
                     voice_ai: document.getElementById('bulk-voice-ai').value,
                     voice_type: document.getElementById('bulk-voice-type').value,
+                    sentence_pause: parseFloat(document.getElementById('bulk-sentence-pause').value) || 0,
                     image_ai: document.getElementById('bulk-image-ai').value,
                     subtitle_style: document.getElementById('bulk-subtitle-style').value,
                     video_mode: document.getElementById('bulk-video-mode').value
@@ -727,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     language: 'tr', // Nedir.me Türkçe
                     script_ai: document.getElementById('nedir-script-ai').value,
                     voice_ai: document.getElementById('nedir-voice-ai').value,
+                    sentence_pause: parseFloat(document.getElementById('nedir-sentence-pause').value) || 0,
                     image_ai: document.getElementById('nedir-image-ai').value,
                     subtitle_style: document.getElementById('nedir-subtitle-style').value,
                     video_mode: document.getElementById('nedir-video-mode').value

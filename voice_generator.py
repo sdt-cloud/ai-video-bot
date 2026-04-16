@@ -152,20 +152,104 @@ async def generate_voice_edge(text, output_filename, voice_type="erkek", target_
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None):
+async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0):
     """Async ortamdan (FastAPI gibi) çağrılacak versiyon."""
-    if "elevenlabs" in ai_provider.lower():
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, generate_voice_elevenlabs, text, output_filename, voice_type)
-    else:
-        return await generate_voice_edge(text, output_filename, voice_type, target_duration_seconds)
+    if sentence_pause <= 0.0:
+        if "elevenlabs" in ai_provider.lower():
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, generate_voice_elevenlabs, text, output_filename, voice_type)
+        else:
+            return await generate_voice_edge(text, output_filename, voice_type, target_duration_seconds)
+            
+    # --- Cümle Arası Boşluk Mantığı ---
+    print(f"[i] Cümle arası {sentence_pause}s boşluk eklenecek. Cümleler ayrılıyor...")
+    
+    # Basit cümle bölme kalıbı, kısaltmalarda vs ufak hatalar yapabilir ama genel olarak iyi çalışır
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    
+    if not sentences:
+        print("[-] Parçalanacak cümle bulunamadı.")
+        return False
+        
+    temp_files = []
+    success = True
+    
+    try:
+        from moviepy import AudioFileClip, CompositeAudioClip
+        import uuid
+        
+        clips = []
+        current_time = 0.0
+        
+        # Hedef süre oranını parçalara dağıtmak yerine otomatik hızlandırma kullanmıyoruz
+        # (cümle parse ederken tek tek ayarlamak zor, Edge TTS varsayılan rate kullanacak)
+        
+        for i, sentence in enumerate(sentences):
+            tmp_name = f"temp_voice_{uuid.uuid4().hex[:8]}_{i}.mp3"
+            temp_files.append(tmp_name)
+            
+            print(f"[i] Cümle {i+1}/{len(sentences)} sentezleniyor...")
+            if "elevenlabs" in ai_provider.lower():
+                loop = asyncio.get_event_loop()
+                cur_success = await loop.run_in_executor(None, generate_voice_elevenlabs, sentence, tmp_name, voice_type)
+                # ElevenLabs API limitlerine takılmamak için kısa bekleme
+                await asyncio.sleep(0.5)
+            else:
+                cur_success = await generate_voice_edge(sentence, tmp_name, voice_type, None)
+                
+            if not cur_success or not os.path.exists(tmp_name):
+                print(f"[-] Hata: {i+1}. cümle üretilemedi.")
+                success = False
+                break
+                
+            try:
+                # Klibi yükle
+                clip = AudioFileClip(tmp_name)
+                
+                # moviepy v1 ve v2 uyumlulugu icin start time ayarla
+                if hasattr(clip, 'with_start'):
+                    clip = clip.with_start(current_time)
+                elif hasattr(clip, 'set_start'):
+                    clip = clip.set_start(current_time)
+                    
+                clips.append(clip)
+                
+                # Sonraki klibin baslangic zamanini guncelle
+                current_time += clip.duration + sentence_pause
+                
+            except Exception as clip_err:
+                print(f"[-] Klip oluşturma hatası: {clip_err}")
+                success = False
+                break
+                
+        if success and clips:
+            print("[i] Ses klipsleri birleştiriliyor...")
+            final_audio = CompositeAudioClip(clips)
+            final_audio.write_audiofile(output_filename, fps=44100, logger=None)
+            
+            for c in clips:
+                try:
+                    c.close()
+                except:
+                    pass
+            print(f"[+] Özel boşluklu ses başarıyla oluşturuldu: {output_filename}")
+            return True
+            
+        return False
+    except Exception as e:
+        print(f"[-] Cümle arası boşluk eklenirken beklenmedik hata: {e}")
+        return False
+    finally:
+        for f in temp_files:
+            if os.path.exists(f):
+                try:
+                    os.remove(f)
+                except Exception as del_err:
+                    print(f"[-] Gecici dosya silinemedi: {f} - {del_err}")
 
-def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None):
+def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0):
     """Senkron ortamdan çağrılacak versiyon (test için)."""
-    if "elevenlabs" in ai_provider.lower():
-        return generate_voice_elevenlabs(text, output_filename, voice_type)
-    else:
-        return asyncio.run(generate_voice_edge(text, output_filename, voice_type, target_duration_seconds))
+    return asyncio.run(generate_voice_async(text, output_filename, ai_provider, voice_type, target_duration_seconds, sentence_pause))
 
 if __name__ == "__main__":
     test_text = "Dünya sadece bir kum tanesi mi yoksa sonsuz bir okyanus mu?"

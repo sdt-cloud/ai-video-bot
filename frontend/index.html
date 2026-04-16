@@ -209,17 +209,35 @@
                                     </select>
                                 </div>
                                 <div class="option-group">
+                                    <label data-i18n="opt_sentence_pause">Cümle Arası Boşluk</label>
+                                    <select id="opt-sentence-pause">
+                                        <option value="0">Yok</option>
+                                        <option value="0.5">0.5 Saniye</option>
+                                        <option value="1.0" selected>1.0 Saniye (Normal)</option>
+                                        <option value="1.5">1.5 Saniye (Yavaş)</option>
+                                        <option value="2.0">2.0 Saniye</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
                                     <label>Ses Testi</label>
                                     <div id="voice-preview"></div>
                                 </div>
                                 <div class="option-group">
                                     <label data-i18n="opt_image_ai">Image AI</label>
                                     <select id="opt-image-ai">
-                                        <option value="Pollinations">Pollinations (Free)</option>
-                                        <option value="OpenAI">OpenAI (DALL-E 3)</option>
-                                        <option value="Flux">Flux (Schnell - High Quality)</option>
-                                        <option value="Flux-Pro">Flux (Pro - Ultra Quality)</option>
-                                        <option value="SDXL">SDXL (Classic HD)</option>
+                                        <optgroup label="⚡ Stok Görsel (Hızlı & Ücretsiz)">
+                                            <option value="Stock-Auto" selected>Stock-Auto 🚀 (Pexels→Pixabay→Unsplash→DALL-E)</option>
+                                            <option value="Pexels">Pexels</option>
+                                            <option value="Pixabay">Pixabay</option>
+                                            <option value="Unsplash">Unsplash</option>
+                                        </optgroup>
+                                        <optgroup label="🤖 AI Görsel (Yavaş)">
+                                            <option value="OpenAI">OpenAI (DALL-E 3)</option>
+                                            <option value="Pollinations">Pollinations (Free AI)</option>
+                                            <option value="Flux">Flux (Schnell - High Quality)</option>
+                                            <option value="Flux-Pro">Flux (Pro - Ultra Quality)</option>
+                                            <option value="SDXL">SDXL (Classic HD)</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                                 <div class="option-group">
@@ -349,13 +367,31 @@
                             </select>
                         </div>
                         <div class="option-group">
+                            <label data-i18n="opt_sentence_pause">Cümle Arası Boşluk</label>
+                            <select id="bulk-sentence-pause">
+                                <option value="0">Yok</option>
+                                <option value="0.5">0.5 Saniye</option>
+                                <option value="1.0" selected>1.0 Saniye (Normal)</option>
+                                <option value="1.5">1.5 Saniye (Yavaş)</option>
+                                <option value="2.0">2.0 Saniye</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
                             <label data-i18n="opt_image_ai">Image AI</label>
                             <select id="bulk-image-ai">
-                                <option value="Pollinations">Pollinations (Free)</option>
-                                <option value="OpenAI">OpenAI (DALL-E 3)</option>
-                                <option value="Flux">Flux (Schnell - High Quality)</option>
-                                <option value="Flux-Pro">Flux (Pro - Ultra Quality)</option>
-                                <option value="SDXL">SDXL (Classic HD)</option>
+                                <optgroup label="⚡ Stok Görsel (Hızlı & Ücretsiz)">
+                                    <option value="Stock-Auto" selected>Stock-Auto 🚀 (Pexels→Pixabay→Unsplash→DALL-E)</option>
+                                    <option value="Pexels">Pexels</option>
+                                    <option value="Pixabay">Pixabay</option>
+                                    <option value="Unsplash">Unsplash</option>
+                                </optgroup>
+                                <optgroup label="🤖 AI Görsel (Yavaş)">
+                                    <option value="OpenAI">OpenAI (DALL-E 3)</option>
+                                    <option value="Pollinations">Pollinations (Free AI)</option>
+                                    <option value="Flux">Flux (Schnell - High Quality)</option>
+                                    <option value="Flux-Pro">Flux (Pro - Ultra Quality)</option>
+                                    <option value="SDXL">SDXL (Classic HD)</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="option-group">
@@ -404,12 +440,12 @@
                             <label>Content Type (Post Type)</label>
                             <select id="nedir-type-select">
                                 <option value="posts">Genel Yazılar (Posts)</option>
-                                <option value="kavram">Kavramlar</option>
-                                <option value="kisaltma">Kısaltmalar</option>
-                                <option value="kisi">Kişiler</option>
-                                <option value="terim">Terimler</option>
-                                <option value="gunluk-dil">Günlük Dil</option>
-                                <option value="yeni-kavram">Yeni Kavramlar</option>
+                                <option value="kavram">Kavramlar (Kategori)</option>
+                                <option value="kisaltma">Kısaltmalar (Kategori)</option>
+                                <option value="kisi">Kişiler (Kategori)</option>
+                                <option value="terim">Terimler (Kategori)</option>
+                                <option value="gunluk-dil">Günlük Dil (Kategori)</option>
+                                <option value="yeni-kavramlar">Yeni Kavramlar (Kategori)</option>
                             </select>
                         </div>
                         <button class="action-btn" id="nedir-fetch-btn" style="height: 48px; background-color: var(--secondary);">
@@ -451,10 +487,28 @@
                             </select>
                         </div>
                         <div class="option-group">
+                            <label data-i18n="opt_sentence_pause">Cümle Arası Boşluk</label>
+                            <select id="nedir-sentence-pause">
+                                <option value="0">Yok</option>
+                                <option value="0.5">0.5 Saniye</option>
+                                <option value="1.0" selected>1.0 Saniye (Normal)</option>
+                                <option value="1.5">1.5 Saniye (Yavaş)</option>
+                                <option value="2.0">2.0 Saniye</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
                             <label data-i18n="opt_image_ai">Image AI</label>
                             <select id="nedir-image-ai">
-                                <option value="Pollinations">Pollinations (Free)</option>
-                                <option value="OpenAI">OpenAI (DALL-E 3)</option>
+                                <optgroup label="⚡ Stok Görsel (Hızlı & Ücretsiz)">
+                                    <option value="Stock-Auto" selected>Stock-Auto 🚀 (Pexels→Pixabay→Unsplash→DALL-E)</option>
+                                    <option value="Pexels">Pexels</option>
+                                    <option value="Pixabay">Pixabay</option>
+                                    <option value="Unsplash">Unsplash</option>
+                                </optgroup>
+                                <optgroup label="🤖 AI Görsel (Yavaş)">
+                                    <option value="OpenAI">OpenAI (DALL-E 3)</option>
+                                    <option value="Pollinations">Pollinations (Free AI)</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="option-group">
