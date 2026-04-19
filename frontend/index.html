@@ -256,6 +256,36 @@
                                         <option value="none">Altyazı Yok</option>
                                     </select>
                                 </div>
+                                <div class="option-group">
+                                    <label data-i18n="opt_transition">Geçiş Efekti</label>
+                                    <select id="opt-transition-style">
+                                        <option value="none">Yok</option>
+                                        <option value="fade">Fade (Karar/Açıl)</option>
+                                        <option value="crossfade">Crossfade (Çapraz Geçiş)</option>
+                                    </select>
+                                </div>
+                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                    <label data-i18n="opt_watermark" style="margin:0;">Filigran (Watermark)</label>
+                                    <input type="checkbox" id="opt-watermark-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                                </div>
+                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                    <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
+                                    <input type="checkbox" id="opt-bgm-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);" onchange="document.getElementById('opt-bgm-options').style.display=this.checked?'block':'none'">
+                                </div>
+                                <div id="opt-bgm-options" style="display:none;">
+                                    <div class="option-group">
+                                        <label>Müzik Tonu</label>
+                                        <select id="opt-bgm-tone">
+                                            <option value="auto">Otomatik</option>
+                                            <option value="sakin">Sakin / Ambient</option>
+                                            <option value="enerjik">Enerjik</option>
+                                            <option value="dramatik">Dramatik</option>
+                                            <option value="gizemli">Gizemli</option>
+                                            <option value="neşeli">Neşeli</option>
+                                            <option value="profesyonel">Profesyonel</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -403,6 +433,36 @@
                             </select>
                         </div>
                         <div class="option-group">
+                            <label data-i18n="opt_transition">Geçiş Efekti</label>
+                            <select id="bulk-transition-style">
+                                <option value="none">Yok</option>
+                                <option value="fade">Fade</option>
+                                <option value="crossfade">Crossfade</option>
+                            </select>
+                        </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label data-i18n="opt_watermark" style="margin:0;">Filigran (Watermark)</label>
+                            <input type="checkbox" id="bulk-watermark-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                        </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
+                            <input type="checkbox" id="bulk-bgm-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);" onchange="document.getElementById('bulk-bgm-options').style.display=this.checked?'block':'none'">
+                        </div>
+                        <div id="bulk-bgm-options" style="display:none;">
+                            <div class="option-group">
+                                <label>Müzik Tonu</label>
+                                <select id="bulk-bgm-tone">
+                                    <option value="auto">Otomatik</option>
+                                    <option value="sakin">Sakin / Ambient</option>
+                                    <option value="enerjik">Enerjik</option>
+                                    <option value="dramatik">Dramatik</option>
+                                    <option value="gizemli">Gizemli</option>
+                                    <option value="neşeli">Neşeli</option>
+                                    <option value="profesyonel">Profesyonel</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="option-group">
                             <label data-i18n="opt_video_mode">Video Animation</label>
                             <select id="bulk-video-mode">
                                 <option value="slideshow">Statik (Slideshow)</option>
@@ -518,6 +578,36 @@
                                 <option value="netflix">Netflix (Beyaz)</option>
                                 <option value="none">Altyazı Yok</option>
                             </select>
+                        </div>
+                        <div class="option-group">
+                            <label data-i18n="opt_transition">Geçiş Efekti</label>
+                            <select id="nedir-transition-style">
+                                <option value="none">Yok</option>
+                                <option value="fade">Fade</option>
+                                <option value="crossfade">Crossfade</option>
+                            </select>
+                        </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label data-i18n="opt_watermark" style="margin:0;">Filigran (Watermark)</label>
+                            <input type="checkbox" id="nedir-watermark-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                        </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
+                            <input type="checkbox" id="nedir-bgm-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);" onchange="document.getElementById('nedir-bgm-options').style.display=this.checked?'block':'none'">
+                        </div>
+                        <div id="nedir-bgm-options" style="display:none;">
+                            <div class="option-group">
+                                <label>Müzik Tonu</label>
+                                <select id="nedir-bgm-tone">
+                                    <option value="auto">Otomatik</option>
+                                    <option value="sakin">Sakin / Ambient</option>
+                                    <option value="enerjik">Enerjik</option>
+                                    <option value="dramatik">Dramatik</option>
+                                    <option value="gizemli">Gizemli</option>
+                                    <option value="neşeli">Neşeli</option>
+                                    <option value="profesyonel">Profesyonel</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="option-group">
                             <label data-i18n="opt_video_mode">Video Animation</label>

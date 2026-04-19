@@ -46,6 +46,10 @@ class VideoRequest(BaseModel):
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
+    watermark_enabled: Optional[bool] = False
+    transition_style: Optional[str] = "none"
+    bgm_enabled: Optional[bool] = False
+    bgm_tone: Optional[str] = "auto"
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
@@ -58,6 +62,10 @@ class BulkVideoRequest(BaseModel):
     subtitle_style: Optional[str] = "tiktok"
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
+    watermark_enabled: Optional[bool] = False
+    transition_style: Optional[str] = "none"
+    bgm_enabled: Optional[bool] = False
+    bgm_tone: Optional[str] = "auto"
 
 async def process_video(task):
     task_id = task["id"]
@@ -174,6 +182,10 @@ async def process_video(task):
         narrations = [scene.get("narration", "") for scene in scenes]
         subtitle_style = task.get("subtitle_style", "tiktok")
         video_mode = task.get("video_mode", "slideshow")
+        watermark_enabled = bool(task.get("watermark_enabled", False))
+        transition_style = task.get("transition_style", "none")
+        bgm_enabled = bool(task.get("bgm_enabled", False))
+        bgm_tone = task.get("bgm_tone", "auto") or "auto"
         
         video_success = await error_recovery.retry_with_backoff(
             create_video,
@@ -182,7 +194,11 @@ async def process_video(task):
             output_video_path, 
             narrations=narrations, 
             subtitle_style=subtitle_style, 
-            video_mode=video_mode
+            video_mode=video_mode,
+            watermark_enabled=watermark_enabled,
+            transition_style=transition_style,
+            bgm_enabled=bgm_enabled,
+            bgm_tone=bgm_tone,
         )
         
         if video_success:
@@ -216,7 +232,10 @@ def cleanup_temp_files(temp_files: List[str], task_id: int):
 async def add_single_video(req: VideoRequest):
     task_id = database.add_video_task(
         req.topic, req.category, req.tone, req.duration, req.language,
-        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, req.custom_script, req.sentence_pause
+        req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
+        req.voice_type, req.custom_script, req.sentence_pause,
+        req.watermark_enabled, req.transition_style,
+        req.bgm_enabled, req.bgm_tone
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -229,7 +248,10 @@ async def add_bulk_videos(req: BulkVideoRequest):
         if topic:
             task_id = database.add_video_task(
                 topic, "Genel", "Enerjik", req.duration, req.language,
-                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode, req.voice_type, None, req.sentence_pause
+                req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
+                req.voice_type, None, req.sentence_pause,
+                req.watermark_enabled, req.transition_style,
+                req.bgm_enabled, req.bgm_tone
             )
             task_ids.append(task_id)
     

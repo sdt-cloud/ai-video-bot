@@ -1,4 +1,4 @@
-from moviepy import AudioFileClip, ImageClip, VideoFileClip, concatenate_videoclips
+from moviepy import AudioFileClip, ImageClip, VideoFileClip, concatenate_videoclips, CompositeAudioClip
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import os
@@ -6,6 +6,7 @@ import requests
 import numpy as np
 import video_effects
 from subtitle_enhancer import subtitle_enhancer
+from bgm_manager import get_bgm_path
 
 
 def is_target_resolution_image(image_path, target_size=(1080, 1920)):
@@ -26,7 +27,7 @@ def get_render_settings(video_mode, total_duration):
         "fps": 20,
         "preset": "superfast",
         "threads": cpu_threads,
-        "ffmpeg_params": ["-movflags", "+faststart", "-crf", "24"],
+        "ffmpeg_params": ["-movflags", "+faststart", "-crf", "24", "-pix_fmt", "yuv420p"],
     }
 
     # Uzun videolarda encode suresi ciddi uzadigi icin daha agresif hiz profili
@@ -34,7 +35,7 @@ def get_render_settings(video_mode, total_duration):
         settings.update({
             "fps": 16,
             "preset": "ultrafast",
-            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "30"],
+            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "30", "-pix_fmt", "yuv420p"],
         })
 
     # AI video modu en maliyetli mod oldugu icin ek hizlandirma
@@ -42,13 +43,19 @@ def get_render_settings(video_mode, total_duration):
         settings.update({
             "fps": 15,
             "preset": "ultrafast",
-            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "32"],
+            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "32", "-pix_fmt", "yuv420p"],
         })
 
     return settings
 
 def apply_clip_resize(clip, width=None, height=None):
     """MoviePy v1'de resize(), v2'de resized() kullanılır."""
+    if width is not None and height is not None:
+        if hasattr(clip, 'resized'):
+            return clip.resized((width, height))
+        if hasattr(clip, 'resize'):
+            return clip.resize((width, height))
+            
     if hasattr(clip, 'resized'):
         return clip.resized(width=width, height=height)
     if hasattr(clip, 'resize'):
@@ -149,6 +156,41 @@ def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok
     # HIZLI: Kaliteyi %85 yap (95 yerine) - %30 daha hızlı
     result.save(output_path, quality=85, optimize=True)
 
+def apply_watermark(image_path, output_path, opacity=0.35, padding=30, max_size=180):
+    """Görselin sağ üst köşesine şeffaf logo watermark uygular."""
+    watermark_path = "assets/watermark/logo.png"
+    if not os.path.exists(watermark_path):
+        # Logo yoksa görseli olduğu gibi kopyala
+        import shutil
+        shutil.copy2(image_path, output_path)
+        return
+
+    try:
+        base = Image.open(image_path).convert("RGBA")
+        wm = Image.open(watermark_path).convert("RGBA")
+
+        # Watermark boyutunu sınırla (max max_size x max_size)
+        wm_ratio = min(max_size / wm.width, max_size / wm.height)
+        new_wm_size = (int(wm.width * wm_ratio), int(wm.height * wm_ratio))
+        wm = wm.resize(new_wm_size, Image.LANCZOS)
+
+        # Opacity uygula — alpha kanalını ölçekle
+        r, g, b, a = wm.split()
+        a = a.point(lambda x: int(x * opacity))
+        wm = Image.merge("RGBA", (r, g, b, a))
+
+        # Sağ üst köşeye yerleştir
+        x = base.width - new_wm_size[0] - padding
+        y = padding
+        base.paste(wm, (x, y), wm)
+
+        base.convert("RGB").save(output_path, quality=85, optimize=True)
+    except Exception as e:
+        print(f"[-] Watermark uygulama hatası: {e}")
+        import shutil
+        shutil.copy2(image_path, output_path)
+
+
 def generate_video_clip_ai(image_path, output_path):
     """Görseli Replicate SVD kullanarak videoya çevirir."""
     try:
@@ -190,7 +232,10 @@ def generate_video_clip_ai(image_path, output_path):
         print(f"[-] AI video oluşturulurken hata: {e}")
         return False
 
-def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None, subtitle_style="tiktok", video_mode="slideshow"):
+def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None,
+                 subtitle_style="tiktok", video_mode="slideshow",
+                 watermark_enabled=False, transition_style="none",
+                 bgm_enabled=False, bgm_tone="auto"):
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}): {output_filename}...")
     temp_files = []
     clips = []
@@ -208,12 +253,21 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         
         for i, img in enumerate(image_paths):
             processed_img = img
+
+            # Altyazı yakma
             if narrations and i < len(narrations) and subtitle_style != "none":
                 enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
                 subtitle_img = f"assets/sub_{os.path.basename(img)}"
                 burn_subtitle_on_image(img, enhanced_narration, subtitle_img, subtitle_style)
                 processed_img = subtitle_img
                 temp_files.append(subtitle_img)
+
+            # Watermark uygula
+            if watermark_enabled:
+                wm_img = f"assets/wm_{os.path.basename(processed_img)}"
+                apply_watermark(processed_img, wm_img)
+                temp_files.append(wm_img)
+                processed_img = wm_img
             
             if video_mode == "ai_video":
                 video_clip_path = f"assets/clip_{os.path.basename(img)}.mp4"
@@ -230,12 +284,79 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     clip = apply_clip_resize(clip, width=1080, height=1920)
                 if video_mode == "cinematic":
                     clip = video_effects.apply_random_effect(clip)
+
+            # Geçiş efektleri (crossfade / fade)
+            transition_dur = 0.4
+            if transition_style in ("crossfade", "fade") and clip.duration > transition_dur * 2:
+                clip = video_effects.apply_fade_in(clip, transition_dur)
+                clip = video_effects.apply_fade_out(clip, transition_dur)
             
             clips.append(clip)
         
-        final_video = concatenate_videoclips(clips, method="compose")
-        final_video = apply_clip_audio(final_video, audio_clip)
+        if transition_style == "crossfade" and len(clips) > 1:
+            # Crossfade: klipleri 0.4 saniye overlap ile birleştir
+            final_video = concatenate_videoclips(clips, method="compose", padding=-0.4)
+        else:
+            final_video = concatenate_videoclips(clips, method="compose")
+
+        # --- BGM Karıştırma ---
+        if bgm_enabled:
+            bgm_path = get_bgm_path(bgm_tone)
+            if bgm_path and os.path.exists(bgm_path):
+                try:
+                    print(f"[BGM] Müzik ekleniyor: {bgm_path} (ton: {bgm_tone})")
+                    bgm_clip = AudioFileClip(bgm_path)
+
+                    # BGM'i video süresine göre loop veya kırp
+                    if bgm_clip.duration < total_duration:
+                        # Loop: gerektiği kadar tekrarla
+                        from math import ceil
+                        repeat_count = ceil(total_duration / bgm_clip.duration)
+                        loops = []
+                        t = 0.0
+                        for _ in range(repeat_count):
+                            lp = bgm_clip
+                            if hasattr(lp, 'with_start'):
+                                lp = lp.with_start(t)
+                            elif hasattr(lp, 'set_start'):
+                                lp = lp.set_start(t)
+                            loops.append(lp)
+                            t += bgm_clip.duration
+                        bgm_looped = CompositeAudioClip(loops)
+                    else:
+                        bgm_looped = bgm_clip
+
+                    # BGM'i video süresine kırp
+                    if hasattr(bgm_looped, 'with_duration'):
+                        bgm_looped = bgm_looped.with_duration(total_duration)
+                    elif hasattr(bgm_looped, 'set_duration'):
+                        bgm_looped = bgm_looped.set_duration(total_duration)
+
+                    # Volume düşür (MoviePy v1/v2 uyumlu)
+                    bgm_volume = 0.12  # %12
+                    if hasattr(bgm_looped, 'with_volume_scaled'):
+                        bgm_looped = bgm_looped.with_volume_scaled(bgm_volume)
+                    elif hasattr(bgm_looped, 'volumex'):
+                        bgm_looped = bgm_looped.volumex(bgm_volume)
+
+                    # Narration + BGM'i birleştir
+                    mixed_audio = CompositeAudioClip([audio_clip, bgm_looped])
+                    final_video = apply_clip_audio(final_video, mixed_audio)
+                    print("[BGM] Arka plan müzik başarıyla eklendi!")
+                except Exception as bgm_err:
+                    print(f"[BGM] Müzik eklenirken hata (devam ediliyor): {bgm_err}")
+                    final_video = apply_clip_audio(final_video, audio_clip)
+            else:
+                print("[BGM] Müzik dosyası bulunamadı, sözsüz devam ediliyor.")
+                final_video = apply_clip_audio(final_video, audio_clip)
+        else:
+            final_video = apply_clip_audio(final_video, audio_clip)
         
+        # H264 codec requires even dimensions
+        w, h = final_video.size
+        if w % 2 != 0 or h % 2 != 0:
+            final_video = apply_clip_resize(final_video, width=w - (w % 2), height=h - (h % 2))
+            
         render_settings = get_render_settings(video_mode, total_duration)
         print(
             f"[+] Render işlemi başlıyor... "

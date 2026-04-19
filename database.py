@@ -51,6 +51,10 @@ def init_db():
                 progress INTEGER DEFAULT 0,
                 video_mode TEXT DEFAULT 'slideshow',
                 sentence_pause REAL DEFAULT 0.0,
+                watermark_enabled INTEGER DEFAULT 0,
+                transition_style TEXT DEFAULT 'none',
+                bgm_enabled INTEGER DEFAULT 0,
+                bgm_tone TEXT DEFAULT 'auto',
                 error_message TEXT,
                 video_path TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,19 +87,49 @@ def init_db():
             cursor.execute("ALTER TABLE videos ADD COLUMN sentence_pause REAL DEFAULT 0.0")
         except sqlite3.OperationalError:
             pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN watermark_enabled INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN transition_style TEXT DEFAULT 'none'")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN bgm_enabled INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN bgm_tone TEXT DEFAULT 'auto'")
+        except sqlite3.OperationalError:
+            pass
         
         # Index oluştur - performans için
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON videos(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON videos(created_at)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_topic ON videos(topic)")
 
-def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai, subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek", custom_script=None, sentence_pause=0.0):
+def add_video_task(topic, category, tone, duration, language, script_ai, voice_ai, image_ai,
+                   subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek",
+                   custom_script=None, sentence_pause=0.0,
+                   watermark_enabled=False, transition_style="none",
+                   bgm_enabled=False, bgm_tone="auto"):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script, sentence_pause)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script, sentence_pause))
+            INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai,
+                                voice_type, image_ai, subtitle_style, video_mode, custom_script,
+                                sentence_pause, watermark_enabled, transition_style,
+                                bgm_enabled, bgm_tone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type,
+               image_ai, subtitle_style, video_mode, custom_script,
+               sentence_pause, int(watermark_enabled), transition_style,
+               int(bgm_enabled), bgm_tone))
         return cursor.lastrowid
 
 def update_status(task_id, status, progress=None, error_message=None, video_path=None):
@@ -125,7 +159,10 @@ def get_pending_tasks(limit: int = 10) -> List[dict]:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, topic, category, tone, duration, language, script_ai, voice_ai, voice_type, image_ai, subtitle_style, video_mode, custom_script, sentence_pause
+            SELECT id, topic, category, tone, duration, language, script_ai, voice_ai,
+                   voice_type, image_ai, subtitle_style, video_mode, custom_script,
+                   sentence_pause, watermark_enabled, transition_style,
+                   bgm_enabled, bgm_tone
             FROM videos 
             WHERE status = 'pending' 
             ORDER BY created_at ASC 

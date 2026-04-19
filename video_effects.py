@@ -69,3 +69,33 @@ def apply_random_effect(clip):
     effects = [zoom_in_effect, zoom_out_effect, pan_left_to_right_effect]
     effect_fn = random.choice(effects)
     return effect_fn(clip)
+
+
+def apply_fade_in(clip, duration=0.4):
+    """MoviePy v1/v2 uyumlu fade-in efekti."""
+    try:
+        # MoviePy v2
+        if hasattr(clip, 'with_effects'):
+            from moviepy.video.fx import FadeIn
+            return clip.with_effects([FadeIn(duration)])
+        # MoviePy v1
+        if hasattr(clip, 'fadein'):
+            return clip.fadein(duration)
+    except Exception as e:
+        print(f"[!] fade_in efekti uygulanamadı: {e}")
+    return clip
+
+
+def apply_fade_out(clip, duration=0.4):
+    """MoviePy v1/v2 uyumlu fade-out efekti."""
+    try:
+        # MoviePy v2
+        if hasattr(clip, 'with_effects'):
+            from moviepy.video.fx import FadeOut
+            return clip.with_effects([FadeOut(duration)])
+        # MoviePy v1
+        if hasattr(clip, 'fadeout'):
+            return clip.fadeout(duration)
+    except Exception as e:
+        print(f"[!] fade_out efekti uygulanamadı: {e}")
+    return clip

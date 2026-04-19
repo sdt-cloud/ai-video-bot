@@ -277,7 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                     image_ai: document.getElementById('opt-image-ai').value,
                     subtitle_style: document.getElementById('opt-subtitle-style').value,
-                    video_mode: document.getElementById('opt-video-mode').value
+                    video_mode: document.getElementById('opt-video-mode').value,
+                    transition_style: document.getElementById('opt-transition-style').value,
+                    watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
+                    bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
+                    bgm_tone: document.getElementById('opt-bgm-tone').value
                 };
 
                 const res = await fetch('/api/videos/single', {
@@ -332,7 +336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     sentence_pause: parseFloat(document.getElementById('bulk-sentence-pause').value) || 0,
                     image_ai: document.getElementById('bulk-image-ai').value,
                     subtitle_style: document.getElementById('bulk-subtitle-style').value,
-                    video_mode: document.getElementById('bulk-video-mode').value
+                    video_mode: document.getElementById('bulk-video-mode').value,
+                    transition_style: document.getElementById('bulk-transition-style').value,
+                    watermark_enabled: document.getElementById('bulk-watermark-enabled').checked,
+                    bgm_enabled: document.getElementById('bulk-bgm-enabled').checked,
+                    bgm_tone: document.getElementById('bulk-bgm-tone').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {
@@ -732,7 +740,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     sentence_pause: parseFloat(document.getElementById('nedir-sentence-pause').value) || 0,
                     image_ai: document.getElementById('nedir-image-ai').value,
                     subtitle_style: document.getElementById('nedir-subtitle-style').value,
-                    video_mode: document.getElementById('nedir-video-mode').value
+                    video_mode: document.getElementById('nedir-video-mode').value,
+                    transition_style: document.getElementById('nedir-transition-style').value,
+                    watermark_enabled: document.getElementById('nedir-watermark-enabled').checked,
+                    bgm_enabled: document.getElementById('nedir-bgm-enabled').checked,
+                    bgm_tone: document.getElementById('nedir-bgm-tone').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {
