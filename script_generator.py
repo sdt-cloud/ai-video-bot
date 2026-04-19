@@ -31,6 +31,64 @@ Başka hiçbir açıklama veya markdown ekleme, sadece saf JSON döndür:
 }
 """
 
+# Dil bazlı system prompt'lar
+SYSTEM_PROMPTS = {
+    "tr": SYSTEM_PROMPT,
+    "en": """
+You are a YouTube Shorts and Instagram Reels content creator.
+You will write an extremely engaging, informative {duration}-second video script about the given topic.
+MANDATORY RULES:
+- Total narration word count MUST be AT LEAST {min_words} words.
+- Generate at least {min_scenes} scenes.
+- Each scene's narration must be 1-2 sentences and must NOT repeat a previous scene.
+- Do NOT produce short text; write enough content to fill the target duration.
+Each sentence or sentence group should have an 'image_prompt' describing the visual for that scene.
+Image prompts must ALWAYS be written in ENGLISH (AI image tools work better in English).
+Add terms like realistic, cinematic, or high-quality. Narrations must be in ENGLISH.
+
+Return ONLY a JSON object (containing a 'scenes' list) as shown below.
+Do NOT add any explanation or markdown, return only raw JSON:
+{
+  "scenes": [
+    {
+        "narration": "The coldest place in the universe is not in Antarctica, but in the Boomerang Nebula, 5000 light-years away from us.",
+        "image_prompt": "A cinematic hyperrealistic image of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution"
+    }
+  ]
+}
+""",
+    "es": """
+Eres un creador de contenido de YouTube Shorts e Instagram Reels.
+Escribirás un guion de video extremadamente atractivo e informativo de {duration} segundos sobre el tema dado.
+REGLAS OBLIGATORIAS:
+- El número total de palabras de narración DEBE ser AL MENOS {min_words} palabras.
+- Genera al menos {min_scenes} escenas.
+- La narración de cada escena debe tener 1-2 oraciones y NO debe repetir una escena anterior.
+- NO produzcas texto corto; escribe suficiente contenido para llenar la duración objetivo.
+Cada oración o grupo de oraciones debe tener un 'image_prompt' que describa el visual de esa escena.
+Los image prompts deben SIEMPRE estar escritos en INGLÉS (las herramientas de IA funcionan mejor en inglés).
+Añade términos como realista, cinematográfico o alta calidad. Las narraciones deben ser en ESPAÑOL.
+
+Devuelve SOLO un objeto JSON (que contenga una lista 'scenes') como se muestra a continuación.
+NO agregues ninguna explicación o markdown, devuelve solo JSON puro:
+{
+  "scenes": [
+    {
+        "narration": "El lugar más frío del universo no está en la Antártida, sino en la Nebulosa Boomerang, a 5000 años luz de nosotros.",
+        "image_prompt": "A cinematic hyperrealistic image of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution"
+    }
+  ]
+}
+""",
+}
+
+# Dil bazlı user prompt şablonları
+USER_PROMPTS = {
+    "tr": "Lütfen şu konuda ilginç ve tam olarak {duration} saniye sürecek bir senaryo yaz: {topic}. Toplam narration metni en az {min_words} kelime ve en az {min_scenes} sahne olsun.",
+    "en": "Please write an interesting script about the following topic that will last exactly {duration} seconds: {topic}. Total narration text must be at least {min_words} words and at least {min_scenes} scenes.",
+    "es": "Por favor, escribe un guion interesante sobre el siguiente tema que dure exactamente {duration} segundos: {topic}. El texto de narración total debe tener al menos {min_words} palabras y al menos {min_scenes} escenas.",
+}
+
 # Konuşma hızına göre minimum metin uzunluğu kontrolü.
 # .env üzerinden SCRIPT_MIN_WORDS_PER_MINUTE ile değiştirilebilir.
 MIN_WORDS_PER_MINUTE = int(os.environ.get("SCRIPT_MIN_WORDS_PER_MINUTE", "120"))
@@ -50,22 +108,27 @@ def _calculate_min_scenes(duration_seconds: int) -> int:
     return max(3, int(duration_seconds / 15))
 
 
-def _build_system_prompt(duration: int, min_words: int, min_scenes: int) -> str:
+def _build_system_prompt(duration: int, min_words: int, min_scenes: int, language: str = "tr") -> str:
+    template = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["tr"])
     return (
-        SYSTEM_PROMPT
+        template
         .replace("{duration}", str(duration))
         .replace("{min_words}", str(min_words))
         .replace("{min_scenes}", str(min_scenes))
     )
 
 
-def _build_user_prompt(topic: str, duration: int, min_words: int, min_scenes: int, extra_instructions: str = "") -> str:
+def _build_user_prompt(topic: str, duration: int, min_words: int, min_scenes: int, extra_instructions: str = "", language: str = "tr") -> str:
+    template = USER_PROMPTS.get(language, USER_PROMPTS["tr"])
     prompt = (
-        f"Lütfen şu konuda ilginç ve tam olarak {duration} saniye sürecek bir senaryo yaz: {topic}. "
-        f"Toplam narration metni en az {min_words} kelime ve en az {min_scenes} sahne olsun."
+        template
+        .replace("{topic}", topic)
+        .replace("{duration}", str(duration))
+        .replace("{min_words}", str(min_words))
+        .replace("{min_scenes}", str(min_scenes))
     )
     if extra_instructions:
-        prompt += f"\nEk düzeltme talimatı: {extra_instructions}"
+        prompt += f"\nAdditional instruction: {extra_instructions}"
     return prompt
 
 
@@ -250,12 +313,12 @@ def generate_script_from_custom_text(topic, custom_script, ai_provider="Gemini",
         print(f"[-] Özel script işlenirken hata oluştu: {e}")
         return None
 
-def generate_script_openai(topic, duration=30, min_words=60, min_scenes=3, extra_instructions=""):
+def generate_script_openai(topic, duration=30, min_words=60, min_scenes=3, extra_instructions="", language="tr"):
     from openai import OpenAI
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     
-    formatted_system_prompt = _build_system_prompt(duration, min_words, min_scenes)
-    user_prompt = _build_user_prompt(topic, duration, min_words, min_scenes, extra_instructions)
+    formatted_system_prompt = _build_system_prompt(duration, min_words, min_scenes, language)
+    user_prompt = _build_user_prompt(topic, duration, min_words, min_scenes, extra_instructions, language)
     
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -267,18 +330,17 @@ def generate_script_openai(topic, duration=30, min_words=60, min_scenes=3, extra
     )
     return response.choices[0].message.content
 
-def generate_script_gemini(topic, model_name="gemini-2.5-pro", duration=30, min_words=60, min_scenes=3, extra_instructions=""):
+def generate_script_gemini(topic, model_name="gemini-2.5-pro", duration=30, min_words=60, min_scenes=3, extra_instructions="", language="tr"):
     try:
         import google.genai as genai
     except ImportError:
-        # Yeni paket yüklü değilse eski paketi kullan
         import google.generativeai as genai
     
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     model = genai.GenerativeModel(model_name)
     
-    formatted_system_prompt = _build_system_prompt(duration, min_words, min_scenes)
-    prompt = formatted_system_prompt + "\n\n" + _build_user_prompt(topic, duration, min_words, min_scenes, extra_instructions)
+    formatted_system_prompt = _build_system_prompt(duration, min_words, min_scenes, language)
+    prompt = formatted_system_prompt + "\n\n" + _build_user_prompt(topic, duration, min_words, min_scenes, extra_instructions, language)
     
     response = model.generate_content(prompt)
     return response.text
@@ -296,8 +358,9 @@ def _is_openai_quota_or_rate_error(error: Exception) -> bool:
         or "quota" in text
     )
 
-def generate_script(topic, ai_provider="Gemini", duration=30):
-    print(f"[+] '{topic}' konusu için {duration} saniyelik senaryo üretiliyor... (AI: {ai_provider})")
+def generate_script(topic, ai_provider="Gemini", duration=30, language="tr"):
+    lang_name = {"tr": "Türkçe", "en": "English", "es": "Español"}.get(language, language)
+    print(f"[+] '{topic}' konusu için {duration} saniyelik {lang_name} senaryo üretiliyor... (AI: {ai_provider})")
     min_words = _calculate_min_words(duration)
     min_scenes = _calculate_min_scenes(duration)
     print(f"[i] Minimum senaryo hedefi: {min_words} kelime, {min_scenes} sahne (min {MIN_WORDS_PER_MINUTE} kelime/dk)")
@@ -317,6 +380,7 @@ def generate_script(topic, ai_provider="Gemini", duration=30):
                         min_words=min_words,
                         min_scenes=min_scenes,
                         extra_instructions=extra_instructions,
+                        language=language,
                     )
                 except Exception as openai_error:
                     if _is_openai_quota_or_rate_error(openai_error):
@@ -330,11 +394,11 @@ def generate_script(topic, ai_provider="Gemini", duration=30):
                             min_words=min_words,
                             min_scenes=min_scenes,
                             extra_instructions=extra_instructions,
+                            language=language,
                         )
                     else:
                         raise
             elif "3.1-flash" in provider_lower or "3.1 flash" in provider_lower:
-                # Not: Google API'sinde şu an en güncel flaş model 2.5-flash'dir. 3.1 UI ismidir.
                 raw_content = generate_script_gemini(
                     topic,
                     model_name="gemini-2.5-flash",
@@ -342,9 +406,9 @@ def generate_script(topic, ai_provider="Gemini", duration=30):
                     min_words=min_words,
                     min_scenes=min_scenes,
                     extra_instructions=extra_instructions,
+                    language=language,
                 )
             elif "3.1-pro" in provider_lower or "3.1 pro" in provider_lower:
-                # Not: Google API'sinde şu an en güncel pro model 2.5-pro'dur.
                 raw_content = generate_script_gemini(
                     topic,
                     model_name="gemini-2.5-pro",
@@ -352,6 +416,7 @@ def generate_script(topic, ai_provider="Gemini", duration=30):
                     min_words=min_words,
                     min_scenes=min_scenes,
                     extra_instructions=extra_instructions,
+                    language=language,
                 )
             else:
                 raw_content = generate_script_gemini(
@@ -361,6 +426,7 @@ def generate_script(topic, ai_provider="Gemini", duration=30):
                     min_words=min_words,
                     min_scenes=min_scenes,
                     extra_instructions=extra_instructions,
+                    language=language,
                 )
 
             # JSON temizle (bazen ```json ... ``` ile sarılıyor)

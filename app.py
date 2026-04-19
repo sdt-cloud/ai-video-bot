@@ -93,7 +93,8 @@ async def process_video(task):
                 generate_script,
                 topic, 
                 task.get("script_ai", "Gemini"), 
-                task.get("duration", 30)
+                task.get("duration", 30),
+                task.get("language", "tr")
             )
         
         if not script_data or "scenes" not in script_data:
@@ -131,7 +132,8 @@ async def process_video(task):
             voice_ai_provider,
             voice_type,
             target_duration_seconds=target_duration_seconds,
-            sentence_pause=sentence_pause
+            sentence_pause=sentence_pause,
+            language=task.get("language", "tr")
         )
         
         if not voice_success:
@@ -257,6 +259,49 @@ async def add_bulk_videos(req: BulkVideoRequest):
     
     video_logger.log_video_production_step("bulk_queued", "bulk", {"count": len(task_ids)})
     return {"status": "success", "count": len(req.topics), "task_ids": task_ids}
+
+
+class MultiLangVideoRequest(BaseModel):
+    topic: str
+    languages: List[str] = ["tr", "en", "es"]
+    duration: int = Field(default=30, ge=15, le=300)
+    script_ai: Optional[str] = "Gemini"
+    voice_ai: Optional[str] = "Edge-TTS"
+    voice_type: Optional[str] = "erkek"
+    image_ai: Optional[str] = "Pollinations"
+    subtitle_style: Optional[str] = "tiktok"
+    video_mode: Optional[str] = "slideshow"
+    sentence_pause: Optional[float] = 0.0
+    watermark_enabled: Optional[bool] = False
+    transition_style: Optional[str] = "none"
+    bgm_enabled: Optional[bool] = False
+    bgm_tone: Optional[str] = "auto"
+
+
+@app.post("/api/videos/multi-lang")
+async def add_multi_lang_video(req: MultiLangVideoRequest):
+    """Aynı konuyu birden fazla dilde kuyruğa ekler (TR/EN/ES)."""
+    task_ids = []
+    lang_names = {"tr": "Türkçe", "en": "English", "es": "Español"}
+    for lang in req.languages:
+        lang = lang.strip().lower()
+        if lang not in ["tr", "en", "es"]:
+            continue
+        lang_label = lang_names.get(lang, lang)
+        topic_with_lang = f"[{lang_label}] {req.topic}"
+        task_id = database.add_video_task(
+            topic_with_lang, "Genel", "Enerjik", req.duration, lang,
+            req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
+            req.voice_type, None, req.sentence_pause,
+            req.watermark_enabled, req.transition_style,
+            req.bgm_enabled, req.bgm_tone
+        )
+        task_ids.append({"language": lang, "task_id": task_id})
+    
+    video_logger.log_video_production_step("multi_lang_queued", "multi", {
+        "topic": req.topic, "languages": req.languages, "count": len(task_ids)
+    })
+    return {"status": "success", "topic": req.topic, "tasks": task_ids}
 
 @app.get("/api/nedir/fetch")
 async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):

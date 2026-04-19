@@ -34,19 +34,45 @@ def get_elevenlabs_session():
     
     return _elevenlabs_session
 
-# Ses seçenekleri - Edge TTS
+# Ses seçenekleri - Edge TTS (Dil bazlı)
 EDGE_TTS_VOICES = {
-    "erkek": "tr-TR-AhmetNeural",
-    "kadin": "tr-TR-EmelNeural",
-    "cocuk": "tr-TR-EmelNeural",  # Çocuk sesi için Emel kullan (daha yumuşak)
-    "dramatik": "tr-TR-AhmetNeural",
-    "gulucu": "tr-TR-EmelNeural",
-    "profesyonel": "tr-TR-AhmetNeural",
-    "sakin": "tr-TR-EmelNeural",
+    "tr": {
+        "erkek": "tr-TR-AhmetNeural",
+        "kadin": "tr-TR-EmelNeural",
+        "cocuk": "tr-TR-EmelNeural",
+        "dramatik": "tr-TR-AhmetNeural",
+        "gulucu": "tr-TR-EmelNeural",
+        "profesyonel": "tr-TR-AhmetNeural",
+        "sakin": "tr-TR-EmelNeural",
+    },
+    "en": {
+        "erkek": "en-US-GuyNeural",
+        "kadin": "en-US-JennyNeural",
+        "cocuk": "en-US-AnaNeural",
+        "dramatik": "en-US-GuyNeural",
+        "gulucu": "en-US-JennyNeural",
+        "profesyonel": "en-US-GuyNeural",
+        "sakin": "en-US-JennyNeural",
+    },
+    "es": {
+        "erkek": "es-ES-AlvaroNeural",
+        "kadin": "es-ES-ElviraNeural",
+        "cocuk": "es-ES-ElviraNeural",
+        "dramatik": "es-ES-AlvaroNeural",
+        "gulucu": "es-ES-ElviraNeural",
+        "profesyonel": "es-ES-AlvaroNeural",
+        "sakin": "es-ES-ElviraNeural",
+    },
 }
 
 # Varsayılan ses
-DEFAULT_VOICE = EDGE_TTS_VOICES["erkek"]
+DEFAULT_VOICE = "tr-TR-AhmetNeural"
+
+
+def _get_edge_voice(voice_type: str = "erkek", language: str = "tr") -> str:
+    """Dil ve ses tipine göre uygun Edge TTS sesini döndürür."""
+    lang_voices = EDGE_TTS_VOICES.get(language, EDGE_TTS_VOICES["tr"])
+    return lang_voices.get(voice_type, lang_voices.get("erkek", DEFAULT_VOICE))
 
 # Edge-TTS otomatik hız ayarı için temel değerler
 EDGE_BASE_WPM = int(os.environ.get("EDGE_BASE_WPM", "145"))
@@ -132,11 +158,11 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-async def generate_voice_edge(text, output_filename, voice_type="erkek", target_duration_seconds=None):
-    print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS)...")
+async def generate_voice_edge(text, output_filename, voice_type="erkek", target_duration_seconds=None, language="tr"):
+    print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS, dil: {language})...")
     try:
-        # Ses tipine göre voice seç
-        voice = EDGE_TTS_VOICES.get(voice_type, DEFAULT_VOICE)
+        # Dil ve ses tipine göre voice seç
+        voice = _get_edge_voice(voice_type, language)
         print(f"[+] Edge-TTS ses tipi: {voice_type} (Voice: {voice})")
 
         rate = "+0%"
@@ -152,14 +178,14 @@ async def generate_voice_edge(text, output_filename, voice_type="erkek", target_
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
-async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0):
-    """Async ortamdan (FastAPI gibi) çağrılacak versiyon."""
+async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0, language="tr"):
+    """Çoklu dil destekli async ses üretici."""
     if sentence_pause <= 0.0:
         if "elevenlabs" in ai_provider.lower():
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, generate_voice_elevenlabs, text, output_filename, voice_type)
         else:
-            return await generate_voice_edge(text, output_filename, voice_type, target_duration_seconds)
+            return await generate_voice_edge(text, output_filename, voice_type, target_duration_seconds, language)
             
     # --- Cümle Arası Boşluk Mantığı ---
     print(f"[i] Cümle arası {sentence_pause}s boşluk eklenecek. Cümleler ayrılıyor...")
@@ -192,10 +218,9 @@ async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", vo
             if "elevenlabs" in ai_provider.lower():
                 loop = asyncio.get_event_loop()
                 cur_success = await loop.run_in_executor(None, generate_voice_elevenlabs, sentence, tmp_name, voice_type)
-                # ElevenLabs API limitlerine takılmamak için kısa bekleme
                 await asyncio.sleep(0.5)
             else:
-                cur_success = await generate_voice_edge(sentence, tmp_name, voice_type, None)
+                cur_success = await generate_voice_edge(sentence, tmp_name, voice_type, None, language)
                 
             if not cur_success or not os.path.exists(tmp_name):
                 print(f"[-] Hata: {i+1}. cümle üretilemedi.")
@@ -247,9 +272,9 @@ async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", vo
                 except Exception as del_err:
                     print(f"[-] Gecici dosya silinemedi: {f} - {del_err}")
 
-def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0):
+def generate_voice(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0, language="tr"):
     """Senkron ortamdan çağrılacak versiyon (test için)."""
-    return asyncio.run(generate_voice_async(text, output_filename, ai_provider, voice_type, target_duration_seconds, sentence_pause))
+    return asyncio.run(generate_voice_async(text, output_filename, ai_provider, voice_type, target_duration_seconds, sentence_pause, language))
 
 if __name__ == "__main__":
     test_text = "Dünya sadece bir kum tanesi mi yoksa sonsuz bir okyanus mu?"

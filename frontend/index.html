@@ -178,7 +178,17 @@
                                     <select id="opt-language">
                                         <option value="tr">Türkçe</option>
                                         <option value="en">English</option>
+                                        <option value="es">Español</option>
                                     </select>
+                                </div>
+                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                    <label style="margin:0;">🌍 Çoklu Dil Üretimi</label>
+                                    <input type="checkbox" id="opt-multi-lang" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);" onchange="document.getElementById('opt-multi-lang-options').style.display=this.checked?'flex':'none'">
+                                </div>
+                                <div id="opt-multi-lang-options" style="display:none; gap:12px; flex-wrap:wrap; padding:8px 0;">
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" value="tr" checked class="multi-lang-cb" style="accent-color:var(--accent-color);"> Türkçe</label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" value="en" checked class="multi-lang-cb" style="accent-color:var(--accent-color);"> English</label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" value="es" checked class="multi-lang-cb" style="accent-color:var(--accent-color);"> Español</label>
                                 </div>
                                 <div class="option-group">
                                     <label data-i18n="opt_script_ai">Script AI</label>
@@ -366,6 +376,7 @@
                             <select id="bulk-language">
                                 <option value="tr">Türkçe</option>
                                 <option value="en">English</option>
+                                <option value="es">Español</option>
                             </select>
                         </div>
                         <div class="option-group">

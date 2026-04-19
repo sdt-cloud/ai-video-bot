@@ -264,40 +264,80 @@ document.addEventListener('DOMContentLoaded', () => {
             generateBtn.disabled = true;
 
             try {
-                const payload = {
-                    topic: topic,
-                    category: document.getElementById('opt-category').value.trim() || "Genel",
-                    tone: document.getElementById('opt-tone').value,
-                    duration: parseInt(document.getElementById('opt-duration').value),
-                    language: document.getElementById('opt-language').value,
-                    script_ai: document.getElementById('opt-script-ai').value,
-                    custom_script: customScript || null,
-                    voice_ai: document.getElementById('opt-voice-ai').value,
-                    voice_type: document.getElementById('voice-type').value, // Ses tipi eklendi
-                    sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
-                    image_ai: document.getElementById('opt-image-ai').value,
-                    subtitle_style: document.getElementById('opt-subtitle-style').value,
-                    video_mode: document.getElementById('opt-video-mode').value,
-                    transition_style: document.getElementById('opt-transition-style').value,
-                    watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
-                    bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
-                    bgm_tone: document.getElementById('opt-bgm-tone').value
-                };
-
-                const res = await fetch('/api/videos/single', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
-                if(res.ok) {
-                    topicInput.value = '';
-                    if (customScriptInput) customScriptInput.value = '';
-                    showToast(currentLang === 'tr' ? "Video başarıyla kuyruğa eklendi!" : "Video successfully added to queue!");
-                    fetchStats();
-                    fetchVideos();
+                const isMultiLang = document.getElementById('opt-multi-lang').checked;
+                
+                if (isMultiLang) {
+                    // Çoklu Dil Modu — /api/videos/multi-lang endpoint'i kullan
+                    const selectedLangs = Array.from(document.querySelectorAll('.multi-lang-cb:checked')).map(cb => cb.value);
+                    if (selectedLangs.length === 0) {
+                        showToast(currentLang === 'tr' ? "En az 1 dil seçmelisiniz!" : "Select at least 1 language!", "error");
+                        return;
+                    }
+                    const multiPayload = {
+                        topic: topic,
+                        languages: selectedLangs,
+                        duration: parseInt(document.getElementById('opt-duration').value),
+                        script_ai: document.getElementById('opt-script-ai').value,
+                        voice_ai: document.getElementById('opt-voice-ai').value,
+                        voice_type: document.getElementById('voice-type').value,
+                        sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
+                        image_ai: document.getElementById('opt-image-ai').value,
+                        subtitle_style: document.getElementById('opt-subtitle-style').value,
+                        video_mode: document.getElementById('opt-video-mode').value,
+                        transition_style: document.getElementById('opt-transition-style').value,
+                        watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
+                        bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
+                        bgm_tone: document.getElementById('opt-bgm-tone').value
+                    };
+                    const res = await fetch('/api/videos/multi-lang', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(multiPayload)
+                    });
+                    if(res.ok) {
+                        topicInput.value = '';
+                        if (customScriptInput) customScriptInput.value = '';
+                        showToast(currentLang === 'tr' ? `${selectedLangs.length} dilde video kuyruğa eklendi! 🌍` : `Video queued in ${selectedLangs.length} languages! 🌍`);
+                        fetchStats();
+                        fetchVideos();
+                    } else {
+                        showToast(currentLang === 'tr' ? "Kuyruğa eklenirken hata oluştu." : "Error adding to queue.", "error");
+                    }
                 } else {
-                    showToast(currentLang === 'tr' ? "Kuyruğa eklenirken hata oluştu." : "Error adding to queue.", "error");
+                    // Normal tek dil modu
+                    const payload = {
+                        topic: topic,
+                        category: document.getElementById('opt-category').value.trim() || "Genel",
+                        tone: document.getElementById('opt-tone').value,
+                        duration: parseInt(document.getElementById('opt-duration').value),
+                        language: document.getElementById('opt-language').value,
+                        script_ai: document.getElementById('opt-script-ai').value,
+                        custom_script: customScript || null,
+                        voice_ai: document.getElementById('opt-voice-ai').value,
+                        voice_type: document.getElementById('voice-type').value,
+                        sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
+                        image_ai: document.getElementById('opt-image-ai').value,
+                        subtitle_style: document.getElementById('opt-subtitle-style').value,
+                        video_mode: document.getElementById('opt-video-mode').value,
+                        transition_style: document.getElementById('opt-transition-style').value,
+                        watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
+                        bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
+                        bgm_tone: document.getElementById('opt-bgm-tone').value
+                    };
+                    const res = await fetch('/api/videos/single', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    if(res.ok) {
+                        topicInput.value = '';
+                        if (customScriptInput) customScriptInput.value = '';
+                        showToast(currentLang === 'tr' ? "Video başarıyla kuyruğa eklendi!" : "Video successfully added to queue!");
+                        fetchStats();
+                        fetchVideos();
+                    } else {
+                        showToast(currentLang === 'tr' ? "Kuyruğa eklenirken hata oluştu." : "Error adding to queue.", "error");
+                    }
                 }
             } catch (err) {
                 console.error(err);
