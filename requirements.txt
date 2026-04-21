@@ -11,3 +11,4 @@ google-generativeai
 google-genai
 replicate
 psutil
+pyTelegramBotAPI
