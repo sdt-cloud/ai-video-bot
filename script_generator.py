@@ -11,6 +11,7 @@ SYSTEM_PROMPT = """
 Sen bir YouTube Shorts ve Instagram Reels içerik üreticisisin.
 Verilen konu hakkında aşırı ilgi çekici, bilgilendirici, {duration} saniyelik bir video senaryosu yazacaksın.
 ZORUNLU KURALLAR:
+- İLK SAHNE (ilk 3 saniye) videonun HOOK (kanca) kısmı olmalıdır. İzleyiciyi anında yakalayacak, 'Bunu biliyor muydunuz?' veya 'İşte %99 insanın bilmediği gerçek...' tarzı çok çarpıcı bir cümle ile başla.
 - Toplam narration kelime sayısı EN AZ {min_words} kelime olmalıdır.
 - En az {min_scenes} sahne üret.
 - Her sahnede narration metni 1-2 cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
@@ -38,6 +39,7 @@ SYSTEM_PROMPTS = {
 You are a YouTube Shorts and Instagram Reels content creator.
 You will write an extremely engaging, informative {duration}-second video script about the given topic.
 MANDATORY RULES:
+- The FIRST SCENE (first 3 seconds) must be the HOOK. Start with an extremely catchy sentence like 'Did you know?' or 'Here is a fact 99% of people don\\'t know...' to immediately grab the viewer's attention.
 - Total narration word count MUST be AT LEAST {min_words} words.
 - Generate at least {min_scenes} scenes.
 - Each scene's narration must be 1-2 sentences and must NOT repeat a previous scene.
@@ -61,6 +63,7 @@ Do NOT add any explanation or markdown, return only raw JSON:
 Eres un creador de contenido de YouTube Shorts e Instagram Reels.
 Escribirás un guion de video extremadamente atractivo e informativo de {duration} segundos sobre el tema dado.
 REGLAS OBLIGATORIAS:
+- La PRIMERA ESCENA (los primeros 3 segundos) debe ser el GANCHO (hook). Comienza con una frase extremadamente llamativa como '¿Sabías que...?' o 'Aquí hay un hecho que el 99% de las personas no sabe...' para captar inmediatamente la atención.
 - El número total de palabras de narración DEBE ser AL MENOS {min_words} palabras.
 - Genera al menos {min_scenes} escenas.
 - La narración de cada escena debe tener 1-2 oraciones y NO debe repetir una escena anterior.

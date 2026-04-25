@@ -100,14 +100,20 @@ class SubtitleEnhancer:
         if total_words == 0:
             return []
         
-        # Kelime başına düşen süre
-        avg_time_per_word = duration / total_words
+        total_chars = sum(len(word) for word in words)
+        if total_chars == 0:
+            return []
+            
+        # Konuşma sonlarındaki sessizlik ve esleri telafi etmek için
+        # altyazı akışını %15 oranında hızlandırıyoruz (geriden gelmeyi önler).
+        active_duration = duration * 0.85
+        time_per_char = active_duration / total_chars
         
         subtitles = []
         current_time = 0.0
         
         for i, word in enumerate(words):
-            word_duration = len(word) * avg_time_per_word * 0.5  # Kelime uzunluğuna göre
+            word_duration = len(word) * time_per_char
             
             subtitles.append({
                 'index': i + 1,
@@ -118,6 +124,18 @@ class SubtitleEnhancer:
             })
             
             current_time += word_duration
+            
+        # Sahnenin geri kalan kısmında sessizlik olacağı için 
+        # hiçbir kelimenin sarı yanmadığı (highlight_idx = -1) bir bitiş frame'i ekle.
+        remaining_time = duration - active_duration
+        if remaining_time > 0:
+            subtitles.append({
+                'index': -1,
+                'text': '',
+                'start_time': current_time,
+                'end_time': duration,
+                'duration': remaining_time
+            })
         
         return subtitles
 

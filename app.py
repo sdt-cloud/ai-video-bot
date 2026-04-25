@@ -146,22 +146,32 @@ async def process_video(task):
         # Paralel görsel üretimi için hazırlık
         prompts = []
         output_paths = []
+        providers = []
+        image_ai_provider = task.get("image_ai", "Pollinations")
+        premium_models = ["OpenAI", "Flux", "Flux-Pro", "SDXL"]
+        
         for i, scene in enumerate(scenes):
             prompt = scene.get("image_prompt", "")
             img_name = f"assets/scene_{task_id}_{i}.jpg"
             prompts.append(prompt)
             output_paths.append(img_name)
             temp_files.append(img_name)
+            
+            # İlk sahne (Hook) için Premium AI (DALL-E 3) garantile
+            if i == 0 and image_ai_provider not in premium_models:
+                providers.append("OpenAI")
+                video_logger.log_video_production_step("premium_hook", str(task_id), {"info": "İlk sahne DALL-E 3 ile yükseltildi."})
+            else:
+                providers.append(image_ai_provider)
         
         # Paralel görsel üretimi
-        image_ai_provider = task.get("image_ai", "Pollinations")
         loop = asyncio.get_running_loop()
         image_results = await loop.run_in_executor(
             None,
             parallel_process_images,
             prompts,
             output_paths,
-            image_ai_provider
+            providers
         )
         
         # Başarılı görselleri filtrele

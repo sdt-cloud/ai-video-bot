@@ -16,6 +16,112 @@ def is_target_resolution_image(image_path, target_size=(1080, 1920)):
             return img.size == target_size
     except Exception:
         return False
+        
+def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok"):
+    """Kelimelerin zamanlamasını hesaplar ve karaoke stili PNG'lerden oluşan bir klip döner."""
+    from subtitle_enhancer import subtitle_enhancer
+    from moviepy import ImageClip, concatenate_videoclips
+    import uuid
+    
+    timings = subtitle_enhancer.generate_subtitle_timing(text, duration)
+    if not timings:
+        return None
+        
+    wrapped = textwrap.fill(text, width=18 if subtitle_style == "tiktok" else 24)
+    lines = wrapped.split("\n")
+    
+    font_size = 58 if subtitle_style == "tiktok" else 50
+    font = None
+    bold_fonts = [
+        "C:/Windows/Fonts/impact.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/Arial.ttf",
+    ]
+    for f in bold_fonts:
+        if os.path.exists(f):
+            font = ImageFont.truetype(f, font_size)
+            break
+    if font is None:
+        font = ImageFont.load_default()
+        
+    line_height = font_size + 10
+    total_text_height = len(lines) * line_height
+    start_y = 1920 - total_text_height - (200 if subtitle_style == "tiktok" else 260)
+    
+    box_padding = 25 if subtitle_style == "tiktok" else 18
+    box_top = start_y - box_padding
+    box_bottom = start_y + total_text_height + box_padding
+    
+    overlay_height = int(box_bottom - box_top + 20)
+    y_offset = box_top
+    
+    base_color = (255, 255, 255, 255)
+    highlight_color = (255, 255, 80, 255) if subtitle_style == "tiktok" else (255, 200, 0, 255)
+    
+    clips = []
+    
+    for t_idx, timing in enumerate(timings):
+        word_duration = timing['duration']
+        highlight_idx = t_idx
+        
+        overlay = Image.new("RGBA", (1080, overlay_height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        local_box_top = 0
+        local_box_bottom = box_bottom - box_top
+        
+        if subtitle_style == "tiktok":
+            draw.rounded_rectangle([40, local_box_top, 1040, local_box_bottom], radius=15, fill=(0, 0, 0, 120))
+        elif subtitle_style == "netflix":
+            draw.rounded_rectangle([40, local_box_top, 1040, local_box_bottom], radius=12, fill=(0, 0, 0, 70))
+            
+        shadow_offset = 2
+        word_counter = 0
+        
+        for i, line in enumerate(lines):
+            y = (start_y + (i * line_height)) - y_offset
+            
+            bbox = draw.textbbox((0, 0), line, font=font)
+            line_width = bbox[2] - bbox[0]
+            current_x = (1080 - line_width) // 2
+            
+            line_words = line.split()
+            for lw in line_words:
+                is_highlight = (word_counter == highlight_idx)
+                
+                # Gölge
+                for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
+                               (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
+                    draw.text((current_x + dx, y + dy), lw, font=font, fill=(0, 0, 0, 255))
+                    
+                # Text
+                color = highlight_color if is_highlight else base_color
+                draw.text((current_x, y), lw, font=font, fill=color)
+                
+                # Space width
+                lw_bbox = draw.textbbox((0, 0), lw + " ", font=font)
+                current_x += (lw_bbox[2] - lw_bbox[0])
+                word_counter += 1
+                
+        out_name = f"assets/dyn_sub_{uuid.uuid4().hex[:6]}.png"
+        # Optimize PNG for faster disk write/read
+        overlay.save(out_name, "PNG", optimize=False)
+        temp_files.append(out_name)
+        
+        c = ImageClip(out_name)
+        if hasattr(c, 'with_duration'):
+            c = c.with_duration(word_duration)
+        else:
+            c = c.set_duration(word_duration)
+        clips.append(c)
+        
+    if clips:
+        seq = concatenate_videoclips(clips, method="compose")
+        if hasattr(seq, 'with_position'):
+            return seq.with_position(("center", y_offset))
+        else:
+            return seq.set_position(("center", y_offset))
+    return None
 
 
 def get_render_settings(video_mode, total_duration):
@@ -248,19 +354,19 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         if not image_paths:
             raise ValueError("image_paths listesi boş olamaz")
         
-        # Her görselin ekranda kalma süresini hesapla
-        slide_duration = total_duration / len(image_paths)
+        # Slayt sürelerini kelime/harf sayısına göre orantılı hesapla
+        slide_durations = []
+        if narrations and len(narrations) == len(image_paths):
+            total_chars = sum(max(1, len(n)) for n in narrations)
+            for n in narrations:
+                dur = total_duration * (max(1, len(n)) / total_chars)
+                slide_durations.append(dur)
+        else:
+            slide_durations = [total_duration / len(image_paths)] * len(image_paths)
         
         for i, img in enumerate(image_paths):
+            slide_duration = slide_durations[i]
             processed_img = img
-
-            # Altyazı yakma
-            if narrations and i < len(narrations) and subtitle_style != "none":
-                enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
-                subtitle_img = f"assets/sub_{os.path.basename(img)}"
-                burn_subtitle_on_image(img, enhanced_narration, subtitle_img, subtitle_style)
-                processed_img = subtitle_img
-                temp_files.append(subtitle_img)
 
             # Watermark uygula
             if watermark_enabled:
@@ -277,13 +383,33 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     clip = apply_clip_duration(clip, slide_duration)
                     temp_files.append(video_clip_path)
                 else:
-                    clip = ImageClip(processed_img, duration=slide_duration)
+                    clip = ImageClip(processed_img)
+                    clip = apply_clip_duration(clip, slide_duration)
             else:
-                clip = ImageClip(processed_img, duration=slide_duration)
+                clip = ImageClip(processed_img)
+                clip = apply_clip_duration(clip, slide_duration)
                 if not is_target_resolution_image(processed_img):
                     clip = apply_clip_resize(clip, width=1080, height=1920)
                 if video_mode == "cinematic":
                     clip = video_effects.apply_random_effect(clip)
+
+            # Dinamik Karaoke Altyazı Ekleme
+            if narrations and i < len(narrations) and subtitle_style != "none":
+                enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
+                try:
+                    from moviepy import CompositeVideoClip
+                    dynamic_sub_clip = generate_karaoke_subtitle_clips(enhanced_narration, slide_duration, temp_files, subtitle_style)
+                    if dynamic_sub_clip:
+                        clip = CompositeVideoClip([clip, dynamic_sub_clip])
+                    else:
+                        # Fallback to static if dynamic fails
+                        subtitle_img = f"assets/sub_{os.path.basename(img)}"
+                        burn_subtitle_on_image(processed_img, enhanced_narration, subtitle_img, subtitle_style)
+                        clip = ImageClip(subtitle_img)
+                        clip = apply_clip_duration(clip, slide_duration)
+                        temp_files.append(subtitle_img)
+                except Exception as sub_err:
+                    print(f"[-] Dinamik altyazı hatası (devam ediliyor): {sub_err}")
 
             # Geçiş efektleri (crossfade / fade)
             transition_dur = 0.4
@@ -309,7 +435,6 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
 
                     # BGM'i video süresine göre loop veya kırp
                     if bgm_clip.duration < total_duration:
-                        # Loop: gerektiği kadar tekrarla
                         from math import ceil
                         repeat_count = ceil(total_duration / bgm_clip.duration)
                         loops = []
@@ -326,20 +451,17 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     else:
                         bgm_looped = bgm_clip
 
-                    # BGM'i video süresine kırp
                     if hasattr(bgm_looped, 'with_duration'):
                         bgm_looped = bgm_looped.with_duration(total_duration)
                     elif hasattr(bgm_looped, 'set_duration'):
                         bgm_looped = bgm_looped.set_duration(total_duration)
 
-                    # Volume düşür (MoviePy v1/v2 uyumlu)
-                    bgm_volume = 0.12  # %12
+                    bgm_volume = 0.12
                     if hasattr(bgm_looped, 'with_volume_scaled'):
                         bgm_looped = bgm_looped.with_volume_scaled(bgm_volume)
                     elif hasattr(bgm_looped, 'volumex'):
                         bgm_looped = bgm_looped.volumex(bgm_volume)
 
-                    # Narration + BGM'i birleştir
                     mixed_audio = CompositeAudioClip([audio_clip, bgm_looped])
                     final_video = apply_clip_audio(final_video, mixed_audio)
                     print("[BGM] Arka plan müzik başarıyla eklendi!")
@@ -351,7 +473,35 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 final_video = apply_clip_audio(final_video, audio_clip)
         else:
             final_video = apply_clip_audio(final_video, audio_clip)
-        
+
+        # --- Intro / Outro Ekleme (Son Aşama) ---
+        try:
+            intro_path = "assets/intro.mp4"
+            outro_path = "assets/outro.mp4"
+            sequence = []
+            
+            if os.path.exists(intro_path):
+                print(f"[+] Intro videosu algılandı: {intro_path}")
+                intro_clip = VideoFileClip(intro_path)
+                intro_clip = apply_clip_resize(intro_clip, width=1080, height=1920)
+                sequence.append(intro_clip)
+                clips.append(intro_clip) # Cleanup için listeye ekle
+                
+            sequence.append(final_video)
+            
+            if os.path.exists(outro_path):
+                print(f"[+] Outro videosu algılandı: {outro_path}")
+                outro_clip = VideoFileClip(outro_path)
+                outro_clip = apply_clip_resize(outro_clip, width=1080, height=1920)
+                sequence.append(outro_clip)
+                clips.append(outro_clip) # Cleanup için listeye ekle
+                
+            if len(sequence) > 1:
+                final_video = concatenate_videoclips(sequence, method="compose")
+                total_duration = final_video.duration
+        except Exception as io_err:
+            print(f"[-] Intro/Outro birleştirme hatası: {io_err}")
+
         # H264 codec requires even dimensions
         w, h = final_video.size
         if w % 2 != 0 or h % 2 != 0:
