@@ -214,6 +214,17 @@ async def process_video(task):
         )
         
         if video_success:
+            # 5. Thumbnail (Kapak) Üretimi
+            if image_paths:
+                try:
+                    from thumbnail_generator import create_thumbnail
+                    thumb_filename = f"thumb_{task_id}_{safe_topic}.jpg"
+                    thumb_path = f"frontend/videos/{thumb_filename}"
+                    create_thumbnail(image_paths[0], topic, thumb_path)
+                    video_logger.log_video_production_step("thumbnail", str(task_id), {"output": thumb_filename})
+                except Exception as thumb_err:
+                    print(f"[-] Thumbnail oluşturma hatası (İşlem devam ediyor): {thumb_err}")
+
             database.update_status(task_id, "completed", 100, None, output_filename)
             video_logger.log_video_production_step("completed", str(task_id), {"output": output_filename})
             print(f"[{task_id}] İŞLEM BİTTİ: {output_filename}")

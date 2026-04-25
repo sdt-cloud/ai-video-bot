@@ -425,7 +425,10 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         else:
             final_video = concatenate_videoclips(clips, method="compose")
 
-        # --- BGM Karıştırma ---
+        # --- Ses Katmanları (BGM ve SFX) ---
+        audio_layers = [audio_clip]
+        
+        # 1. Arka Plan Müziği (BGM)
         if bgm_enabled:
             bgm_path = get_bgm_path(bgm_tone)
             if bgm_path and os.path.exists(bgm_path):
@@ -433,7 +436,6 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     print(f"[BGM] Müzik ekleniyor: {bgm_path} (ton: {bgm_tone})")
                     bgm_clip = AudioFileClip(bgm_path)
 
-                    # BGM'i video süresine göre loop veya kırp
                     if bgm_clip.duration < total_duration:
                         from math import ceil
                         repeat_count = ceil(total_duration / bgm_clip.duration)
@@ -462,17 +464,41 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     elif hasattr(bgm_looped, 'volumex'):
                         bgm_looped = bgm_looped.volumex(bgm_volume)
 
-                    mixed_audio = CompositeAudioClip([audio_clip, bgm_looped])
-                    final_video = apply_clip_audio(final_video, mixed_audio)
+                    audio_layers.append(bgm_looped)
                     print("[BGM] Arka plan müzik başarıyla eklendi!")
                 except Exception as bgm_err:
                     print(f"[BGM] Müzik eklenirken hata (devam ediliyor): {bgm_err}")
-                    final_video = apply_clip_audio(final_video, audio_clip)
             else:
                 print("[BGM] Müzik dosyası bulunamadı, sözsüz devam ediliyor.")
-                final_video = apply_clip_audio(final_video, audio_clip)
-        else:
-            final_video = apply_clip_audio(final_video, audio_clip)
+
+        # 2. Ses Efektleri (SFX)
+        try:
+            from sfx_manager import sfx_manager
+            current_sfx_time = 0.0
+            
+            # İlk saniye Hook efekti (Boom/Impact)
+            hook_sfx = sfx_manager.get_clip("hook", 0.0, volume=0.8)
+            if hook_sfx:
+                audio_layers.append(hook_sfx)
+                print("[SFX] Başlangıç 'Hook' ses efekti eklendi.")
+                
+            # Sahneler arası geçiş (Whoosh) efektleri
+            if transition_style != "none":
+                for i, slide_dur in enumerate(slide_durations):
+                    current_sfx_time += slide_dur
+                    if i < len(slide_durations) - 1:
+                        # Geçişin başlangıcına denk gelmesi için hafif offset
+                        trans_time = max(0, current_sfx_time - 0.2)
+                        trans_sfx = sfx_manager.get_clip("transition", trans_time, volume=0.5)
+                        if trans_sfx:
+                            audio_layers.append(trans_sfx)
+                print("[SFX] Sahne geçişi ses efektleri eklendi.")
+        except Exception as sfx_err:
+            print(f"[-] SFX eklenirken hata: {sfx_err}")
+
+        # Tüm sesleri birleştirip videoya uygula
+        mixed_audio = CompositeAudioClip(audio_layers)
+        final_video = apply_clip_audio(final_video, mixed_audio)
 
         # --- Intro / Outro Ekleme (Son Aşama) ---
         try:

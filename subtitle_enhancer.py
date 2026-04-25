@@ -105,8 +105,8 @@ class SubtitleEnhancer:
             return []
             
         # Konuşma sonlarındaki sessizlik ve esleri telafi etmek için
-        # altyazı akışını %15 oranında hızlandırıyoruz (geriden gelmeyi önler).
-        active_duration = duration * 0.85
+        # altyazı akışını %10 oranında hızlandırıyoruz (geriden gelmeyi önler).
+        active_duration = duration * 0.90
         time_per_char = active_duration / total_chars
         
         subtitles = []
