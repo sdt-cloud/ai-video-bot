@@ -44,6 +44,7 @@ class VideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"  # Ses tipi seçeneği
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
+    subtitle_delay: Optional[float] = 0.5
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -60,6 +61,7 @@ class BulkVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
+    subtitle_delay: Optional[float] = 0.5
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -157,10 +159,12 @@ async def process_video(task):
             output_paths.append(img_name)
             temp_files.append(img_name)
             
-            # İlk sahne (Hook) için Premium AI (DALL-E 3) garantile
-            if i == 0 and image_ai_provider not in premium_models:
+            # İlk sahne (Hook) ve son sahne (Outro/Call to Action) için Premium AI (DALL-E 3) garantile
+            if (i == 0 or i == len(scenes) - 1) and image_ai_provider not in premium_models:
                 providers.append("OpenAI")
-                video_logger.log_video_production_step("premium_hook", str(task_id), {"info": "İlk sahne DALL-E 3 ile yükseltildi."})
+                log_info = "İlk sahne DALL-E 3 ile yükseltildi." if i == 0 else "Son sahne DALL-E 3 ile yükseltildi."
+                step_name = "premium_hook" if i == 0 else "premium_outro"
+                video_logger.log_video_production_step(step_name, str(task_id), {"info": log_info})
             else:
                 providers.append(image_ai_provider)
         
@@ -206,6 +210,7 @@ async def process_video(task):
             output_video_path, 
             narrations=narrations, 
             subtitle_style=subtitle_style, 
+            subtitle_delay=task.get("subtitle_delay", 0.5),
             video_mode=video_mode,
             watermark_enabled=watermark_enabled,
             transition_style=transition_style,
@@ -258,7 +263,8 @@ async def add_single_video(req: VideoRequest):
         req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
         req.voice_type, req.custom_script, req.sentence_pause,
         req.watermark_enabled, req.transition_style,
-        req.bgm_enabled, req.bgm_tone
+        req.bgm_enabled, req.bgm_tone,
+        req.subtitle_delay
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -274,7 +280,8 @@ async def add_bulk_videos(req: BulkVideoRequest):
                 req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
                 req.voice_type, None, req.sentence_pause,
                 req.watermark_enabled, req.transition_style,
-                req.bgm_enabled, req.bgm_tone
+                req.bgm_enabled, req.bgm_tone,
+                req.subtitle_delay
             )
             task_ids.append(task_id)
     
@@ -291,6 +298,7 @@ class MultiLangVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
+    subtitle_delay: Optional[float] = 0.5
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -315,7 +323,8 @@ async def add_multi_lang_video(req: MultiLangVideoRequest):
             req.script_ai, req.voice_ai, req.image_ai, req.subtitle_style, req.video_mode,
             req.voice_type, None, req.sentence_pause,
             req.watermark_enabled, req.transition_style,
-            req.bgm_enabled, req.bgm_tone
+            req.bgm_enabled, req.bgm_tone,
+            req.subtitle_delay
         )
         task_ids.append({"language": lang, "task_id": task_id})
     
@@ -470,7 +479,7 @@ async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_conc
         # Veritabanına ekle
         task_ids = []
         for topic in video_topics:
-            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek", None, 1.0)
+            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek", None, 1.0, False, "none", False, "auto", 0.5)
             task_ids.append(task_id)
         
         # NOT: Artık kuyruk yöneticisi otomatik işleyecek

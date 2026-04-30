@@ -30,10 +30,35 @@ class PerformanceOptimizer:
             
         def generate_single_image(args):
             prompt, output_path, current_provider = args
+            from image_validator import evaluate_image_relevance
+            
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    success = generate_image(prompt, output_path, current_provider)
+                    if not success:
+                        self.logger.warning(f"Görsel üretimi başarısız (Deneme: {attempt+1}/{max_retries})")
+                        continue
+                        
+                    # Görseli Denetle
+                    score, reason = evaluate_image_relevance(prompt, output_path)
+                    if score >= 7:
+                        if attempt > 0:
+                            self.logger.info(f"Görsel kabul edildi (Puan: {score}/10). {attempt+1}. denemede başarılı.")
+                        return True
+                    else:
+                        self.logger.warning(f"Görsel reddedildi (Puan: {score}/10). Neden: {reason} (Deneme: {attempt+1}/{max_retries})")
+                        
+                except Exception as e:
+                    self.logger.error(f"Görsel üretim hatası: {e}")
+            
+            # 3 deneme de başarısızsa (veya görsel kalitesizse) AI ile zorla (Fallback)
+            self.logger.warning(f"[*] 3 deneme başarısız. AI ile zorla üretiliyor: {output_path}")
             try:
-                return generate_image(prompt, output_path, current_provider)
+                # "DALL-E" veya "OpenAI" diyerek garanti bir model çağırıyoruz
+                return generate_image(prompt, output_path, "OpenAI")
             except Exception as e:
-                self.logger.error(f"Görsel üretim hatası: {e}")
+                self.logger.error(f"Zorunlu AI fallback hatası: {e}")
                 return False
         
         # Paralel işlem için argümanları hazırla

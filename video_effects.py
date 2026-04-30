@@ -70,6 +70,40 @@ def apply_random_effect(clip):
     effect_fn = random.choice(effects)
     return effect_fn(clip)
 
+def apply_camera_shake(clip, duration=0.6, intensity=15):
+    """Videonun ilk saniyelerinde şiddeti azalan bir sarsıntı (Hook) efekti uygular."""
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        if t > duration:
+            return frame
+        
+        # Sarsıntı zamanla azalır
+        decay = max(0, 1.0 - (t / duration))
+        current_intensity = intensity * decay
+        
+        import random
+        dx = int(random.uniform(-current_intensity, current_intensity))
+        dy = int(random.uniform(-current_intensity, current_intensity))
+        
+        img = Image.fromarray(frame)
+        base_size = img.size
+        
+        # Siyah kenar oluşmaması için hafif zoom (%5) yapıp içinden kesiyoruz
+        zoom = 1.05
+        new_size = [int(base_size[0] * zoom), int(base_size[1] * zoom)]
+        img = img.resize(new_size, Image.LANCZOS)
+        
+        cx = (new_size[0] - base_size[0]) // 2 + dx
+        cy = (new_size[1] - base_size[1]) // 2 + dy
+        
+        # Sınırların dışına çıkmamak için
+        cx = max(0, min(cx, new_size[0] - base_size[0]))
+        cy = max(0, min(cy, new_size[1] - base_size[1]))
+        
+        img = img.crop((cx, cy, cx + base_size[0], cy + base_size[1]))
+        return np.array(img)
+    return apply_clip_transform(clip, filter)
+
 
 def apply_fade_in(clip, duration=0.4):
     """MoviePy v1/v2 uyumlu fade-in efekti."""

@@ -12,11 +12,12 @@ Sen bir YouTube Shorts ve Instagram Reels içerik üreticisisin.
 Verilen konu hakkında aşırı ilgi çekici, bilgilendirici, {duration} saniyelik bir video senaryosu yazacaksın.
 ZORUNLU KURALLAR:
 - İLK SAHNE (ilk 3 saniye) videonun HOOK (kanca) kısmı olmalıdır. İzleyiciyi anında yakalayacak, 'Bunu biliyor muydunuz?' veya 'İşte %99 insanın bilmediği gerçek...' tarzı çok çarpıcı bir cümle ile başla.
+- Kısa video algoritması dinamik bir yapı sever! Bu yüzden GÖRSELLER HER 3-4 SANİYEDE BİR DEĞİŞMELİ (B-Roll tarzı hızlı kesmeler).
+- En az {min_scenes} sahne üret (ÇOK ÖNEMLİ). Sahneleri kısa ve vurucu tut.
 - Toplam narration kelime sayısı EN AZ {min_words} kelime olmalıdır.
-- En az {min_scenes} sahne üret.
-- Her sahnede narration metni 1-2 cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
-- Kısa metin üretme, hedef süreyi dolduracak içerik yaz.
-Her cümlenin veya cümle grubunun ekranda kalma süresinde gösterilecek bir 'görsel promptu (image_prompt)' olmalıdır.
+- Her sahnede narration metni sadece 1 kısa cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
+- Hedef süreyi dolduracak kadar içerik yaz.
+Her cümlenin ekranda kalma süresinde gösterilecek bir 'görsel promptu (image_prompt)' olmalıdır.
 Image prompt'lar her zaman İNGİLİZCE yazılmalıdır çünkü yapay zeka resim araçları İngilizce daha iyi anlar. 
 Gerçekçi, sinematik veya yüksek kaliteli gibi terimler ekle. Metinler ise TÜRKÇE olacaktır.
 
@@ -40,11 +41,12 @@ You are a YouTube Shorts and Instagram Reels content creator.
 You will write an extremely engaging, informative {duration}-second video script about the given topic.
 MANDATORY RULES:
 - The FIRST SCENE (first 3 seconds) must be the HOOK. Start with an extremely catchy sentence like 'Did you know?' or 'Here is a fact 99% of people don\\'t know...' to immediately grab the viewer's attention.
+- Short video algorithms love dynamic pacing! Visuals MUST CHANGE EVERY 3-4 SECONDS (B-Roll style fast cuts).
+- Generate at least {min_scenes} scenes (CRITICAL). Keep scenes short and punchy.
 - Total narration word count MUST be AT LEAST {min_words} words.
-- Generate at least {min_scenes} scenes.
-- Each scene's narration must be 1-2 sentences and must NOT repeat a previous scene.
-- Do NOT produce short text; write enough content to fill the target duration.
-Each sentence or sentence group should have an 'image_prompt' describing the visual for that scene.
+- Each scene's narration must be just 1 short sentence and must NOT repeat a previous scene.
+- Write enough content to fill the target duration.
+Each sentence should have an 'image_prompt' describing the visual for that scene.
 Image prompts must ALWAYS be written in ENGLISH (AI image tools work better in English).
 Add terms like realistic, cinematic, or high-quality. Narrations must be in ENGLISH.
 
@@ -64,11 +66,12 @@ Eres un creador de contenido de YouTube Shorts e Instagram Reels.
 Escribirás un guion de video extremadamente atractivo e informativo de {duration} segundos sobre el tema dado.
 REGLAS OBLIGATORIAS:
 - La PRIMERA ESCENA (los primeros 3 segundos) debe ser el GANCHO (hook). Comienza con una frase extremadamente llamativa como '¿Sabías que...?' o 'Aquí hay un hecho que el 99% de las personas no sabe...' para captar inmediatamente la atención.
+- ¡El algoritmo de videos cortos ama el ritmo dinámico! Las imágenes DEBEN CAMBIAR CADA 3-4 SEGUNDOS (cortes rápidos estilo B-Roll).
+- Genera al menos {min_scenes} escenas (CRÍTICO). Mantén las escenas cortas y contundentes.
 - El número total de palabras de narración DEBE ser AL MENOS {min_words} palabras.
-- Genera al menos {min_scenes} escenas.
-- La narración de cada escena debe tener 1-2 oraciones y NO debe repetir una escena anterior.
-- NO produzcas texto corto; escribe suficiente contenido para llenar la duración objetivo.
-Cada oración o grupo de oraciones debe tener un 'image_prompt' que describa el visual de esa escena.
+- La narración de cada escena debe ser solo 1 oración corta y NO debe repetir una escena anterior.
+- Escribe suficiente contenido para llenar la duración objetivo.
+Cada oración debe tener un 'image_prompt' que describa el visual de esa escena.
 Los image prompts deben SIEMPRE estar escritos en INGLÉS (las herramientas de IA funcionan mejor en inglés).
 Añade términos como realista, cinematográfico o alta calidad. Las narraciones deben ser en ESPAÑOL.
 
@@ -107,8 +110,8 @@ def _calculate_min_words(duration_seconds: int) -> int:
 
 
 def _calculate_min_scenes(duration_seconds: int) -> int:
-    # Ortalama 12-15 saniye/sahne temposu
-    return max(3, int(duration_seconds / 15))
+    # Dinamik B-Roll tarzı için ortalama 3-4 saniye/sahne temposu
+    return max(6, int(duration_seconds / 3.5))
 
 
 def _build_system_prompt(duration: int, min_words: int, min_scenes: int, language: str = "tr") -> str:
@@ -233,11 +236,7 @@ def _generate_image_prompts_openai(topic: str, narrations: list[str]) -> list[st
 
 
 def _generate_image_prompts_gemini(topic: str, narrations: list[str], model_name: str) -> list[str]:
-    try:
-        import google.genai as genai
-    except ImportError:
-        import google.generativeai as genai
-
+    import google.generativeai as genai
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     model = genai.GenerativeModel(model_name)
     list_text = "\n".join([f"{i+1}. {n}" for i, n in enumerate(narrations)])
@@ -334,11 +333,7 @@ def generate_script_openai(topic, duration=30, min_words=60, min_scenes=3, extra
     return response.choices[0].message.content
 
 def generate_script_gemini(topic, model_name="gemini-2.5-pro", duration=30, min_words=60, min_scenes=3, extra_instructions="", language="tr"):
-    try:
-        import google.genai as genai
-    except ImportError:
-        import google.generativeai as genai
-    
+    import google.generativeai as genai
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     model = genai.GenerativeModel(model_name)
     

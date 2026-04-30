@@ -47,6 +47,7 @@ def init_db():
                 image_ai TEXT,
                 custom_script TEXT,
                 subtitle_style TEXT DEFAULT 'tiktok',
+                subtitle_delay REAL DEFAULT 0.5,
                 status TEXT DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
                 video_mode TEXT DEFAULT 'slideshow',
@@ -65,6 +66,11 @@ def init_db():
         # Geçmiş veritabanına sütun ekleme (varsa hata verir, ignore edilir)
         try:
             cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_style TEXT DEFAULT 'tiktok'")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_delay REAL DEFAULT 0.5")
         except sqlite3.OperationalError:
             pass
             
@@ -117,19 +123,19 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                    subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek",
                    custom_script=None, sentence_pause=0.0,
                    watermark_enabled=False, transition_style="none",
-                   bgm_enabled=False, bgm_tone="auto"):
+                   bgm_enabled=False, bgm_tone="auto", subtitle_delay=0.5):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO videos (topic, category, tone, duration, language, script_ai, voice_ai,
                                 voice_type, image_ai, subtitle_style, video_mode, custom_script,
                                 sentence_pause, watermark_enabled, transition_style,
-                                bgm_enabled, bgm_tone)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                bgm_enabled, bgm_tone, subtitle_delay)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type,
                image_ai, subtitle_style, video_mode, custom_script,
                sentence_pause, int(watermark_enabled), transition_style,
-               int(bgm_enabled), bgm_tone))
+               int(bgm_enabled), bgm_tone, subtitle_delay))
         return cursor.lastrowid
 
 def update_status(task_id, status, progress=None, error_message=None, video_path=None):
@@ -162,7 +168,7 @@ def get_pending_tasks(limit: int = 10) -> List[dict]:
             SELECT id, topic, category, tone, duration, language, script_ai, voice_ai,
                    voice_type, image_ai, subtitle_style, video_mode, custom_script,
                    sentence_pause, watermark_enabled, transition_style,
-                   bgm_enabled, bgm_tone
+                   bgm_enabled, bgm_tone, subtitle_delay
             FROM videos 
             WHERE status = 'pending' 
             ORDER BY created_at ASC 

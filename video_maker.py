@@ -7,6 +7,55 @@ import numpy as np
 import video_effects
 from subtitle_enhancer import subtitle_enhancer
 from bgm_manager import get_bgm_path
+import urllib.request
+
+def ensure_font(style="tiktok"):
+    """Sistemde font yoksa otomatik indirir ve yolunu döner."""
+    os.makedirs("assets/fonts", exist_ok=True)
+    if style == "tiktok":
+        font_name = "Montserrat-ExtraBold.ttf"
+        url = "https://github.com/JulietaUla/Montserrat/raw/master/fonts/ttf/Montserrat-ExtraBold.ttf"
+    else:
+        font_name = "Montserrat-Medium.ttf"
+        url = "https://github.com/JulietaUla/Montserrat/raw/master/fonts/ttf/Montserrat-Medium.ttf"
+        
+    font_path = f"assets/fonts/{font_name}"
+    if not os.path.exists(font_path):
+        print(f"[*] Font eksik, indiriliyor: {font_name}")
+        try:
+            urllib.request.urlretrieve(url, font_path)
+        except Exception as e:
+            print(f"[-] Font indirilemedi: {e}")
+    return font_path
+
+def make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.04, threshold=0.015):
+    """Konuşma anında müziği kısan (ducking) zarf fonksiyonu. Belgesel tarzı (arkada hafif)."""
+    import numpy as np
+    try:
+        print("[BGM] Auto-Ducking için ana ses (TTS) analiz ediliyor...")
+        fps = 10 # saniyede 10 örnek
+        audio_array = audio_clip.to_soundarray(fps=fps)
+        if audio_array.ndim == 2:
+            rms = np.sqrt(np.mean(audio_array**2, axis=1))
+        else:
+            rms = np.sqrt(audio_array**2)
+            
+        # Pürüzsüzleştirme (smoothing) - ani ses değişimlerini engellemek için
+        window = 4
+        smoothed_rms = np.convolve(rms, np.ones(window)/window, mode='same')
+        
+        def volume_multiplier(t):
+            idx = int(t * fps)
+            if idx < len(smoothed_rms):
+                if smoothed_rms[idx] > threshold:
+                    return duck_vol
+                else:
+                    return base_vol
+            return base_vol
+        return volume_multiplier
+    except Exception as e:
+        print(f"[-] Ducking analizi başarısız: {e}")
+        return base_vol
 
 
 def is_target_resolution_image(image_path, target_size=(1080, 1920)):
@@ -17,32 +66,32 @@ def is_target_resolution_image(image_path, target_size=(1080, 1920)):
     except Exception:
         return False
         
-def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok"):
+def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.5):
     """Kelimelerin zamanlamasını hesaplar ve karaoke stili PNG'lerden oluşan bir klip döner."""
     from subtitle_enhancer import subtitle_enhancer
     from moviepy import ImageClip, concatenate_videoclips
     import uuid
     
-    timings = subtitle_enhancer.generate_subtitle_timing(text, duration)
+    timings = subtitle_enhancer.generate_subtitle_timing(text, duration, delay=subtitle_delay)
     if not timings:
         return None
         
     wrapped = textwrap.fill(text, width=18 if subtitle_style == "tiktok" else 24)
     lines = wrapped.split("\n")
     
+    font_path = ensure_font(subtitle_style)
     font_size = 58 if subtitle_style == "tiktok" else 50
     font = None
-    bold_fonts = [
-        "C:/Windows/Fonts/impact.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/Arial.ttf",
-    ]
+    pop_font = None
+    bold_fonts = [font_path]
     for f in bold_fonts:
         if os.path.exists(f):
             font = ImageFont.truetype(f, font_size)
+            pop_font = ImageFont.truetype(f, int(font_size * 1.25))  # %25 daha büyük pop-in
             break
     if font is None:
         font = ImageFont.load_default()
+        pop_font = font
         
     line_height = font_size + 10
     total_text_height = len(lines) * line_height
@@ -62,7 +111,7 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
     
     for t_idx, timing in enumerate(timings):
         word_duration = timing['duration']
-        highlight_idx = t_idx
+        highlight_idx = timing.get('index', -1)
         
         overlay = Image.new("RGBA", (1080, overlay_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
@@ -89,14 +138,19 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
             for lw in line_words:
                 is_highlight = (word_counter == highlight_idx)
                 
+                # Pop-in animasyonu için konum ve font ayarla
+                active_font = pop_font if is_highlight else font
+                pop_offset_x = -3 if is_highlight else 0
+                pop_offset_y = -8 if is_highlight else 0
+                
                 # Gölge
                 for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
                                (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
-                    draw.text((current_x + dx, y + dy), lw, font=font, fill=(0, 0, 0, 255))
+                    draw.text((current_x + dx + pop_offset_x, y + dy + pop_offset_y), lw, font=active_font, fill=(0, 0, 0, 255))
                     
                 # Text
                 color = highlight_color if is_highlight else base_color
-                draw.text((current_x, y), lw, font=font, fill=color)
+                draw.text((current_x + pop_offset_x, y + pop_offset_y), lw, font=active_font, fill=color)
                 
                 # Space width
                 lw_bbox = draw.textbbox((0, 0), lw + " ", font=font)
@@ -196,14 +250,12 @@ def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
+    font_path = ensure_font(subtitle_style)
+    
     # Font ayarla
     font_size = 58 if subtitle_style == "tiktok" else 50  # Biraz daha küçük = hızlı render
     font = None
-    bold_fonts = [
-        "C:/Windows/Fonts/impact.ttf",
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/Arial.ttf",
-    ]
+    bold_fonts = [font_path]
     for f in bold_fonts:
         if os.path.exists(f):
             font = ImageFont.truetype(f, font_size)
@@ -339,7 +391,7 @@ def generate_video_clip_ai(image_path, output_path):
         return False
 
 def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None,
-                 subtitle_style="tiktok", video_mode="slideshow",
+                 subtitle_style="tiktok", subtitle_delay=0.5, video_mode="slideshow",
                  watermark_enabled=False, transition_style="none",
                  bgm_enabled=False, bgm_tone="auto"):
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}): {output_filename}...")
@@ -390,21 +442,27 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 clip = apply_clip_duration(clip, slide_duration)
                 if not is_target_resolution_image(processed_img):
                     clip = apply_clip_resize(clip, width=1080, height=1920)
+                
+                # Sadece ilk sahnede (Hook) Camera Shake uygula
+                if i == 0:
+                    clip = video_effects.apply_camera_shake(clip, duration=0.8, intensity=15)
+                
                 if video_mode == "cinematic":
                     clip = video_effects.apply_random_effect(clip)
 
             # Dinamik Karaoke Altyazı Ekleme
             if narrations and i < len(narrations) and subtitle_style != "none":
                 enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
+                narration_with_emojis = subtitle_enhancer.add_emojis(enhanced_narration)
                 try:
                     from moviepy import CompositeVideoClip
-                    dynamic_sub_clip = generate_karaoke_subtitle_clips(enhanced_narration, slide_duration, temp_files, subtitle_style)
+                    dynamic_sub_clip = generate_karaoke_subtitle_clips(narration_with_emojis, slide_duration, temp_files, subtitle_style, subtitle_delay)
                     if dynamic_sub_clip:
                         clip = CompositeVideoClip([clip, dynamic_sub_clip])
                     else:
                         # Fallback to static if dynamic fails
                         subtitle_img = f"assets/sub_{os.path.basename(img)}"
-                        burn_subtitle_on_image(processed_img, enhanced_narration, subtitle_img, subtitle_style)
+                        burn_subtitle_on_image(processed_img, narration_with_emojis, subtitle_img, subtitle_style)
                         clip = ImageClip(subtitle_img)
                         clip = apply_clip_duration(clip, slide_duration)
                         temp_files.append(subtitle_img)
@@ -458,14 +516,16 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     elif hasattr(bgm_looped, 'set_duration'):
                         bgm_looped = bgm_looped.set_duration(total_duration)
 
-                    bgm_volume = 0.12
+                    # Auto-Ducking Uygulaması
+                    ducking_func = make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.035, threshold=0.015)
+                    
                     if hasattr(bgm_looped, 'with_volume_scaled'):
-                        bgm_looped = bgm_looped.with_volume_scaled(bgm_volume)
+                        bgm_looped = bgm_looped.with_volume_scaled(ducking_func)
                     elif hasattr(bgm_looped, 'volumex'):
-                        bgm_looped = bgm_looped.volumex(bgm_volume)
+                        bgm_looped = bgm_looped.volumex(ducking_func)
 
                     audio_layers.append(bgm_looped)
-                    print("[BGM] Arka plan müzik başarıyla eklendi!")
+                    print("[BGM] Auto-Ducking ile arka plan müzik başarıyla eklendi!")
                 except Exception as bgm_err:
                     print(f"[BGM] Müzik eklenirken hata (devam ediliyor): {bgm_err}")
             else:
