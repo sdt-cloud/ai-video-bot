@@ -21,6 +21,8 @@ from script_generator import generate_script, generate_script_from_custom_text
 from voice_generator import generate_voice_async
 from image_generator import generate_image
 from video_maker import create_video
+from clip_fetcher import fetch_clip_auto
+from image_animator import animate_image
 from nedir_integration import NedirIntegration
 from queue_manager import start_queue_manager, get_queue_status
 from performance_optimizer import parallel_process_images, get_optimized_settings
@@ -41,7 +43,7 @@ class VideoRequest(BaseModel):
     language: Optional[str] = "tr"
     script_ai: Optional[str] = "Gemini"
     voice_ai: Optional[str] = "Edge-TTS"
-    voice_type: Optional[str] = "erkek"  # Ses tipi seçeneği
+    voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
     subtitle_delay: Optional[float] = 0.5
@@ -51,6 +53,10 @@ class VideoRequest(BaseModel):
     transition_style: Optional[str] = "none"
     bgm_enabled: Optional[bool] = False
     bgm_tone: Optional[str] = "auto"
+    quality_level: Optional[str] = "medium"
+    aspect_ratio: Optional[str] = "9:16"
+    animation_provider: Optional[str] = "none"
+    color_grade_style: Optional[str] = "auto_enhance"
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
@@ -68,6 +74,9 @@ class BulkVideoRequest(BaseModel):
     transition_style: Optional[str] = "none"
     bgm_enabled: Optional[bool] = False
     bgm_tone: Optional[str] = "auto"
+    quality_level: Optional[str] = "medium"
+    aspect_ratio: Optional[str] = "9:16"
+    animation_provider: Optional[str] = "none"
 
 async def process_video(task):
     task_id = task["id"]
@@ -81,6 +90,7 @@ async def process_video(task):
         # 1. Senaryo Aşaması
         database.update_status(task_id, "scripting", 10)
         custom_script = (task.get("custom_script") or "").strip()
+        quality_level = task.get("quality_level", "medium")
         if custom_script:
             database.update_status(task_id, "scripting", 12, "Özel script kullanılıyor: sahneler hazırlanıyor.")
             script_data = await error_recovery.retry_with_backoff(
@@ -89,6 +99,7 @@ async def process_video(task):
                 custom_script,
                 task.get("script_ai", "Gemini"),
                 task.get("duration", 30),
+                quality_level,
             )
         else:
             script_data = await error_recovery.retry_with_backoff(
@@ -96,7 +107,8 @@ async def process_video(task):
                 topic, 
                 task.get("script_ai", "Gemini"), 
                 task.get("duration", 30),
-                task.get("language", "tr")
+                task.get("language", "tr"),
+                quality_level,
             )
         
         if not script_data or "scenes" not in script_data:
@@ -142,50 +154,111 @@ async def process_video(task):
             database.update_status(task_id, "failed", 30, "Ses sentezlenemedi.")
             return
             
-        # 3. Medya Aşaması (Görseller) - PARALEL İŞLEME
+        # 3. Medya Aşaması (Görseller ve Video Klipleri) - PARALEL İŞLEME
         database.update_status(task_id, "media", 50)
         
         # Paralel görsel üretimi için hazırlık
         prompts = []
         output_paths = []
         providers = []
+        media_types = []  # Her sahnenin medya tipi: "image" veya "video_clip"
+        clip_queries = []  # Video clip sahneleri için arama sorgusu
         image_ai_provider = task.get("image_ai", "Pollinations")
+        aspect_ratio = task.get("aspect_ratio", "9:16")
+        animation_provider = task.get("animation_provider", "none")
         premium_models = ["OpenAI", "Flux", "Flux-Pro", "SDXL"]
         
         for i, scene in enumerate(scenes):
             prompt = scene.get("image_prompt", "")
-            img_name = f"assets/scene_{task_id}_{i}.jpg"
-            prompts.append(prompt)
-            output_paths.append(img_name)
-            temp_files.append(img_name)
+            media_type = scene.get("media_type", "image")
+            clip_query = scene.get("clip_search_query", "")
             
-            # İlk sahne (Hook) ve son sahne (Outro/Call to Action) için Premium AI (DALL-E 3) garantile
-            if (i == 0 or i == len(scenes) - 1) and image_ai_provider not in premium_models:
-                providers.append("OpenAI")
-                log_info = "İlk sahne DALL-E 3 ile yükseltildi." if i == 0 else "Son sahne DALL-E 3 ile yükseltildi."
-                step_name = "premium_hook" if i == 0 else "premium_outro"
-                video_logger.log_video_production_step(step_name, str(task_id), {"info": log_info})
-            else:
+            media_types.append(media_type)
+            clip_queries.append(clip_query)
+            
+            if media_type == "video_clip":
+                # Video klip sahneleri için MP4 uzantısı
+                clip_name = f"assets/clip_{task_id}_{i}.mp4"
+                output_paths.append(clip_name)
+                temp_files.append(clip_name)
+                prompts.append(prompt)  # Fallback görsel için
                 providers.append(image_ai_provider)
+            else:
+                img_name = f"assets/scene_{task_id}_{i}.jpg"
+                prompts.append(prompt)
+                output_paths.append(img_name)
+                temp_files.append(img_name)
+                
+                # İlk sahne (Hook) ve son sahne için Premium AI (HD kalite)
+                if (i == 0 or i == len(scenes) - 1) and image_ai_provider not in premium_models:
+                    providers.append("OpenAI-HD")
+                    log_info = "İlk sahne DALL-E 3 HD ile yükseltildi." if i == 0 else "Son sahne DALL-E 3 HD ile yükseltildi."
+                    step_name = "premium_hook" if i == 0 else "premium_outro"
+                    video_logger.log_video_production_step(step_name, str(task_id), {"info": log_info})
+                else:
+                    providers.append(image_ai_provider)
         
-        # Paralel görsel üretimi
-        loop = asyncio.get_running_loop()
-        image_results = await loop.run_in_executor(
-            None,
-            parallel_process_images,
-            prompts,
-            output_paths,
-            providers
-        )
+        # Önce video kliplerini indir
+        for i, media_type in enumerate(media_types):
+            if media_type == "video_clip" and clip_queries[i]:
+                print(f"[{task_id}] Sahne {i}: Video klip indiriliyor... ('{clip_queries[i]}')")
+                clip_success = fetch_clip_auto(clip_queries[i], output_paths[i])
+                if clip_success:
+                    video_logger.log_video_production_step("clip_fetched", str(task_id), {
+                        "scene": i, "query": clip_queries[i]
+                    })
+                else:
+                    # Klip bulunamadı → normal görsel olarak devam et
+                    print(f"[{task_id}] Sahne {i}: Klip bulunamadı, statik görsel kullanılacak.")
+                    media_types[i] = "image"
+                    output_paths[i] = f"assets/scene_{task_id}_{i}.jpg"
+                    temp_files.append(output_paths[i])
         
-        # Başarılı görselleri filtrele
-        image_paths = [output_paths[i] for i, success in enumerate(image_results) if success]
+        # Statik görselleri paralel olarak üret (sadece image tipindekiler)
+        image_indices = [i for i, mt in enumerate(media_types) if mt == "image"]
+        image_prompts = [prompts[i] for i in image_indices]
+        image_outputs = [output_paths[i] for i in image_indices]
+        image_providers = [providers[i] for i in image_indices]
         
-        success_rate = len(image_paths) / len(scenes) * 100 if scenes else 0
+        if image_prompts:
+            loop = asyncio.get_running_loop()
+            image_results = await loop.run_in_executor(
+                None,
+                parallel_process_images,
+                image_prompts,
+                image_outputs,
+                image_providers
+            )
+            
+            # Başarısız görselleri işaretle
+            for idx, success in enumerate(image_results):
+                if not success:
+                    real_idx = image_indices[idx]
+                    output_paths[real_idx] = None  # Başarısız
+        
+        # Animasyon provider aktifse, görselleri videoya dönüştür
+        if animation_provider and animation_provider != "none":
+            for i, media_type in enumerate(media_types):
+                if media_type == "image" and output_paths[i] and os.path.exists(output_paths[i]):
+                    anim_output = f"assets/anim_{task_id}_{i}.mp4"
+                    print(f"[{task_id}] Sahne {i}: Animasyon uygulanıyor ({animation_provider})...")
+                    anim_success = animate_image(output_paths[i], anim_output, animation_provider)
+                    if anim_success:
+                        temp_files.append(anim_output)
+                        output_paths[i] = anim_output
+                        media_types[i] = "animated"  # video_maker'a bildir
+                        video_logger.log_video_production_step("animated", str(task_id), {
+                            "scene": i, "provider": animation_provider
+                        })
+        
+        # Başarılı medya dosyalarını filtrele
+        valid_media_paths = [p for p in output_paths if p and os.path.exists(p)]
+        
+        success_rate = len(valid_media_paths) / len(scenes) * 100 if scenes else 0
         database.update_status(task_id, "media", 50 + int(success_rate * 0.3))
             
-        if not image_paths:
-            database.update_status(task_id, "failed", 80, "Hiç görsel indirilemedi.")
+        if not valid_media_paths:
+            database.update_status(task_id, "failed", 80, "Hiç medya indirilemedi.")
             return
             
         # 4. Video Kurgu (Render)
@@ -196,6 +269,10 @@ async def process_video(task):
         
         # Sahne metinlerini topla (altyazı için)
         narrations = [scene.get("narration", "") for scene in scenes]
+        scene_pacings = [
+            {"pacing": scene.get("pacing", "normal"), "mood": scene.get("mood", "")}
+            for scene in scenes
+        ]
         subtitle_style = task.get("subtitle_style", "tiktok")
         video_mode = task.get("video_mode", "slideshow")
         watermark_enabled = bool(task.get("watermark_enabled", False))
@@ -205,7 +282,7 @@ async def process_video(task):
         
         video_success = await error_recovery.retry_with_backoff(
             create_video,
-            image_paths, 
+            valid_media_paths, 
             voice_file, 
             output_video_path, 
             narrations=narrations, 
@@ -216,16 +293,21 @@ async def process_video(task):
             transition_style=transition_style,
             bgm_enabled=bgm_enabled,
             bgm_tone=bgm_tone,
+            aspect_ratio=aspect_ratio,
+            quality_level=quality_level,
+            color_grade_style=task.get("color_grade_style", "auto_enhance"),
+            scene_pacings=scene_pacings,
+            letterbox_enabled=bool(task.get("letterbox_enabled", False)),
         )
         
         if video_success:
             # 5. Thumbnail (Kapak) Üretimi
-            if image_paths:
+            if valid_media_paths:
                 try:
                     from thumbnail_generator import create_thumbnail
                     thumb_filename = f"thumb_{task_id}_{safe_topic}.jpg"
                     thumb_path = f"frontend/videos/{thumb_filename}"
-                    create_thumbnail(image_paths[0], topic, thumb_path)
+                    create_thumbnail(valid_media_paths[0], topic, thumb_path)
                     video_logger.log_video_production_step("thumbnail", str(task_id), {"output": thumb_filename})
                 except Exception as thumb_err:
                     print(f"[-] Thumbnail oluşturma hatası (İşlem devam ediyor): {thumb_err}")
@@ -264,7 +346,9 @@ async def add_single_video(req: VideoRequest):
         req.voice_type, req.custom_script, req.sentence_pause,
         req.watermark_enabled, req.transition_style,
         req.bgm_enabled, req.bgm_tone,
-        req.subtitle_delay
+        req.subtitle_delay,
+        req.quality_level, req.aspect_ratio, req.animation_provider,
+        req.color_grade_style
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -281,7 +365,8 @@ async def add_bulk_videos(req: BulkVideoRequest):
                 req.voice_type, None, req.sentence_pause,
                 req.watermark_enabled, req.transition_style,
                 req.bgm_enabled, req.bgm_tone,
-                req.subtitle_delay
+                req.subtitle_delay,
+                req.quality_level, req.aspect_ratio, req.animation_provider
             )
             task_ids.append(task_id)
     
@@ -305,6 +390,9 @@ class MultiLangVideoRequest(BaseModel):
     transition_style: Optional[str] = "none"
     bgm_enabled: Optional[bool] = False
     bgm_tone: Optional[str] = "auto"
+    quality_level: Optional[str] = "medium"
+    aspect_ratio: Optional[str] = "9:16"
+    animation_provider: Optional[str] = "none"
 
 
 @app.post("/api/videos/multi-lang")
@@ -324,7 +412,8 @@ async def add_multi_lang_video(req: MultiLangVideoRequest):
             req.voice_type, None, req.sentence_pause,
             req.watermark_enabled, req.transition_style,
             req.bgm_enabled, req.bgm_tone,
-            req.subtitle_delay
+            req.subtitle_delay,
+            req.quality_level, req.aspect_ratio, req.animation_provider
         )
         task_ids.append({"language": lang, "task_id": task_id})
     

@@ -111,8 +111,18 @@ def _calculate_edge_rate(text: str, target_duration_seconds: int) -> str:
     sign = "+" if rate_percent >= 0 else ""
     return f"{sign}{rate_percent}%"
 
-def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
-    print(f"[+] '{output_filename}' için ses sentezleniyor (AI: ElevenLabs)...")
+# ElevenLabs ses tonu presetleri — her mod farklı stability/style değerleri kullanır
+ELEVENLABS_VOICE_PRESETS = {
+    "dramatik":     {"stability": 0.30, "similarity_boost": 0.85, "style": 0.70},
+    "profesyonel":  {"stability": 0.70, "similarity_boost": 0.80, "style": 0.30},
+    "enerjik":      {"stability": 0.40, "similarity_boost": 0.75, "style": 0.80},
+    "sakin":        {"stability": 0.80, "similarity_boost": 0.70, "style": 0.20},
+    "gulucu":       {"stability": 0.35, "similarity_boost": 0.75, "style": 0.90},
+    "default":      {"stability": 0.50, "similarity_boost": 0.75, "style": 0.50},
+}
+
+def generate_voice_elevenlabs(text, output_filename, voice_type="erkek", voice_tone="default"):
+    print(f"[+] '{output_filename}' için ses sentezleniyor (AI: ElevenLabs, ton: {voice_tone})...")
     try:
         api_key = os.environ.get("ELEVENLABS_API_KEY")
         if not api_key:
@@ -123,6 +133,10 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
         voice_id = TURKISH_VOICES.get(voice_type, TURKISH_VOICES["erkek"])
         print(f"[+] Ses tipi: {voice_type} (Voice ID: {voice_id})")
         
+        # Ton preset'ini seç
+        preset = ELEVENLABS_VOICE_PRESETS.get(voice_tone, ELEVENLABS_VOICE_PRESETS["default"])
+        print(f"[+] Ses tonu preset: {voice_tone} → stability={preset['stability']}, style={preset['style']}")
+        
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         
         headers = {
@@ -131,13 +145,18 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek"):
             "xi-api-key": api_key
         }
         
+        voice_settings = {
+            "stability": preset["stability"],
+            "similarity_boost": preset["similarity_boost"],
+        }
+        # Style parametresi sadece multilingual_v2'de aktif
+        if "style" in preset:
+            voice_settings["style"] = preset["style"]
+        
         data = {
             "text": text,
             "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75,
-            }
+            "voice_settings": voice_settings
         }
         
         # Session kullanarak istek gönder

@@ -288,7 +288,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
                         bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
-                        bgm_tone: document.getElementById('opt-bgm-tone').value
+                        bgm_tone: document.getElementById('opt-bgm-tone').value,
+                        quality_level: document.getElementById('opt-quality-level').value,
+                        aspect_ratio: document.getElementById('opt-aspect-ratio').value,
+                        animation_provider: document.getElementById('opt-animation-provider').value,
+                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false
                     };
                     const res = await fetch('/api/videos/multi-lang', {
                         method: 'POST',
@@ -324,7 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
                         bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
-                        bgm_tone: document.getElementById('opt-bgm-tone').value
+                        bgm_tone: document.getElementById('opt-bgm-tone').value,
+                        quality_level: document.getElementById('opt-quality-level').value,
+                        aspect_ratio: document.getElementById('opt-aspect-ratio').value,
+                        animation_provider: document.getElementById('opt-animation-provider').value,
+                        color_grade_style: document.getElementById('opt-color-grade')?.value || 'auto_enhance',
+                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false
                     };
                     const res = await fetch('/api/videos/single', {
                         method: 'POST',
@@ -383,7 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     transition_style: document.getElementById('bulk-transition-style').value,
                     watermark_enabled: document.getElementById('bulk-watermark-enabled').checked,
                     bgm_enabled: document.getElementById('bulk-bgm-enabled').checked,
-                    bgm_tone: document.getElementById('bulk-bgm-tone').value
+                    bgm_tone: document.getElementById('bulk-bgm-tone').value,
+                    quality_level: document.getElementById('bulk-quality-level').value,
+                    aspect_ratio: document.getElementById('bulk-aspect-ratio').value,
+                    animation_provider: document.getElementById('bulk-animation-provider').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {
@@ -788,7 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     transition_style: document.getElementById('nedir-transition-style').value,
                     watermark_enabled: document.getElementById('nedir-watermark-enabled').checked,
                     bgm_enabled: document.getElementById('nedir-bgm-enabled').checked,
-                    bgm_tone: document.getElementById('nedir-bgm-tone').value
+                    bgm_tone: document.getElementById('nedir-bgm-tone').value,
+                    quality_level: document.getElementById('nedir-quality-level').value,
+                    aspect_ratio: document.getElementById('nedir-aspect-ratio').value,
+                    animation_provider: document.getElementById('nedir-animation-provider').value
                 };
 
                 const res = await fetch('/api/videos/bulk', {

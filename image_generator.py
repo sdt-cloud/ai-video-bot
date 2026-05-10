@@ -57,17 +57,18 @@ def get_session():
     
     return _session
 
-def generate_image_openai(prompt, output_filename):
+def generate_image_openai(prompt, output_filename, quality="standard"):
     from openai import OpenAI
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     
-    print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: DALL-E 3)")
+    quality_label = "HD" if quality == "hd" else "Standard"
+    print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: DALL-E 3, Kalite: {quality_label})")
     try:
         response = client.images.generate(
             model="dall-e-3",
             prompt=prompt,
             size="1024x1792", # DALL-E 3 desteklenen en yakın portre çözünürlüğü
-            quality="standard",
+            quality=quality,
             n=1,
         )
         image_url = response.data[0].url
@@ -90,6 +91,7 @@ def generate_image_openai(prompt, output_filename):
         # Fallback: Pollinations kullan
         print(f"[+] Fallback: Pollinations ile deneniyor...")
         return generate_image_pollinations(prompt, output_filename)
+
 
 def generate_image_pollinations(prompt, output_filename):
     print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: Pollinations)")
@@ -181,9 +183,30 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
 # STOK GÖRSEL SAĞLAYICILARI (ücretsiz, çok hızlı)
 # ─────────────────────────────────────────────────────────────
 
+# AI görsel prompt'larında sık geçen ama stok arama için anlamsız olan terimler
+_STOCK_NOISE_WORDS = frozenset({
+    "a", "an", "the", "of", "in", "on", "at", "to", "for", "with", "and", "or",
+    "cinematic", "hyperrealistic", "realistic", "photorealistic", "ultra",
+    "lighting", "professional", "photography", "photo", "photograph",
+    "8k", "4k", "hd", "resolution", "sharp", "focus", "focused",
+    "detailed", "high", "quality", "highly", "extreme", "extremely",
+    "dramatic", "scene", "image", "shot", "view", "style", "artistic",
+    "beautiful", "stunning", "gorgeous", "amazing", "incredible",
+    "background", "foreground", "composition", "frame", "portrait",
+    "wide", "angle", "close-up", "closeup", "close", "up",
+    "bird's", "eye", "low", "macro",
+    "render", "rendering", "generated", "digital", "illustration",
+    "no", "without", "blurry", "watermark", "text", "overlay",
+    "ugly", "deformed", "concept", "art",
+})
+
 def _stock_search_keyword(prompt: str) -> str:
-    """Uzun prompt'tan kısa arama anahtar kelimesi çıkar (ilk 4 kelime)."""
-    words = prompt.strip().split()
+    """Uzun AI prompt'undan noise word'leri filtreleyerek anlamlı arama terimi çıkarır."""
+    words = [w.lower().strip(",.;:!?\"'()[]") for w in prompt.strip().split()]
+    meaningful = [w for w in words if w and len(w) > 2 and w not in _STOCK_NOISE_WORDS]
+    if meaningful:
+        return " ".join(meaningful[:5])
+    # Fallback: hiç anlamlı kelime bulunamazsa ilk 4 kelimeyi kullan
     return " ".join(words[:4]) if len(words) >= 4 else prompt[:60]
 
 
@@ -386,6 +409,9 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto"):
         return fetch_stock_image_auto(prompt, output_filename)
 
     # AI görsel sağlayıcıları
+    elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd":
+        # Hook ve CTA sahneleri için HD kalite
+        return generate_image_openai(prompt, output_filename, quality="hd")
     elif "dall-e" in provider_lower or "openai" in provider_lower:
         return generate_image_openai(prompt, output_filename)
     elif "flux" in provider_lower:

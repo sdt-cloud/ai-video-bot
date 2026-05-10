@@ -9,6 +9,21 @@ from subtitle_enhancer import subtitle_enhancer
 from bgm_manager import get_bgm_path
 import urllib.request
 
+
+# ─────────────────────────────────────────────────────────────
+# ASPECT RATIO YARDIMCISI
+# ─────────────────────────────────────────────────────────────
+
+ASPECT_RATIO_MAP = {
+    "9:16": (1080, 1920),   # Dikey (TikTok, Reels, Shorts)
+    "1:1":  (1080, 1080),   # Kare (Instagram Feed, X)
+    "16:9": (1920, 1080),   # Yatay (YouTube, Web)
+}
+
+def get_resolution(aspect_ratio: str = "9:16") -> tuple:
+    """Aspect ratio'ya göre (width, height) döner."""
+    return ASPECT_RATIO_MAP.get(aspect_ratio, (1080, 1920))
+
 def ensure_font(style="tiktok"):
     """Sistemde font yoksa otomatik indirir ve yolunu döner."""
     os.makedirs("assets/fonts", exist_ok=True)
@@ -28,12 +43,19 @@ def ensure_font(style="tiktok"):
             print(f"[-] Font indirilemedi: {e}")
     return font_path
 
-def make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.04, threshold=0.015):
-    """Konuşma anında müziği kısan (ducking) zarf fonksiyonu. Belgesel tarzı (arkada hafif)."""
+def make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.035, threshold=0.015,
+                              attack_time=0.3, release_time=0.5):
+    """
+    Smooth attack/release ile profesyonel ducking zarf fonksiyonu.
+    
+    - attack_time: Konuşma başladığında müziğin kısılma süresi (saniye)
+    - release_time: Konuşma bittiğinde müziğin geri açılma süresi (saniye)
+    - Bu, ani ses değişimlerini engelleyerek doğal bir geçiş sağlar.
+    """
     import numpy as np
     try:
-        print("[BGM] Auto-Ducking için ana ses (TTS) analiz ediliyor...")
-        fps = 10 # saniyede 10 örnek
+        print("[BGM] Auto-Ducking için ana ses (TTS) analiz ediliyor (smooth envelope)...")
+        fps = 20  # Daha yüksek çözünürlük (20 örnek/s) — pürüzsüz geçiş için
         audio_array = audio_clip.to_soundarray(fps=fps)
         if audio_array.ndim == 2:
             rms = np.sqrt(np.mean(audio_array**2, axis=1))
@@ -41,36 +63,62 @@ def make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.04, threshold
             rms = np.sqrt(audio_array**2)
             
         # Pürüzsüzleştirme (smoothing) - ani ses değişimlerini engellemek için
-        window = 4
+        window = 6
         smoothed_rms = np.convolve(rms, np.ones(window)/window, mode='same')
+        
+        # Konuşma aktif mi? (binary maske)
+        is_speaking = (smoothed_rms > threshold).astype(np.float32)
+        
+        # Smooth envelope oluştur: attack (kısılma) ve release (açılma) süreleri
+        attack_samples = max(1, int(attack_time * fps))
+        release_samples = max(1, int(release_time * fps))
+        
+        envelope = np.zeros_like(is_speaking)
+        current_level = 0.0  # 0=konuşma yok, 1=konuşma var
+        
+        for i in range(len(is_speaking)):
+            target = is_speaking[i]
+            if target > current_level:
+                # Attack: konuşma başlıyor, hızlıca kıs
+                current_level = min(1.0, current_level + 1.0 / attack_samples)
+            else:
+                # Release: konuşma bitiyor, yavaşça aç
+                current_level = max(0.0, current_level - 1.0 / release_samples)
+            envelope[i] = current_level
+        
+        # Envelope'u volume çarpanına dönüştür: 
+        # envelope=0 → base_vol (müzik açık), envelope=1 → duck_vol (müzik kısık)
+        vol_envelope = base_vol - (base_vol - duck_vol) * envelope
         
         def volume_multiplier(t):
             idx = int(t * fps)
-            if idx < len(smoothed_rms):
-                if smoothed_rms[idx] > threshold:
-                    return duck_vol
-                else:
-                    return base_vol
+            if idx < len(vol_envelope):
+                return float(vol_envelope[idx])
             return base_vol
+        
+        print(f"[BGM] Smooth ducking hazır (attack: {attack_time}s, release: {release_time}s)")
         return volume_multiplier
     except Exception as e:
         print(f"[-] Ducking analizi başarısız: {e}")
         return base_vol
 
 
-def is_target_resolution_image(image_path, target_size=(1080, 1920)):
+def is_target_resolution_image(image_path, target_size=None, aspect_ratio="9:16"):
     """Gorsel zaten hedef cozumlukteyse ekstra resize maliyetinden kacin."""
+    if target_size is None:
+        target_size = get_resolution(aspect_ratio)
     try:
         with Image.open(image_path) as img:
             return img.size == target_size
     except Exception:
         return False
         
-def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.5):
-    """Kelimelerin zamanlamasını hesaplar ve karaoke stili PNG'lerden oluşan bir klip döner."""
+def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.5, aspect_ratio="9:16"):
+    """Kelimelerin zamanlamasını hesaplar ve karaoke stili bellekten oluşan bir klip döner."""
     from subtitle_enhancer import subtitle_enhancer
     from moviepy import ImageClip, concatenate_videoclips
-    import uuid
+    
+    target_w, target_h = get_resolution(aspect_ratio)
     
     timings = subtitle_enhancer.generate_subtitle_timing(text, duration, delay=subtitle_delay)
     if not timings:
@@ -95,7 +143,7 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
         
     line_height = font_size + 10
     total_text_height = len(lines) * line_height
-    start_y = 1920 - total_text_height - (200 if subtitle_style == "tiktok" else 260)
+    start_y = target_h - total_text_height - (200 if subtitle_style == "tiktok" else 260)
     
     box_padding = 25 if subtitle_style == "tiktok" else 18
     box_top = start_y - box_padding
@@ -113,16 +161,16 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
         word_duration = timing['duration']
         highlight_idx = timing.get('index', -1)
         
-        overlay = Image.new("RGBA", (1080, overlay_height), (0, 0, 0, 0))
+        overlay = Image.new("RGBA", (target_w, overlay_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
         
         local_box_top = 0
         local_box_bottom = box_bottom - box_top
         
         if subtitle_style == "tiktok":
-            draw.rounded_rectangle([40, local_box_top, 1040, local_box_bottom], radius=15, fill=(0, 0, 0, 120))
+            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=15, fill=(0, 0, 0, 120))
         elif subtitle_style == "netflix":
-            draw.rounded_rectangle([40, local_box_top, 1040, local_box_bottom], radius=12, fill=(0, 0, 0, 70))
+            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=12, fill=(0, 0, 0, 70))
             
         shadow_offset = 2
         word_counter = 0
@@ -132,7 +180,7 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
             
             bbox = draw.textbbox((0, 0), line, font=font)
             line_width = bbox[2] - bbox[0]
-            current_x = (1080 - line_width) // 2
+            current_x = (target_w - line_width) // 2
             
             line_words = line.split()
             for lw in line_words:
@@ -157,12 +205,10 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
                 current_x += (lw_bbox[2] - lw_bbox[0])
                 word_counter += 1
                 
-        out_name = f"assets/dyn_sub_{uuid.uuid4().hex[:6]}.png"
-        # Optimize PNG for faster disk write/read
-        overlay.save(out_name, "PNG", optimize=False)
-        temp_files.append(out_name)
+        # Disk I/O yerine doğrudan bellekten numpy array kullan (performans: ~%30-40 hızlanma)
+        overlay_array = np.array(overlay)
         
-        c = ImageClip(out_name)
+        c = ImageClip(overlay_array)
         if hasattr(c, 'with_duration'):
             c = c.with_duration(word_duration)
         else:
@@ -178,35 +224,172 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
     return None
 
 
-def get_render_settings(video_mode, total_duration):
-    """Süreye ve moda gore hiz/kalite dengesini otomatik ayarla."""
-    cpu_threads = max(2, min(8, (os.cpu_count() or 4)))
+# ─────────────────────────────────────────────────────────────
+# KALİTE BAZLI RENDER AYARLARI
+# ─────────────────────────────────────────────────────────────
 
-    # Varsayilan kalite profili (mevcut davranisa yakin)
+RENDER_QUALITY_PROFILES = {
+    "low": {
+        "fps": 24,
+        "preset": "fast",
+        "crf": "26",
+    },
+    "medium": {
+        "fps": 30,
+        "preset": "medium",
+        "crf": "20",
+    },
+    "high": {
+        "fps": 30,
+        "preset": "slow",
+        "crf": "16",
+    },
+}
+
+def get_render_settings(video_mode, total_duration, quality_level="medium"):
+    """Kalite düzeyine, süreye ve moda göre render ayarlarını belirler."""
+    cpu_threads = max(2, min(8, (os.cpu_count() or 4)))
+    profile = RENDER_QUALITY_PROFILES.get(quality_level, RENDER_QUALITY_PROFILES["medium"])
+
     settings = {
-        "fps": 20,
-        "preset": "superfast",
+        "fps": profile["fps"],
+        "preset": profile["preset"],
         "threads": cpu_threads,
-        "ffmpeg_params": ["-movflags", "+faststart", "-crf", "24", "-pix_fmt", "yuv420p"],
+        "ffmpeg_params": [
+            "-movflags", "+faststart",
+            "-crf", profile["crf"],
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "high",
+            "-level", "4.2",
+        ],
     }
 
-    # Uzun videolarda encode suresi ciddi uzadigi icin daha agresif hiz profili
-    if total_duration >= 180:
-        settings.update({
-            "fps": 16,
-            "preset": "ultrafast",
-            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "30", "-pix_fmt", "yuv420p"],
-        })
+    # Uzun videolarda (3dk+) encode süresini kontrol altına al
+    if total_duration >= 180 and quality_level != "high":
+        settings["preset"] = "fast"
 
-    # AI video modu en maliyetli mod oldugu icin ek hizlandirma
-    if video_mode == "ai_video":
-        settings.update({
-            "fps": 15,
-            "preset": "ultrafast",
-            "ffmpeg_params": ["-movflags", "+faststart", "-crf", "32", "-pix_fmt", "yuv420p"],
-        })
+    # AI video modunda encode daha ağır olur
+    if video_mode == "ai_video" and quality_level == "low":
+        settings["preset"] = "fast"
 
     return settings
+
+
+# ─────────────────────────────────────────────────────────────
+# RENK DÜZELTME / COLOR GRADING
+# ─────────────────────────────────────────────────────────────
+
+def color_grade_image(image_path, output_path=None, style="auto_enhance"):
+    """
+    Görsele renk düzeltme/grading uygular.
+    style: auto_enhance, cinematic_warm, cinematic_cool, vintage, none
+    """
+    if style == "none":
+        return image_path
+    
+    try:
+        from PIL import ImageEnhance, ImageFilter
+        img = Image.open(image_path).convert("RGB")
+        
+        if style == "auto_enhance":
+            # Profesyonel otomatik iyileştirme
+            img = ImageEnhance.Contrast(img).enhance(1.12)      # +12% kontrast
+            img = ImageEnhance.Brightness(img).enhance(1.04)    # +4% parlaklık
+            img = ImageEnhance.Color(img).enhance(1.18)         # +18% doygunluk
+            img = ImageEnhance.Sharpness(img).enhance(1.15)     # +15% keskinlik
+        
+        elif style == "cinematic_warm":
+            img = ImageEnhance.Contrast(img).enhance(1.20)
+            img = ImageEnhance.Color(img).enhance(1.10)
+            # Sıcak ton: hafif turuncu/amber overlay
+            warm_overlay = Image.new("RGB", img.size, (255, 200, 150))
+            img = Image.blend(img, warm_overlay, 0.06)
+            img = ImageEnhance.Brightness(img).enhance(1.02)
+        
+        elif style == "cinematic_cool":
+            img = ImageEnhance.Contrast(img).enhance(1.22)
+            img = ImageEnhance.Color(img).enhance(0.90)
+            # Soğuk ton: hafif mavi overlay
+            cool_overlay = Image.new("RGB", img.size, (150, 180, 255))
+            img = Image.blend(img, cool_overlay, 0.06)
+        
+        elif style == "vintage":
+            img = ImageEnhance.Color(img).enhance(0.75)
+            img = ImageEnhance.Contrast(img).enhance(1.15)
+            sepia_overlay = Image.new("RGB", img.size, (255, 230, 200))
+            img = Image.blend(img, sepia_overlay, 0.10)
+            img = ImageEnhance.Brightness(img).enhance(0.97)
+        
+        save_path = output_path or image_path
+        img.save(save_path, quality=92, optimize=True)
+        return save_path
+    
+    except Exception as e:
+        print(f"[-] Color grading hatası: {e}")
+        return image_path
+
+
+# Sahne mood'una göre otomatik color grade eşleştirmesi
+MOOD_TO_COLOR_GRADE = {
+    "tense":     "cinematic_cool",    # Gerilimli → soğuk mavi tonlar
+    "inspiring": "cinematic_warm",    # İlham verici → sıcak amber tonlar
+    "shocking":  "auto_enhance",      # Şok edici → yüksek kontrast, canlı
+    "calm":      "cinematic_warm",    # Sakin → sıcak yumuşak tonlar
+    "funny":     "auto_enhance",      # Komik → canlı doğal renkler
+}
+
+def get_scene_color_grade(scene_index, scene_pacings, default_style="auto_enhance"):
+    """Sahne mood'una göre uygun color grade stilini döndürür."""
+    if scene_pacings and scene_index < len(scene_pacings):
+        scene_data = scene_pacings[scene_index]
+        mood = None
+        if isinstance(scene_data, dict):
+            mood = scene_data.get("mood", None)
+        if mood and mood in MOOD_TO_COLOR_GRADE:
+            return MOOD_TO_COLOR_GRADE[mood]
+    return default_style
+
+
+def smart_resize_image(image_path, target_w, target_h, output_path=None):
+    """
+    Görseli akıllıca hedef boyuta getirir:
+    - LANCZOS (en kaliteli) resize
+    - Crop + letterbox yerine center crop (dikey videolar için)
+    - Küçük görselleri tespit eder
+    """
+    try:
+        img = Image.open(image_path).convert("RGB")
+        orig_w, orig_h = img.size
+        
+        # Hedef aspect ratio
+        target_ratio = target_w / target_h
+        orig_ratio = orig_w / orig_h
+        
+        if abs(orig_ratio - target_ratio) < 0.1:
+            # Yakın oran → doğrudan resize
+            img = img.resize((target_w, target_h), Image.LANCZOS)
+        else:
+            # Farklı oran → center crop + resize
+            if orig_ratio > target_ratio:
+                # Daha geniş → yandan kes
+                new_w = int(orig_h * target_ratio)
+                offset = (orig_w - new_w) // 2
+                img = img.crop((offset, 0, offset + new_w, orig_h))
+            else:
+                # Daha uzun → üstten-alttan kes
+                new_h = int(orig_w / target_ratio)
+                offset = (orig_h - new_h) // 2
+                img = img.crop((0, offset, orig_w, offset + new_h))
+            
+            img = img.resize((target_w, target_h), Image.LANCZOS)
+        
+        save_path = output_path or image_path
+        img.save(save_path, quality=92, optimize=True)
+        return save_path
+    
+    except Exception as e:
+        print(f"[-] Smart resize hatası: {e}")
+        return image_path
 
 def apply_clip_resize(clip, width=None, height=None):
     """MoviePy v1'de resize(), v2'de resized() kullanılır."""
@@ -239,80 +422,111 @@ def apply_clip_audio(clip, audio):
     return clip
 
 
-def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok"):
-    """Görselin üzerine kalın, renkli, gölgeli altyazı yakar. OPTİMİZE EDİLDİ."""
+def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok", aspect_ratio="9:16"):
+    """Görselin üzerine kalın, renkli, gölgeli altyazı yakar. 5 stil destekler."""
+    target_w, target_h = get_resolution(aspect_ratio)
     img = Image.open(image_path).convert("RGBA")
+    img = img.resize((target_w, target_h), Image.LANCZOS)
     
-    # 1080x1920'ye zorla - HIZLI: Bilinear yerine LANCZOS kullanma
-    img = img.resize((1080, 1920), Image.BILINEAR)  # Daha hızlı resize
-    
-    # Yarı saydam bir overlay katmanı oluştur
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     
     font_path = ensure_font(subtitle_style)
     
-    # Font ayarla
-    font_size = 58 if subtitle_style == "tiktok" else 50  # Biraz daha küçük = hızlı render
+    # Stil bazlı parametreler
+    STYLE_CONFIG = {
+        "tiktok": {
+            "font_size": 58, "wrap_width": 18, "shadow_offset": 3,
+            "text_color": (255, 255, 80, 255), "shadow_color": (0, 0, 0, 255),
+            "bg_fill": (0, 0, 0, 120), "bg_radius": 15, "y_offset": 200,
+        },
+        "netflix": {
+            "font_size": 50, "wrap_width": 24, "shadow_offset": 2,
+            "text_color": (255, 255, 255, 255), "shadow_color": (0, 0, 0, 255),
+            "bg_fill": (0, 0, 0, 70), "bg_radius": 12, "y_offset": 260,
+        },
+        "hormozi": {
+            "font_size": 64, "wrap_width": 14, "shadow_offset": 4,
+            "text_color": (255, 255, 255, 255), "shadow_color": (0, 0, 0, 255),
+            "highlight_color": (255, 220, 50, 255),
+            "bg_fill": None, "bg_radius": 0, "y_offset": 180,
+        },
+        "mrbeast": {
+            "font_size": 62, "wrap_width": 15, "shadow_offset": 4,
+            "text_color": (255, 80, 80, 255), "shadow_color": (0, 0, 0, 255),
+            "bg_fill": (0, 0, 0, 160), "bg_radius": 20, "y_offset": 200,
+        },
+        "minimal": {
+            "font_size": 40, "wrap_width": 30, "shadow_offset": 2,
+            "text_color": (255, 255, 255, 230), "shadow_color": (0, 0, 0, 180),
+            "bg_fill": None, "bg_radius": 0, "y_offset": 300,
+        },
+    }
+    
+    config = STYLE_CONFIG.get(subtitle_style, STYLE_CONFIG["tiktok"])
+    font_size = config["font_size"]
+    shadow_offset = config["shadow_offset"]
+    text_color = config["text_color"]
+    
     font = None
-    bold_fonts = [font_path]
-    for f in bold_fonts:
-        if os.path.exists(f):
-            font = ImageFont.truetype(f, font_size)
-            break
+    if os.path.exists(font_path):
+        font = ImageFont.truetype(font_path, font_size)
     if font is None:
         font = ImageFont.load_default()
     
-    # Metni satırlara böl
-    wrapped = textwrap.fill(text, width=18 if subtitle_style == "tiktok" else 24)
+    wrapped = textwrap.fill(text, width=config["wrap_width"])
     lines = wrapped.split("\n")
     
-    # Hesaplamalar
-    line_height = font_size + 10
+    line_height = font_size + 12
     total_text_height = len(lines) * line_height
-    start_y = 1920 - total_text_height - (200 if subtitle_style == "tiktok" else 260)
+    start_y = target_h - total_text_height - config["y_offset"]
     
-    # Arka plan kutusu
-    box_padding = 25 if subtitle_style == "tiktok" else 18
-    box_top = start_y - box_padding
-    box_bottom = start_y + total_text_height + box_padding
-    
-    if subtitle_style == "tiktok":
+    # Arka plan kutusu (bazı stillerde yok)
+    if config["bg_fill"]:
+        box_padding = 25
+        box_top = start_y - box_padding
+        box_bottom = start_y + total_text_height + box_padding
         draw.rounded_rectangle(
-            [40, box_top, 1040, box_bottom],
-            radius=15,
-            fill=(0, 0, 0, 120)  # Biraz daha az opak = hızlı
-        )
-    elif subtitle_style == "netflix":
-        draw.rounded_rectangle(
-            [40, box_top, 1040, box_bottom],
-            radius=12,
-            fill=(0, 0, 0, 70)
+            [40, box_top, target_w - 40, box_bottom],
+            radius=config["bg_radius"],
+            fill=config["bg_fill"]
         )
     
-    # Basit gölge (sadece 4 yön yerine 8)
-    shadow_offset = 2 if subtitle_style == "tiktok" else 2
-    text_color = (255, 255, 80, 255) if subtitle_style == "tiktok" else (255, 255, 255, 255)
-    
+    # Metin render
     for i, line in enumerate(lines):
         y = start_y + (i * line_height)
         bbox = draw.textbbox((0, 0), line, font=font)
         text_width = bbox[2] - bbox[0]
-        x = (1080 - text_width) // 2
+        x = (target_w - text_width) // 2
         
-        # Sadece 4 yönde gölge (daha hızlı)
-        for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
+        # 8 yönlü gölge (daha kaliteli)
+        for dx, dy in [(-shadow_offset, 0), (shadow_offset, 0), (0, -shadow_offset), (0, shadow_offset),
+                       (-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
                        (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
-            draw.text((x + dx, y + dy), line, font=font, fill=(0, 0, 0, 255))
+            draw.text((x + dx, y + dy), line, font=font, fill=config["shadow_color"])
         
-        # Ana metin
-        draw.text((x, y), line, font=font, fill=text_color)
+        # Hormozi stili: en uzun kelimeyi sarı yap
+        if subtitle_style == "hormozi" and "highlight_color" in config:
+            words = line.split()
+            if words:
+                longest_word = max(words, key=len)
+                current_x = x
+                for word in words:
+                    word_bbox = draw.textbbox((0, 0), word + " ", font=font)
+                    word_w = word_bbox[2] - word_bbox[0]
+                    if word == longest_word:
+                        draw.text((current_x, y), word, font=font, fill=config["highlight_color"])
+                    else:
+                        draw.text((current_x, y), word, font=font, fill=text_color)
+                    current_x += word_w
+            else:
+                draw.text((x, y), line, font=font, fill=text_color)
+        else:
+            draw.text((x, y), line, font=font, fill=text_color)
     
-    # Overlay'i ana görselle birleştir
     result = Image.alpha_composite(img, overlay)
     result = result.convert("RGB")
-    # HIZLI: Kaliteyi %85 yap (95 yerine) - %30 daha hızlı
-    result.save(output_path, quality=85, optimize=True)
+    result.save(output_path, quality=92, optimize=True)
 
 def apply_watermark(image_path, output_path, opacity=0.35, padding=30, max_size=180):
     """Görselin sağ üst köşesine şeffaf logo watermark uygular."""
@@ -393,8 +607,11 @@ def generate_video_clip_ai(image_path, output_path):
 def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None,
                  subtitle_style="tiktok", subtitle_delay=0.5, video_mode="slideshow",
                  watermark_enabled=False, transition_style="none",
-                 bgm_enabled=False, bgm_tone="auto"):
-    print(f"[+] Video kurgulanıyor (Mod: {video_mode}): {output_filename}...")
+                 bgm_enabled=False, bgm_tone="auto", aspect_ratio="9:16",
+                 quality_level="medium", color_grade_style="auto_enhance",
+                 scene_pacings=None, letterbox_enabled=False):
+    target_w, target_h = get_resolution(aspect_ratio)
+    print(f"[+] Video kurgulanıyor (Mod: {video_mode}, Boyut: {target_w}x{target_h}, Kalite: {quality_level}): {output_filename}...")
     temp_files = []
     clips = []
     audio_clip = None
@@ -416,6 +633,48 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         else:
             slide_durations = [total_duration / len(image_paths)] * len(image_paths)
         
+        # Akıllı Tempolama: pacing değerlerine göre süreleri ayarla
+        PACING_MULTIPLIERS = {"fast": 0.80, "normal": 1.0, "slow": 1.15}
+        if scene_pacings and len(scene_pacings) == len(slide_durations):
+            raw_durations = []
+            for i, pacing_data in enumerate(scene_pacings):
+                # Dict formatı (yeni) veya string formatı (eski) desteği
+                if isinstance(pacing_data, dict):
+                    pacing = pacing_data.get("pacing", "normal")
+                else:
+                    pacing = pacing_data
+                mult = PACING_MULTIPLIERS.get(pacing, 1.0)
+                raw_durations.append(slide_durations[i] * mult)
+            
+            # Toplam süreyi korumak için normalize et
+            raw_total = sum(raw_durations)
+            if raw_total > 0:
+                scale = total_duration / raw_total
+                slide_durations = [d * scale for d in raw_durations]
+            
+            # Minimum süre garantisi: hiçbir sahne 2 saniyeden kısa olmasın
+            slide_durations = [max(2.0, d) for d in slide_durations]
+            
+            # Hook (ilk sahne) en fazla 4 saniye
+            if slide_durations[0] > 4.0:
+                excess = slide_durations[0] - 4.0
+                slide_durations[0] = 4.0
+                # Fazlayı diğer sahnelere dağıt
+                others = len(slide_durations) - 1
+                if others > 0:
+                    for j in range(1, len(slide_durations)):
+                        slide_durations[j] += excess / others
+            
+            # Son sahne (CTA) en az 3 saniye
+            if len(slide_durations) > 1 and slide_durations[-1] < 3.0:
+                deficit = 3.0 - slide_durations[-1]
+                slide_durations[-1] = 3.0
+                others = len(slide_durations) - 1
+                if others > 0:
+                    per_scene = deficit / others
+                    for j in range(len(slide_durations) - 1):
+                        slide_durations[j] = max(2.0, slide_durations[j] - per_scene)
+        
         for i, img in enumerate(image_paths):
             slide_duration = slide_durations[i]
             processed_img = img
@@ -427,28 +686,64 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 temp_files.append(wm_img)
                 processed_img = wm_img
             
+            # Statik görsellere renk düzeltme ve akıllı resize uygula
+            if not (img.endswith(".mp4") or img.endswith(".webm")):
+                # Renk düzeltme
+                if color_grade_style != "none":
+                    # Sahne mood'una göre renk grading (mood varsa sahne bazlı, yoksa global)
+                    scene_grade = get_scene_color_grade(i, scene_pacings, color_grade_style)
+                    graded_img = f"assets/graded_{os.path.basename(processed_img)}"
+                    color_grade_image(processed_img, graded_img, scene_grade)
+                    temp_files.append(graded_img)
+                    processed_img = graded_img
+                
+                # Akıllı resize (LANCZOS + center crop)
+                resized_img = f"assets/resized_{os.path.basename(processed_img)}"
+                smart_resize_image(processed_img, target_w, target_h, resized_img)
+                temp_files.append(resized_img)
+                processed_img = resized_img
+            
             if video_mode == "ai_video":
                 video_clip_path = f"assets/clip_{os.path.basename(img)}.mp4"
                 if generate_video_clip_ai(processed_img, video_clip_path):
                     clip = VideoFileClip(video_clip_path)
-                    clip = apply_clip_resize(clip, width=1080, height=1920)
+                    clip = apply_clip_resize(clip, width=target_w, height=target_h)
                     clip = apply_clip_duration(clip, slide_duration)
                     temp_files.append(video_clip_path)
                 else:
                     clip = ImageClip(processed_img)
                     clip = apply_clip_duration(clip, slide_duration)
+            elif img.endswith(".mp4") or img.endswith(".webm"):
+                # Video klip veya animasyon dosyası
+                try:
+                    clip = VideoFileClip(img)
+                    # Sesi kaldır (narration ile çakışmaması için)
+                    clip = apply_clip_audio(clip, None)
+                    clip = apply_clip_resize(clip, width=target_w, height=target_h)
+                    # Klip süresini sahne süresine ayarla
+                    if clip.duration < slide_duration:
+                        # Kısa klipleri döngüye al
+                        from math import ceil
+                        loop_count = ceil(slide_duration / clip.duration)
+                        clips_loop = [clip] * loop_count
+                        clip = concatenate_videoclips(clips_loop, method="compose")
+                    clip = apply_clip_duration(clip, slide_duration)
+                except Exception as vid_err:
+                    print(f"[-] Video klip yüklenemedi ({img}): {vid_err}, statik görsel kullanılıyor.")
+                    clip = ImageClip(processed_img)
+                    clip = apply_clip_duration(clip, slide_duration)
             else:
                 clip = ImageClip(processed_img)
                 clip = apply_clip_duration(clip, slide_duration)
-                if not is_target_resolution_image(processed_img):
-                    clip = apply_clip_resize(clip, width=1080, height=1920)
+                if not is_target_resolution_image(processed_img, aspect_ratio=aspect_ratio):
+                    clip = apply_clip_resize(clip, width=target_w, height=target_h)
                 
                 # Sadece ilk sahnede (Hook) Camera Shake uygula
                 if i == 0:
                     clip = video_effects.apply_camera_shake(clip, duration=0.8, intensity=15)
                 
                 if video_mode == "cinematic":
-                    clip = video_effects.apply_random_effect(clip)
+                    clip = video_effects.smart_effect_for_scene(clip, i, len(image_paths))
 
             # Dinamik Karaoke Altyazı Ekleme
             if narrations and i < len(narrations) and subtitle_style != "none":
@@ -456,13 +751,13 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 narration_with_emojis = subtitle_enhancer.add_emojis(enhanced_narration)
                 try:
                     from moviepy import CompositeVideoClip
-                    dynamic_sub_clip = generate_karaoke_subtitle_clips(narration_with_emojis, slide_duration, temp_files, subtitle_style, subtitle_delay)
+                    dynamic_sub_clip = generate_karaoke_subtitle_clips(narration_with_emojis, slide_duration, temp_files, subtitle_style, subtitle_delay, aspect_ratio)
                     if dynamic_sub_clip:
                         clip = CompositeVideoClip([clip, dynamic_sub_clip])
                     else:
                         # Fallback to static if dynamic fails
                         subtitle_img = f"assets/sub_{os.path.basename(img)}"
-                        burn_subtitle_on_image(processed_img, narration_with_emojis, subtitle_img, subtitle_style)
+                        burn_subtitle_on_image(processed_img, narration_with_emojis, subtitle_img, subtitle_style, aspect_ratio)
                         clip = ImageClip(subtitle_img)
                         clip = apply_clip_duration(clip, slide_duration)
                         temp_files.append(subtitle_img)
@@ -482,6 +777,15 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             final_video = concatenate_videoclips(clips, method="compose", padding=-0.4)
         else:
             final_video = concatenate_videoclips(clips, method="compose")
+
+        # --- Sinematik Post-Efektler (Vignette + Film Grain + Letterbox) ---
+        if quality_level in ("medium", "high"):
+            final_video = video_effects.apply_cinematic_post_effects(
+                final_video,
+                vignette=True,
+                grain=(quality_level == "high"),  # Film grain sadece high kalitede
+                letterbox=letterbox_enabled,
+            )
 
         # --- Ses Katmanları (BGM ve SFX) ---
         audio_layers = [audio_clip]
@@ -569,7 +873,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             if os.path.exists(intro_path):
                 print(f"[+] Intro videosu algılandı: {intro_path}")
                 intro_clip = VideoFileClip(intro_path)
-                intro_clip = apply_clip_resize(intro_clip, width=1080, height=1920)
+                intro_clip = apply_clip_resize(intro_clip, width=target_w, height=target_h)
                 sequence.append(intro_clip)
                 clips.append(intro_clip) # Cleanup için listeye ekle
                 
@@ -578,7 +882,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             if os.path.exists(outro_path):
                 print(f"[+] Outro videosu algılandı: {outro_path}")
                 outro_clip = VideoFileClip(outro_path)
-                outro_clip = apply_clip_resize(outro_clip, width=1080, height=1920)
+                outro_clip = apply_clip_resize(outro_clip, width=target_w, height=target_h)
                 sequence.append(outro_clip)
                 clips.append(outro_clip) # Cleanup için listeye ekle
                 
@@ -593,7 +897,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         if w % 2 != 0 or h % 2 != 0:
             final_video = apply_clip_resize(final_video, width=w - (w % 2), height=h - (h % 2))
             
-        render_settings = get_render_settings(video_mode, total_duration)
+        render_settings = get_render_settings(video_mode, total_duration, quality_level)
         print(
             f"[+] Render işlemi başlıyor... "
             f"(fps={render_settings['fps']}, preset={render_settings['preset']}, threads={render_settings['threads']})"
@@ -610,6 +914,47 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             remove_temp=True,
             logger=None
         )
+        
+        # --- POST-PROCESSING ---
+        if quality_level in ("medium", "high") and os.path.exists(output_filename):
+            try:
+                import subprocess
+                temp_pp = output_filename.replace(".mp4", "_pp.mp4")
+                
+                # Ses normalizasyonu (LUFS -14, TikTok/YouTube standardı) + hafif sharpening
+                pp_filters = []
+                if quality_level == "high":
+                    pp_filters.append("unsharp=3:3:0.3:3:3:0.1")  # Hafif keskinlik
+                
+                vf_arg = ",".join(pp_filters) if pp_filters else None
+                
+                pp_cmd = [
+                    "ffmpeg", "-y", "-i", output_filename,
+                    "-af", "loudnorm=I=-14:TP=-1:LRA=11",
+                ]
+                if vf_arg:
+                    pp_cmd.extend(["-vf", vf_arg])
+                pp_cmd.extend([
+                    "-c:v", "copy" if not vf_arg else "libx264",
+                    "-c:a", "aac", "-b:a", "192k",
+                    temp_pp
+                ])
+                
+                result = subprocess.run(pp_cmd, capture_output=True, timeout=120)
+                if result.returncode == 0 and os.path.exists(temp_pp):
+                    os.replace(temp_pp, output_filename)
+                    print("[POST] Ses normalizasyonu (LUFS -14) başarıyla uygulandı!")
+                    if vf_arg:
+                        print("[POST] Video keskinleştirme uygulandı!")
+                else:
+                    # Başarısızsa orijinali kullan
+                    if os.path.exists(temp_pp):
+                        os.remove(temp_pp)
+                    print("[POST] Post-processing atlandı (FFmpeg hatası)")
+            except FileNotFoundError:
+                print("[POST] FFmpeg bulunamadı, post-processing atlanıyor.")
+            except Exception as pp_err:
+                print(f"[POST] Post-processing hatası: {pp_err}")
         
         print(f"[+] ŞAHANE! Videonuz hazırlandı: {output_filename}")
         return True

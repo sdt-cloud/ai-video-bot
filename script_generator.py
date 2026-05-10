@@ -17,17 +17,56 @@ ZORUNLU KURALLAR:
 - Toplam narration kelime sayısı EN AZ {min_words} kelime olmalıdır.
 - Her sahnede narration metni sadece 1 kısa cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
 - Hedef süreyi dolduracak kadar içerik yaz.
-Her cümlenin ekranda kalma süresinde gösterilecek bir 'görsel promptu (image_prompt)' olmalıdır.
-Image prompt'lar her zaman İNGİLİZCE yazılmalıdır çünkü yapay zeka resim araçları İngilizce daha iyi anlar. 
-Gerçekçi, sinematik veya yüksek kaliteli gibi terimler ekle. Metinler ise TÜRKÇE olacaktır.
+- SON SAHNE mutlaka bir Call to Action (CTA) olmalıdır: "Beğen, paylaş, abone ol" tarzı.
 
-Cevabını sadece ve sadece aşağıdaki gibi bir JSON objesi ('scenes' listesi içeren) formatında döndür.
+GÖRSEL PROMPT KURALLARI:
+- Image prompt'lar her zaman İNGİLİZCE yazılmalıdır.
+- Her prompt'ta şu terimleri MUTLAKA ekle: "cinematic lighting, professional photography, 8k resolution, sharp focus"
+- Her prompt'a MUTLAKA bir kamera açısı belirt: "close-up", "wide angle", "bird's eye view", "low angle" gibi
+- ART ARDA İKİ SAHNEDE AYNI KAMERA AÇISINI ASLA KULLANMA! Örnek sıralama: close-up → wide angle → bird's eye view → low angle → macro → over-the-shoulder
+- TÜM sahnelerin görselleri AYNI RENK PALETİNDE ve STILDE olmalı (tutarlılık ÇOK ÖNEMLİ)
+- ASLA şunları içerme: blurry, low quality, watermark, text overlay, ugly, deformed
+
+Her sahne için bir 'media_type' alanı belirle:
+- "image" → normal statik görsel (çoğu sahne bu olmalı)
+- "video_clip" → kısa GIF veya video klip (sahnelerin %20-30'u bunu kullanabilir, özellikle aksiyon, hareket veya komik sahnelerde)
+Video clip sahneleri için ayrıca bir 'clip_search_query' alanı da ekle (İngilizce, kısa arama kelimesi).
+
+Her sahne için bir 'pacing' alanı belirle:
+- "fast" → hızlı tempo (hook, şok bilgiler, heyecan)
+- "normal" → normal tempo (açıklama, bilgi aktarma)
+- "slow" → yavaş tempo (dramatik an, final, CTA)
+
+Her sahne için bir 'mood' alanı belirle:
+- "tense" → gerilimli, karanlık
+- "inspiring" → ilham verici, sıcak
+- "shocking" → şok edici, dikkat çekici
+- "calm" → sakin, huzurlu
+- "funny" → komik, eğlenceli
+
+JSON'un en üst seviyesine bir 'style_anchor' alanı ekle. Bu alan TÜM sahnelerin görsel stilini tanımlar.
+Örnek: "dark moody cinematic, teal and orange color grading, dramatic shadows"
+Her image_prompt'un SONUNA bu style_anchor metnini MUTLAKA ekle.
+
+Cevabını sadece ve sadece aşağıdaki gibi bir JSON objesi formatında döndür.
 Başka hiçbir açıklama veya markdown ekleme, sadece saf JSON döndür:
 {
+  "style_anchor": "dark moody cinematic, teal and orange color grading, dramatic shadows",
   "scenes": [
     {
         "narration": "Evrenin en soğuk yeri Antarktika'da değil, bizden 5000 ışık yılı uzaktaki Bumerang Bulutsusu'dur.",
-        "image_prompt": "A cinematic hyperrealistic image of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution"
+        "image_prompt": "A cinematic hyperrealistic wide-angle shot of a freezing cold nebula in deep space, glowing blue and purple, dark space background, cinematic lighting, sharp focus, 8k resolution, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "image",
+        "pacing": "fast",
+        "mood": "shocking"
+    },
+    {
+        "narration": "Bu bulutsu, eksi 272 derece ile mutlak sıfıra en yakın doğal ortamdır.",
+        "image_prompt": "Extreme close-up of frozen ice crystals forming in deep space environment, macro photography, cinematic lighting, 8k, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "video_clip",
+        "clip_search_query": "ice crystals forming timelapse",
+        "pacing": "normal",
+        "mood": "tense"
     }
   ]
 }
@@ -50,13 +89,49 @@ Each sentence should have an 'image_prompt' describing the visual for that scene
 Image prompts must ALWAYS be written in ENGLISH (AI image tools work better in English).
 Add terms like realistic, cinematic, or high-quality. Narrations must be in ENGLISH.
 
-Return ONLY a JSON object (containing a 'scenes' list) as shown below.
-Do NOT add any explanation or markdown, return only raw JSON:
+IMAGE PROMPT RULES:
+- NEVER use the same camera angle in two consecutive scenes! Example sequence: close-up → wide angle → bird's eye view → low angle → macro → over-the-shoulder
+- ALL scenes must share the SAME COLOR PALETTE and STYLE (consistency is CRITICAL)
+
+For each scene, specify a 'media_type' field:
+- "image" → normal static image (most scenes should use this)
+- "video_clip" → short GIF or video clip (20-30% of scenes can use this, especially for action, movement, or funny scenes)
+For video_clip scenes, also add a 'clip_search_query' field (short English search keyword).
+
+For each scene, specify a 'pacing' field:
+- "fast" → fast tempo (hook, shocking facts, excitement)
+- "normal" → normal tempo (explanation, information)
+- "slow" → slow tempo (dramatic moment, finale, CTA)
+
+For each scene, specify a 'mood' field:
+- "tense" → suspenseful, dark
+- "inspiring" → uplifting, warm
+- "shocking" → attention-grabbing
+- "calm" → peaceful, serene
+- "funny" → humorous, playful
+
+Add a 'style_anchor' field at the TOP LEVEL of the JSON. This defines the visual style for ALL scenes.
+Example: "dark moody cinematic, teal and orange color grading, dramatic shadows"
+You MUST append this style_anchor text to the END of every image_prompt.
+
+Return ONLY a JSON object as shown below. Do NOT add any explanation or markdown:
 {
+  "style_anchor": "dark moody cinematic, teal and orange color grading, dramatic shadows",
   "scenes": [
     {
         "narration": "The coldest place in the universe is not in Antarctica, but in the Boomerang Nebula, 5000 light-years away from us.",
-        "image_prompt": "A cinematic hyperrealistic image of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution"
+        "image_prompt": "A cinematic hyperrealistic wide-angle shot of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "image",
+        "pacing": "fast",
+        "mood": "shocking"
+    },
+    {
+        "narration": "This nebula, at minus 272 degrees, is the closest natural environment to absolute zero.",
+        "image_prompt": "Extreme close-up of frozen ice crystals forming in extreme cold deep space environment, 8k, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "video_clip",
+        "clip_search_query": "ice crystals forming timelapse",
+        "pacing": "normal",
+        "mood": "tense"
     }
   ]
 }
@@ -75,13 +150,49 @@ Cada oración debe tener un 'image_prompt' que describa el visual de esa escena.
 Los image prompts deben SIEMPRE estar escritos en INGLÉS (las herramientas de IA funcionan mejor en inglés).
 Añade términos como realista, cinematográfico o alta calidad. Las narraciones deben ser en ESPAÑOL.
 
-Devuelve SOLO un objeto JSON (que contenga una lista 'scenes') como se muestra a continuación.
-NO agregues ninguna explicación o markdown, devuelve solo JSON puro:
+REGLAS DE IMAGE PROMPT:
+- NUNCA uses el mismo ángulo de cámara en dos escenas consecutivas! Ejemplo: close-up → wide angle → bird's eye view → low angle → macro
+- TODAS las escenas deben compartir la MISMA PALETA DE COLORES y ESTILO (la consistencia es CRÍTICA)
+
+Para cada escena, especifica un campo 'media_type':
+- "image" → imagen estática normal (la mayoría de escenas deben usar esto)
+- "video_clip" → GIF corto o clip de video (20-30% de escenas pueden usar esto, especialmente para acción, movimiento o escenas divertidas)
+Para escenas video_clip, también agrega un campo 'clip_search_query' (palabra clave corta en inglés).
+
+Para cada escena, especifica un campo 'pacing':
+- "fast" → ritmo rápido (gancho, datos impactantes, emoción)
+- "normal" → ritmo normal (explicación, información)
+- "slow" → ritmo lento (momento dramático, final, CTA)
+
+Para cada escena, especifica un campo 'mood':
+- "tense" → suspenso, oscuro
+- "inspiring" → inspirador, cálido
+- "shocking" → impactante
+- "calm" → tranquilo, sereno
+- "funny" → humorístico, divertido
+
+Agrega un campo 'style_anchor' en el NIVEL SUPERIOR del JSON. Define el estilo visual para TODAS las escenas.
+Ejemplo: "dark moody cinematic, teal and orange color grading, dramatic shadows"
+DEBES añadir este texto style_anchor al FINAL de cada image_prompt.
+
+Devuelve SOLO un objeto JSON como se muestra a continuación. NO agregues explicación o markdown:
 {
+  "style_anchor": "dark moody cinematic, teal and orange color grading, dramatic shadows",
   "scenes": [
     {
         "narration": "El lugar más frío del universo no está en la Antártida, sino en la Nebulosa Boomerang, a 5000 años luz de nosotros.",
-        "image_prompt": "A cinematic hyperrealistic image of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution"
+        "image_prompt": "A cinematic hyperrealistic wide-angle shot of a freezing cold nebula in deep space glowing slowly, dark space background, 8k resolution, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "image",
+        "pacing": "fast",
+        "mood": "shocking"
+    },
+    {
+        "narration": "Esta nebulosa, a menos 272 grados, es el entorno natural más cercano al cero absoluto.",
+        "image_prompt": "Extreme close-up of frozen ice crystals forming in extreme cold deep space environment, 8k, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "media_type": "video_clip",
+        "clip_search_query": "ice crystals forming timelapse",
+        "pacing": "normal",
+        "mood": "tense"
     }
   ]
 }
@@ -109,9 +220,19 @@ def _calculate_min_words(duration_seconds: int) -> int:
     return max(30, int((duration_seconds / 60) * MIN_WORDS_PER_MINUTE))
 
 
-def _calculate_min_scenes(duration_seconds: int) -> int:
-    # Dinamik B-Roll tarzı için ortalama 3-4 saniye/sahne temposu
-    return max(6, int(duration_seconds / 3.5))
+# Kalite düzeyine göre sahne çarpanları
+QUALITY_SCENE_MULTIPLIERS = {
+    "low": 0.55,      # Düşük kalite → az sahne (6-8)
+    "medium": 1.0,    # Orta kalite → normal sahne (12-15)
+    "high": 1.6,      # Yüksek kalite → çok sahne (18-22)
+}
+
+def _calculate_min_scenes(duration_seconds: int, quality_level: str = "medium") -> int:
+    """Kalite düzeyine göre minimum sahne sayısını hesaplar."""
+    # Temel hesap: ortalama 3-4 saniye/sahne temposu
+    base_scenes = max(6, int(duration_seconds / 3.5))
+    multiplier = QUALITY_SCENE_MULTIPLIERS.get(quality_level, 1.0)
+    return max(4, int(base_scenes * multiplier))
 
 
 def _build_system_prompt(duration: int, min_words: int, min_scenes: int, language: str = "tr") -> str:
@@ -263,7 +384,7 @@ def _build_fallback_image_prompt(topic: str, narration: str) -> str:
     )
 
 
-def generate_script_from_custom_text(topic, custom_script, ai_provider="Gemini", duration=30):
+def generate_script_from_custom_text(topic, custom_script, ai_provider="Gemini", duration=30, quality_level="medium"):
     """Kullanıcının yazdığı script'i koruyup sadece sahne/görsel promptlarını hazırlar."""
     print(f"[+] Özel script işleniyor... (AI: {ai_provider})")
     try:
@@ -356,12 +477,13 @@ def _is_openai_quota_or_rate_error(error: Exception) -> bool:
         or "quota" in text
     )
 
-def generate_script(topic, ai_provider="Gemini", duration=30, language="tr"):
+def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", quality_level="medium"):
     lang_name = {"tr": "Türkçe", "en": "English", "es": "Español"}.get(language, language)
-    print(f"[+] '{topic}' konusu için {duration} saniyelik {lang_name} senaryo üretiliyor... (AI: {ai_provider})")
+    quality_labels = {"low": "Düşük", "medium": "Orta", "high": "Yüksek"}
+    print(f"[+] '{topic}' konusu için {duration} saniyelik {lang_name} senaryo üretiliyor... (AI: {ai_provider}, Kalite: {quality_labels.get(quality_level, quality_level)})")
     min_words = _calculate_min_words(duration)
-    min_scenes = _calculate_min_scenes(duration)
-    print(f"[i] Minimum senaryo hedefi: {min_words} kelime, {min_scenes} sahne (min {MIN_WORDS_PER_MINUTE} kelime/dk)")
+    min_scenes = _calculate_min_scenes(duration, quality_level)
+    print(f"[i] Minimum senaryo hedefi: {min_words} kelime, {min_scenes} sahne (kalite: {quality_level}, min {MIN_WORDS_PER_MINUTE} kelime/dk)")
     
     try:
         fallback_provider = None

@@ -14,7 +14,11 @@ class SFXManager:
         self.categories = {
             "transition": ["whoosh", "swoosh", "whip", "transition", "pass"],
             "hook": ["boom", "impact", "dramatic", "hit", "bass"],
-            "pop": ["pop", "click", "bubble", "ding"]
+            "pop": ["pop", "click", "bubble", "ding"],
+            "riser": ["riser", "rise", "buildup", "tension", "swell"],
+            "reveal": ["reveal", "magic", "sparkle", "shine", "shimmer"],
+            "notification": ["ding", "bell", "chime", "alert", "notify"],
+            "countdown": ["countdown", "tick", "beep", "timer"],
         }
         
     def generate_sfx_elevenlabs(self, prompt, output_filename, duration_seconds=1.0):

@@ -21,9 +21,62 @@ def generate_clickbait_title(topic: str) -> str:
         words = topic.split()
         return " ".join(words[:3]).upper() + "!"
 
-def create_thumbnail(image_path: str, topic: str, output_path: str):
+def _find_bold_font(font_size=150):
+    """Cross-platform kalın font arayıcı."""
+    font_paths = [
+        # Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-Bold.ttf",
+        # macOS
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/Library/Fonts/Arial Bold.ttf",
+        # Windows
+        "C:/Windows/Fonts/impact.ttf",
+        "C:/Windows/Fonts/arialbd.ttf",
+    ]
+    for fp in font_paths:
+        if os.path.exists(fp):
+            try:
+                return ImageFont.truetype(fp, font_size)
+            except Exception:
+                continue
+    return ImageFont.load_default()
+
+
+def select_best_thumbnail_scene(scenes, image_paths):
+    """En dikkat çekici sahneyi thumbnail için seçer (en uzun narration = en çok bilgi)."""
+    if not scenes or not image_paths:
+        return image_paths[0] if image_paths else None
+    
+    best_idx = 0
+    best_score = 0
+    hook_keywords = ["şok", "inanılmaz", "sır", "gizli", "bilmiyordun", "amazing", "secret", "shocking"]
+    
+    for i, scene in enumerate(scenes):
+        if i >= len(image_paths):
+            break
+        narration = scene.get("narration", "").lower()
+        score = len(narration)  # Daha uzun = daha bilgilendirici
+        for kw in hook_keywords:
+            if kw in narration:
+                score += 50  # Clickbait kelimesi varsa bonus
+        if i == 0:
+            score += 30  # Hook sahnesi genelde en dikkat çekici
+        if score > best_score:
+            best_score = score
+            best_idx = i
+    
+    return image_paths[best_idx]
+
+
+def create_thumbnail(image_path: str, topic: str, output_path: str, aspect_ratio="9:16"):
     """
-    Görseli alır, karartır/kontrast ekler, ortasına devasa clickbait yazısı koyar.
+    Profesyonel thumbnail üretir:
+    - Gradient karartma (üstten aşağı)
+    - Otomatik renk iyileştirme
+    - Devasa clickbait başlık + 3D gölge
     """
     print(f"[+] '{output_path}' için kapak fotoğrafı (Thumbnail) üretiliyor...")
     if not os.path.exists(image_path):
@@ -34,70 +87,71 @@ def create_thumbnail(image_path: str, topic: str, output_path: str):
         title = generate_clickbait_title(topic)
         print(f"[+] Kapak Başlığı: {title}")
         
-        # Resmi yükle
+        # Boyut belirle
+        sizes = {"9:16": (1080, 1920), "1:1": (1080, 1080), "16:9": (1920, 1080)}
+        target_w, target_h = sizes.get(aspect_ratio, (1080, 1920))
+        
         img = Image.open(image_path).convert("RGBA")
-        img = img.resize((1080, 1920), Image.LANCZOS)
+        img = img.resize((target_w, target_h), Image.LANCZOS)
         
-        # Efektler: Kontrastı artır
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(1.3) # Kontrastı %30 artır
+        # Renk iyileştirme
+        img = ImageEnhance.Contrast(img).enhance(1.35)
+        img = ImageEnhance.Color(img).enhance(1.20)
+        img = ImageEnhance.Sharpness(img).enhance(1.15)
         
-        # Arkaplanı hafif karart (metin okunsun diye)
-        overlay = Image.new('RGBA', img.size, (0, 0, 0, 110)) # %45 siyah
-        img = Image.alpha_composite(img, overlay)
+        # Gradient overlay (üstten aşağı karartma — metin için)
+        gradient = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        for y in range(target_h):
+            # Üst %20: hafif, orta: çok hafif, alt %30: koyu
+            if y < target_h * 0.3:
+                alpha = int(80 * (1 - y / (target_h * 0.3)))  # Üst: hafif koyu
+            elif y > target_h * 0.65:
+                progress = (y - target_h * 0.65) / (target_h * 0.35)
+                alpha = int(40 + 100 * progress)  # Alt: giderek koyu
+            else:
+                alpha = 20  # Orta: çok hafif
+            for x in range(target_w):
+                gradient.putpixel((x, y), (0, 0, 0, alpha))
+        img = Image.alpha_composite(img, gradient)
         
         draw = ImageDraw.Draw(img)
         
-        # Font seçimi (Büyük ve kalın)
-        font_size = 150
-        font = None
-        bold_fonts = [
-            "C:/Windows/Fonts/impact.ttf",
-            "C:/Windows/Fonts/arialbd.ttf",
-        ]
-        for f in bold_fonts:
-            if os.path.exists(f):
-                font = ImageFont.truetype(f, font_size)
-                break
-        if font is None:
-            font = ImageFont.load_default()
-            
-        # Metni dar bir kutuya sığdır (ortalama 10-12 karakter yan yana)
+        # Font
+        font_size = int(target_h * 0.078)  # Orantılı font boyutu
+        font = _find_bold_font(font_size)
+        
         wrapped_title = textwrap.fill(title, width=10)
         lines = wrapped_title.split("\n")
         
-        line_height = font_size + 10
+        line_height = font_size + 14
         total_height = len(lines) * line_height
+        start_y = (target_h - total_height) // 2 - int(target_h * 0.08)
         
-        # Metni dikeyde tam merkezin azıcık yukarısına koyalım
-        start_y = (1920 - total_height) // 2 - 150 
-        
-        # Yazı renkleri (Tiktok sarısı / Kırmızı)
-        text_color = (255, 220, 0, 255) # Altın / Canlı Sarı
+        # Renk paleti
+        text_color = (255, 220, 0, 255)  # Altın sarı
         stroke_color = (0, 0, 0, 255)
-        stroke_width = 10
+        stroke_width = max(6, font_size // 15)
         
         for i, line in enumerate(lines):
             y = start_y + (i * line_height)
-            
             bbox = draw.textbbox((0, 0), line, font=font)
             text_width = bbox[2] - bbox[0]
-            x = (1080 - text_width) // 2
+            x = (target_w - text_width) // 2
             
-            # Dış Çizgi (Stroke) ve kalın gölge
-            for dx in range(-stroke_width, stroke_width+1, 3):
-                for dy in range(-stroke_width, stroke_width+1, 3):
+            # Dış çizgi (stroke)
+            for dx in range(-stroke_width, stroke_width + 1, 3):
+                for dy in range(-stroke_width, stroke_width + 1, 3):
                     draw.text((x + dx, y + dy), line, font=font, fill=stroke_color)
             
-            # Alt gölge efekti (3d effect)
-            draw.text((x + 15, y + 15), line, font=font, fill=(0, 0, 0, 200))
+            # 3D gölge efekti
+            draw.text((x + 12, y + 12), line, font=font, fill=(0, 0, 0, 180))
+            draw.text((x + 6, y + 6), line, font=font, fill=(0, 0, 0, 120))
             
-            # Ana Metin
+            # Ana metin
             draw.text((x, y), line, font=font, fill=text_color)
             
-        # JPEG olarak kaydet
         img = img.convert("RGB")
-        img.save(output_path, quality=95)
+        img.save(output_path, quality=95, optimize=True)
         print(f"[+] ŞAHANE! Thumbnail hazır: {output_path}")
         return True
     except Exception as e:
