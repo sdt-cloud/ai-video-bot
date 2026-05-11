@@ -13,9 +13,16 @@ def generate_clickbait_title(topic: str) -> str:
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.5-flash")
-        prompt = f"Şu konu hakkında YouTube Shorts/TikTok/Reels için maksimum 3-4 kelimelik, MUAZZAM derecede merak uyandırıcı, tıklama tuzağı (clickbait) bir kapak yazısı üret. Örneğin: 'BUNU BİLMİYORDUN!', 'GİZLİ GERÇEK!', 'YOK ARTIK!'. Sadece yazıyı ver, tırnak işareti veya noktalama kullanma.\nKonu: {topic}"
+        prompt = f"Şu konu hakkında YouTube Shorts/TikTok/Reels için EN FAZLA TEK CÜMLE ve MAKSİMUM 4 KELİME süren, MUAZZAM derecede merak uyandırıcı, tıklama tuzağı (clickbait) bir kapak yazısı üret. Örneğin: 'BUNU BİLMİYORDUN!', 'GİZLİ GERÇEK!', 'YOK ARTIK!'. Asla uzun cümle kurma. Sadece yazıyı ver, tırnak işareti kullanma.\nKonu: {topic}"
         response = model.generate_content(prompt)
-        return response.text.strip().replace('"', '').replace('.', '').upper()
+        title = response.text.strip().replace('"', '').replace('.', '').upper()
+        
+        # Eğer yapay zeka dinlemeyip uzun bir metin verirse zorla kırp
+        words = title.split()
+        if len(words) > 4:
+            title = " ".join(words[:4])
+            
+        return title
     except Exception:
         # Fallback
         words = topic.split()
