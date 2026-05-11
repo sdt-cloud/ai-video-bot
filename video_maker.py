@@ -128,20 +128,20 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
     lines = wrapped.split("\n")
     
     font_path = ensure_font(subtitle_style)
-    font_size = 58 if subtitle_style == "tiktok" else 50
+    font_size = 52 if subtitle_style == "tiktok" else 46
     font = None
     pop_font = None
     bold_fonts = [font_path]
     for f in bold_fonts:
         if os.path.exists(f):
             font = ImageFont.truetype(f, font_size)
-            pop_font = ImageFont.truetype(f, int(font_size * 1.25))  # %25 daha büyük pop-in
+            pop_font = ImageFont.truetype(f, int(font_size * 1.15))  # %15 pop-in (overlap önlemek için küçültüldü)
             break
     if font is None:
         font = ImageFont.load_default()
         pop_font = font
         
-    line_height = font_size + 10
+    line_height = int(font_size * 1.15) + 12  # Pop fontuna göre boşluk bırak, üst üste binmesin
     total_text_height = len(lines) * line_height
     start_y = target_h - total_text_height - (200 if subtitle_style == "tiktok" else 260)
     
@@ -188,8 +188,8 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
                 
                 # Pop-in animasyonu için konum ve font ayarla
                 active_font = pop_font if is_highlight else font
-                pop_offset_x = -3 if is_highlight else 0
-                pop_offset_y = -8 if is_highlight else 0
+                pop_offset_x = -2 if is_highlight else 0
+                pop_offset_y = -4 if is_highlight else 0
                 
                 # Gölge
                 for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
