@@ -1,5 +1,6 @@
 from moviepy import vfx
 import numpy as np
+import cv2
 from PIL import Image
 
 def apply_clip_transform(clip, filter_func):
@@ -16,132 +17,113 @@ def apply_clip_transform(clip, filter_func):
 def zoom_in_effect(clip, zoom_ratio=0.04):
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
-        new_size = [
-            int(base_size[0] * (1 + (zoom_ratio * t))),
-            int(base_size[1] * (1 + (zoom_ratio * t)))
-        ]
-        img = img.resize(new_size, Image.LANCZOS)
-        x = (new_size[0] - base_size[0]) // 2
-        y = (new_size[1] - base_size[1]) // 2
-        img = img.crop((x, y, x + base_size[0], y + base_size[1]))
-        return np.array(img)
+        h, w = frame.shape[:2]
+        scale = 1 + (zoom_ratio * t)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        x = (new_w - w) // 2
+        y = (new_h - h) // 2
+        return resized[y:y+h, x:x+w]
     return apply_clip_transform(clip, filter)
 
 def zoom_out_effect(clip, zoom_ratio=0.04):
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
-        total_duration = clip.duration or 5 # Fallback
+        h, w = frame.shape[:2]
+        total_duration = clip.duration or 5
         max_zoom = 1 + (zoom_ratio * total_duration)
         current_zoom = max_zoom - (zoom_ratio * t)
-        new_size = [
-            int(base_size[0] * current_zoom),
-            int(base_size[1] * current_zoom)
-        ]
-        img = img.resize(new_size, Image.LANCZOS)
-        x = (new_size[0] - base_size[0]) // 2
-        y = (new_size[1] - base_size[1]) // 2
-        img = img.crop((x, y, x + base_size[0], y + base_size[1]))
-        return np.array(img)
+        new_w, new_h = int(w * current_zoom), int(h * current_zoom)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        x = (new_w - w) // 2
+        y = (new_h - h) // 2
+        return resized[y:y+h, x:x+w]
     return apply_clip_transform(clip, filter)
 
 def pan_left_to_right_effect(clip, pan_ratio=0.1):
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
-        scale = 1.1 
-        new_size = [int(base_size[0] * scale), int(base_size[1] * scale)]
-        img = img.resize(new_size, Image.LANCZOS)
+        h, w = frame.shape[:2]
+        scale = 1.1
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         total_duration = clip.duration or 5
-        max_x = new_size[0] - base_size[0]
+        max_x = new_w - w
         current_x = int((t / total_duration) * max_x)
-        y = (new_size[1] - base_size[1]) // 2
-        img = img.crop((current_x, y, current_x + base_size[0], y + base_size[1]))
-        return np.array(img)
+        y = (new_h - h) // 2
+        return resized[y:y+h, current_x:current_x+w]
     return apply_clip_transform(clip, filter)
 
 def pan_top_to_bottom_effect(clip, pan_ratio=0.1):
     """Dikey videolar için yukarıdan aşağıya pan efekti."""
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
+        h, w = frame.shape[:2]
         scale = 1.1
-        new_size = [int(base_size[0] * scale), int(base_size[1] * scale)]
-        img = img.resize(new_size, Image.LANCZOS)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         total_duration = clip.duration or 5
-        max_y = new_size[1] - base_size[1]
+        max_y = new_h - h
         current_y = int((t / total_duration) * max_y)
-        x = (new_size[0] - base_size[0]) // 2
-        img = img.crop((x, current_y, x + base_size[0], current_y + base_size[1]))
-        return np.array(img)
+        x = (new_w - w) // 2
+        return resized[current_y:current_y+h, x:x+w]
     return apply_clip_transform(clip, filter)
 
 def pan_bottom_to_top_effect(clip, pan_ratio=0.1):
     """Dikey videolar için aşağıdan yukarıya pan efekti."""
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
+        h, w = frame.shape[:2]
         scale = 1.1
-        new_size = [int(base_size[0] * scale), int(base_size[1] * scale)]
-        img = img.resize(new_size, Image.LANCZOS)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         total_duration = clip.duration or 5
-        max_y = new_size[1] - base_size[1]
+        max_y = new_h - h
         current_y = max_y - int((t / total_duration) * max_y)
-        x = (new_size[0] - base_size[0]) // 2
-        img = img.crop((x, current_y, x + base_size[0], current_y + base_size[1]))
-        return np.array(img)
+        x = (new_w - w) // 2
+        return resized[current_y:current_y+h, x:x+w]
     return apply_clip_transform(clip, filter)
 
 def ken_burns_effect(clip, zoom_ratio=0.06):
     """Ken Burns — eşzamanlı zoom + pan (sinematik klasik)."""
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
+        h, w = frame.shape[:2]
         total_duration = clip.duration or 5
         progress = t / total_duration
         current_zoom = 1 + (zoom_ratio * progress * total_duration)
-        new_size = [int(base_size[0] * current_zoom), int(base_size[1] * current_zoom)]
-        img = img.resize(new_size, Image.LANCZOS)
+        new_w, new_h = int(w * current_zoom), int(h * current_zoom)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         # Soldan sağa + hafif yukarıdan aşağıya pan
-        max_x = new_size[0] - base_size[0]
-        max_y = new_size[1] - base_size[1]
+        max_x = new_w - w
+        max_y = new_h - h
         x = int(progress * max_x * 0.6)
         y = int(progress * max_y * 0.3)
         x = max(0, min(x, max_x))
         y = max(0, min(y, max_y))
-        img = img.crop((x, y, x + base_size[0], y + base_size[1]))
-        return np.array(img)
+        return resized[y:y+h, x:x+w]
     return apply_clip_transform(clip, filter)
 
 def parallax_effect(clip, intensity=0.03):
     """Sahte parallax — kenarları daha hızlı hareket ettirerek derinlik hissi."""
+    import math
     def filter(get_frame, t):
         frame = get_frame(t)
-        img = Image.fromarray(frame)
-        base_size = img.size
+        h, w = frame.shape[:2]
         total_duration = clip.duration or 5
         progress = t / total_duration
         # Hafif zoom + offset
         zoom = 1.08
-        new_size = [int(base_size[0] * zoom), int(base_size[1] * zoom)]
-        img = img.resize(new_size, Image.LANCZOS)
+        new_w, new_h = int(w * zoom), int(h * zoom)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         # Sinüs hareketi (ileri-geri sallanma)
-        import math
-        dx = int(math.sin(progress * math.pi * 2) * intensity * base_size[0])
-        dy = int(math.cos(progress * math.pi) * intensity * base_size[1] * 0.5)
-        cx = (new_size[0] - base_size[0]) // 2 + dx
-        cy = (new_size[1] - base_size[1]) // 2 + dy
-        cx = max(0, min(cx, new_size[0] - base_size[0]))
-        cy = max(0, min(cy, new_size[1] - base_size[1]))
-        img = img.crop((cx, cy, cx + base_size[0], cy + base_size[1]))
-        return np.array(img)
+        dx = int(math.sin(progress * math.pi * 2) * intensity * w)
+        dy = int(math.cos(progress * math.pi) * intensity * h * 0.5)
+        cx = (new_w - w) // 2 + dx
+        cy = (new_h - h) // 2 + dy
+        cx = max(0, min(cx, new_w - w))
+        cy = max(0, min(cy, new_h - h))
+        return resized[cy:cy+h, cx:cx+w]
     return apply_clip_transform(clip, filter)
 
 
@@ -189,6 +171,7 @@ def smart_effect_for_scene(clip, scene_index, total_scenes):
 
 def apply_camera_shake(clip, duration=0.6, intensity=15):
     """Videonun ilk saniyelerinde şiddeti azalan bir sarsıntı (Hook) efekti uygular."""
+    import random as _random
     def filter(get_frame, t):
         frame = get_frame(t)
         if t > duration:
@@ -198,27 +181,24 @@ def apply_camera_shake(clip, duration=0.6, intensity=15):
         decay = max(0, 1.0 - (t / duration))
         current_intensity = intensity * decay
         
-        import random
-        dx = int(random.uniform(-current_intensity, current_intensity))
-        dy = int(random.uniform(-current_intensity, current_intensity))
+        dx = int(_random.uniform(-current_intensity, current_intensity))
+        dy = int(_random.uniform(-current_intensity, current_intensity))
         
-        img = Image.fromarray(frame)
-        base_size = img.size
+        h, w = frame.shape[:2]
         
         # Siyah kenar oluşmaması için hafif zoom (%5) yapıp içinden kesiyoruz
         zoom = 1.05
-        new_size = [int(base_size[0] * zoom), int(base_size[1] * zoom)]
-        img = img.resize(new_size, Image.LANCZOS)
+        new_w, new_h = int(w * zoom), int(h * zoom)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
         
-        cx = (new_size[0] - base_size[0]) // 2 + dx
-        cy = (new_size[1] - base_size[1]) // 2 + dy
+        cx = (new_w - w) // 2 + dx
+        cy = (new_h - h) // 2 + dy
         
         # Sınırların dışına çıkmamak için
-        cx = max(0, min(cx, new_size[0] - base_size[0]))
-        cy = max(0, min(cy, new_size[1] - base_size[1]))
+        cx = max(0, min(cx, new_w - w))
+        cy = max(0, min(cy, new_h - h))
         
-        img = img.crop((cx, cy, cx + base_size[0], cy + base_size[1]))
-        return np.array(img)
+        return resized[cy:cy+h, cx:cx+w]
     return apply_clip_transform(clip, filter)
 
 

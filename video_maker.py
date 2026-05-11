@@ -242,7 +242,7 @@ RENDER_QUALITY_PROFILES = {
     "high": {
         "fps": 30,
         "preset": "slow",
-        "crf": "16",
+        "crf": "18",  # 16→18: platformlar zaten re-encode ediyor, dosya boyutunu optimize eder
     },
 }
 
@@ -261,6 +261,7 @@ def get_render_settings(video_mode, total_duration, quality_level="medium"):
             "-pix_fmt", "yuv420p",
             "-profile:v", "high",
             "-level", "4.2",
+            "-b:a", "192k",  # İlk render'da da ses kalitesini garanti altına al
         ],
     }
 
@@ -928,29 +929,93 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 
                 vf_arg = ",".join(pp_filters) if pp_filters else None
                 
-                pp_cmd = [
-                    "ffmpeg", "-y", "-i", output_filename,
-                    "-af", "loudnorm=I=-14:TP=-1:LRA=11",
-                ]
-                if vf_arg:
-                    pp_cmd.extend(["-vf", vf_arg])
-                pp_cmd.extend([
-                    "-c:v", "copy" if not vf_arg else "libx264",
-                    "-c:a", "aac", "-b:a", "192k",
-                    temp_pp
-                ])
-                
-                result = subprocess.run(pp_cmd, capture_output=True, timeout=120)
-                if result.returncode == 0 and os.path.exists(temp_pp):
-                    os.replace(temp_pp, output_filename)
-                    print("[POST] Ses normalizasyonu (LUFS -14) başarıyla uygulandı!")
-                    if vf_arg:
-                        print("[POST] Video keskinleştirme uygulandı!")
+                # High kalitede 2-Pass encoding (daha iyi bit dağılımı)
+                if quality_level == "high" and vf_arg:
+                    passlog = output_filename.replace(".mp4", "_passlog")
+                    
+                    # Pass 1: Analiz (video analiz edilir, çıktı /dev/null'a gider)
+                    pass1_cmd = [
+                        "ffmpeg", "-y", "-i", output_filename,
+                        "-vf", vf_arg,
+                        "-c:v", "libx264", "-preset", "slow", "-b:v", "6M",
+                        "-pass", "1", "-passlogfile", passlog,
+                        "-an",  # Ses işleme yok (sadece video analiz)
+                        "-f", "null", "/dev/null"
+                    ]
+                    
+                    # Pass 2: Asıl encode (analiz sonucuna göre bit dağılımı)
+                    pass2_cmd = [
+                        "ffmpeg", "-y", "-i", output_filename,
+                        "-vf", vf_arg,
+                        "-c:v", "libx264", "-preset", "slow", "-b:v", "6M",
+                        "-pass", "2", "-passlogfile", passlog,
+                        "-af", "loudnorm=I=-14:TP=-1:LRA=11",
+                        "-c:a", "aac", "-b:a", "192k",
+                        temp_pp
+                    ]
+                    
+                    print("[POST] 2-Pass encoding başlıyor (Pass 1: analiz)...")
+                    result1 = subprocess.run(pass1_cmd, capture_output=True, timeout=180)
+                    
+                    if result1.returncode == 0:
+                        print("[POST] Pass 1 tamamlandı. Pass 2: encode...")
+                        result2 = subprocess.run(pass2_cmd, capture_output=True, timeout=180)
+                        
+                        if result2.returncode == 0 and os.path.exists(temp_pp):
+                            os.replace(temp_pp, output_filename)
+                            print("[POST] 2-Pass encoding + LUFS normalizasyon + keskinleştirme başarılı!")
+                        else:
+                            if os.path.exists(temp_pp):
+                                os.remove(temp_pp)
+                            print("[POST] Pass 2 başarısız, orijinal video korunuyor.")
+                    else:
+                        print("[POST] Pass 1 başarısız, tek-pass post-processing'e düşülüyor...")
+                        # Fallback: tek-pass post-processing
+                        fallback_cmd = [
+                            "ffmpeg", "-y", "-i", output_filename,
+                            "-af", "loudnorm=I=-14:TP=-1:LRA=11",
+                            "-vf", vf_arg,
+                            "-c:v", "libx264",
+                            "-c:a", "aac", "-b:a", "192k",
+                            temp_pp
+                        ]
+                        result_fb = subprocess.run(fallback_cmd, capture_output=True, timeout=120)
+                        if result_fb.returncode == 0 and os.path.exists(temp_pp):
+                            os.replace(temp_pp, output_filename)
+                            print("[POST] Tek-pass fallback post-processing başarılı!")
+                        elif os.path.exists(temp_pp):
+                            os.remove(temp_pp)
+                    
+                    # Passlog dosyalarını temizle
+                    for ext in ["-0.log", "-0.log.mbtree"]:
+                        logfile = passlog + ext
+                        if os.path.exists(logfile):
+                            os.remove(logfile)
                 else:
-                    # Başarısızsa orijinali kullan
-                    if os.path.exists(temp_pp):
-                        os.remove(temp_pp)
-                    print("[POST] Post-processing atlandı (FFmpeg hatası)")
+                    # Medium kalite: sadece LUFS normalizasyonu (tek-pass)
+                    pp_cmd = [
+                        "ffmpeg", "-y", "-i", output_filename,
+                        "-af", "loudnorm=I=-14:TP=-1:LRA=11",
+                    ]
+                    if vf_arg:
+                        pp_cmd.extend(["-vf", vf_arg])
+                    pp_cmd.extend([
+                        "-c:v", "copy" if not vf_arg else "libx264",
+                        "-c:a", "aac", "-b:a", "192k",
+                        temp_pp
+                    ])
+                    
+                    result = subprocess.run(pp_cmd, capture_output=True, timeout=120)
+                    if result.returncode == 0 and os.path.exists(temp_pp):
+                        os.replace(temp_pp, output_filename)
+                        print("[POST] Ses normalizasyonu (LUFS -14) başarıyla uygulandı!")
+                        if vf_arg:
+                            print("[POST] Video keskinleştirme uygulandı!")
+                    else:
+                        # Başarısızsa orijinali kullan
+                        if os.path.exists(temp_pp):
+                            os.remove(temp_pp)
+                        print("[POST] Post-processing atlandı (FFmpeg hatası)")
             except FileNotFoundError:
                 print("[POST] FFmpeg bulunamadı, post-processing atlanıyor.")
             except Exception as pp_err:

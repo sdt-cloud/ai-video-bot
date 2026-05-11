@@ -177,6 +177,26 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek", voice_t
         print(f"[-] Ses üretilirken hata oluştu: {e}")
         return False
 
+def _apply_ssml_enhancements(text: str) -> str:
+    """
+    Edge TTS SSML desteği ile dramatik duraklamalar ve vurgular ekler.
+    - '...' → 800ms duraklama
+    - '!' → 400ms duraklama
+    - '?' → 300ms duraklama  
+    - '--' → 500ms duraklama (dramatik geçiş)
+    """
+    # Üç nokta → uzun dramatik duraklama
+    text = text.replace("...", '<break time="800ms"/>')
+    # Çift tire → orta duraklama
+    text = text.replace("--", '<break time="500ms"/>')
+    # Ünlem → kısa duraklama (vurgu sonrası)
+    text = re.sub(r'!\s+', '!<break time="400ms"/> ', text)
+    # Soru işareti → kısa duraklama
+    text = re.sub(r'\?\s+', '?<break time="300ms"/> ', text)
+    
+    return text
+
+
 async def generate_voice_edge(text, output_filename, voice_type="erkek", target_duration_seconds=None, language="tr"):
     print(f"[+] '{output_filename}' için ses sentezleniyor (Edge-TTS, dil: {language})...")
     try:
@@ -189,13 +209,27 @@ async def generate_voice_edge(text, output_filename, voice_type="erkek", target_
             rate = _calculate_edge_rate(text, int(target_duration_seconds))
             print(f"[i] Otomatik TTS hızı: hedef {target_duration_seconds} sn için rate={rate}")
         
-        communicate = edge_tts.Communicate(text, voice, rate=rate)
+        # SSML iyileştirmeleri uygula (dramatik duraklamalar ve vurgular)
+        enhanced_text = _apply_ssml_enhancements(text)
+        if enhanced_text != text:
+            print("[+] SSML iyileştirmeleri uygulandı (dramatik duraklamalar)")
+        
+        communicate = edge_tts.Communicate(enhanced_text, voice, rate=rate)
         await communicate.save(output_filename)
         print(f"[+] Ses dosyası kaydedildi: {output_filename}")
         return True
     except Exception as e:
         print(f"[-] Ses üretilirken hata oluştu: {e}")
-        return False
+        # SSML ile hata aldıysa düz metin ile tekrar dene
+        try:
+            print("[i] SSML'siz tekrar deneniyor...")
+            communicate = edge_tts.Communicate(text, voice, rate=rate)
+            await communicate.save(output_filename)
+            print(f"[+] Ses dosyası kaydedildi (SSML'siz fallback): {output_filename}")
+            return True
+        except Exception as e2:
+            print(f"[-] SSML'siz deneme de başarısız: {e2}")
+            return False
 
 async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0, language="tr"):
     """Çoklu dil destekli async ses üretici."""

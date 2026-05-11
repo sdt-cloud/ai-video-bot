@@ -477,6 +477,55 @@ def _is_openai_quota_or_rate_error(error: Exception) -> bool:
         or "quota" in text
     )
 
+# Kamera açısı çeşitliliğini zorunlu kılan post-validation
+CAMERA_ANGLES = [
+    "close-up", "wide angle", "bird's eye view", "low angle",
+    "macro", "over-the-shoulder", "extreme close-up", "medium shot",
+    "aerial view", "dutch angle"
+]
+
+def _detect_camera_angle(prompt: str) -> str | None:
+    """Prompt'tan kamera açısını tespit eder."""
+    prompt_lower = prompt.lower()
+    for angle in CAMERA_ANGLES:
+        if angle in prompt_lower:
+            return angle
+    return None
+
+def _enforce_camera_angle_diversity(script_data: dict) -> dict:
+    """
+    Ardışık sahnelerde aynı kamera açısı kullanılmışsa otomatik düzeltir.
+    AI bazen kurala uymayabilir, bu fonksiyon garanti sağlar.
+    """
+    scenes = script_data.get("scenes", [])
+    if len(scenes) < 2:
+        return script_data
+    
+    angle_pool = list(CAMERA_ANGLES)  # Kullanılabilir açılar havuzu
+    prev_angle = None
+    fixes_made = 0
+    
+    for i, scene in enumerate(scenes):
+        prompt = scene.get("image_prompt", "")
+        current_angle = _detect_camera_angle(prompt)
+        
+        if current_angle and current_angle == prev_angle:
+            # Ardışık aynı açı bulundu — değiştir
+            available = [a for a in angle_pool if a != current_angle]
+            if available:
+                new_angle = available[i % len(available)]
+                scene["image_prompt"] = prompt.replace(current_angle, new_angle)
+                fixes_made += 1
+                current_angle = new_angle
+        
+        prev_angle = current_angle
+    
+    if fixes_made > 0:
+        print(f"[+] Kamera açısı çeşitliliği düzeltildi: {fixes_made} sahne güncellendi.")
+    
+    return script_data
+
+
 def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", quality_level="medium"):
     lang_name = {"tr": "Türkçe", "en": "English", "es": "Español"}.get(language, language)
     quality_labels = {"low": "Düşük", "medium": "Orta", "high": "Yüksek"}
@@ -587,6 +636,8 @@ def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", qua
                     f"[+] Senaryo başarıyla üretildi! ({stats['scene_count']} sahne, "
                     f"{stats['word_count']} kelime, tahmini {stats['estimated_seconds']} sn)"
                 )
+                # Kamera açısı çeşitliliğini zorla
+                script_data = _enforce_camera_angle_diversity(script_data)
                 return script_data
 
             if attempt < MAX_SCRIPT_RETRIES:

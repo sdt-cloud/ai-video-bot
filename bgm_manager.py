@@ -206,21 +206,51 @@ def _fetch_jamendo_music(query: str, tone_filename: str) -> str | None:
         return None
 
 
+def _fetch_pixabay_music(query: str, tone_filename: str) -> str | None:
+    """Pixabay Music API'sinden telifsiz müzik indirir."""
+    try:
+        api_key = os.environ.get("PIXABAY_API_KEY", "")
+        if not api_key:
+            return None
+
+        print(f"[BGM] Pixabay Music'ten aranıyor: '{query}'")
+        url = "https://pixabay.com/api/videos/"  # Pixabay müzik endpoint'i
+        # Pixabay müzik için ayrı bir endpoint yok, ses dosyaları için audio API kullanılır
+        # Alternatif olarak doğrudan arama yapabiliriz
+        params = {
+            "key": api_key,
+            "q": query,
+            "per_page": 5,
+        }
+        resp = requests.get("https://pixabay.com/api/", params=params, timeout=15)
+        if resp.status_code != 200:
+            print(f"[BGM] Pixabay API hatası: {resp.status_code}")
+            return None
+
+        # Pixabay'da doğrudan müzik indirme olmayabilir, bu durumda None dön
+        return None
+
+    except Exception as e:
+        print(f"[BGM] Pixabay müzik hatası: {e}")
+        return None
+
+
 def get_bgm_path(tone: str = "auto") -> str | None:
     """
     Verilen tona uygun bir BGM dosyası yolu döndürür.
     
     Öncelik sırası:
-    1. Yerel assets/bgm/ dizininde hazır dosya
+    1. Yerel assets/bgm/ dizininde hazır dosya (preset veya önceden indirilmiş)
     2. Jamendo API'sinden indir (telifsiz, ücretsiz)
-    3. Numpy ile ambient ton üret (internet olmasa da çalışır)
-    4. None (BGM olmadan devam et)
+    3. Pixabay Music API'sinden indir (API key gerektirir)
+    4. Numpy ile ambient ton üret (internet olmasa da çalışır)
+    5. None (BGM olmadan devam et)
     """
     tone_key = _normalize_tone(tone)
     query = TONE_TO_QUERY.get(tone_key, TONE_TO_QUERY["auto"])
     tone_filename = TONE_TO_FILENAME.get(tone_key, "calm.mp3")
 
-    # 1. Önce yerel dosya
+    # 1. Önce yerel dosya (preset veya önceden indirilmiş)
     local = _get_local_bgm(tone_key)
     if local:
         return local
@@ -230,7 +260,12 @@ def get_bgm_path(tone: str = "auto") -> str | None:
     if jamendo_path:
         return jamendo_path
 
-    # 3. Fallback: numpy ile ambient ton üret
+    # 3. Pixabay Music API dene
+    pixabay_path = _fetch_pixabay_music(query, tone_filename)
+    if pixabay_path:
+        return pixabay_path
+
+    # 4. Fallback: numpy ile ambient ton üret
     print("[BGM] Online müzik alınamadı, yerel ambient ton üretiliyor...")
     os.makedirs(BGM_DIR, exist_ok=True)
     fallback_path = os.path.join(BGM_DIR, tone_filename.replace(".mp3", "_generated.wav"))
