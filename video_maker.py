@@ -824,10 +824,19 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     # Auto-Ducking Uygulaması
                     ducking_func = make_ducking_volume_func(audio_clip, base_vol=0.15, duck_vol=0.035, threshold=0.015)
                     
-                    if hasattr(bgm_looped, 'with_volume_scaled'):
-                        bgm_looped = bgm_looped.with_volume_scaled(ducking_func)
-                    elif hasattr(bgm_looped, 'volumex'):
-                        bgm_looped = bgm_looped.volumex(ducking_func)
+                    def apply_ducking(get_frame, t):
+                        import numpy as np
+                        frame = get_frame(t)
+                        if isinstance(t, np.ndarray):
+                            vols = np.array([ducking_func(ti) for ti in t]).reshape(-1, 1)
+                            return frame * vols
+                        else:
+                            return frame * ducking_func(t)
+                            
+                    if hasattr(bgm_looped, 'transform'):
+                        bgm_looped = bgm_looped.transform(apply_ducking)
+                    else:
+                        bgm_looped = bgm_looped.fl(apply_ducking)
 
                     audio_layers.append(bgm_looped)
                     print("[BGM] Auto-Ducking ile arka plan müzik başarıyla eklendi!")
