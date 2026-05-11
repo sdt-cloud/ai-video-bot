@@ -30,6 +30,17 @@ def generate_clickbait_title(topic: str) -> str:
 
 def _find_bold_font(font_size=150):
     """Cross-platform kalın font arayıcı."""
+    # 1. Öncelik: Sistemimizde indirdiğimiz fontu kullan
+    try:
+        from video_maker import ensure_font
+        font_path = ensure_font("tiktok") # Montserrat-ExtraBold indirir
+        if os.path.exists(font_path):
+            return ImageFont.truetype(font_path, font_size)
+    except Exception as e:
+        print(f"[*] Font yüklenirken hata: {e}")
+        pass
+
+    # 2. Alternatif Sistem Fontları
     font_paths = [
         # Linux
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -49,6 +60,8 @@ def _find_bold_font(font_size=150):
                 return ImageFont.truetype(fp, font_size)
             except Exception:
                 continue
+                
+    print("[-] DİKKAT: Hiçbir kalın font bulunamadı. Default (küçük) font kullanılıyor!")
     return ImageFont.load_default()
 
 
