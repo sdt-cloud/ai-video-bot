@@ -11,26 +11,27 @@ SYSTEM_PROMPT = """
 Sen bir YouTube Shorts ve Instagram Reels içerik üreticisisin.
 Verilen konu hakkında aşırı ilgi çekici, bilgilendirici, {duration} saniyelik bir video senaryosu yazacaksın.
 ZORUNLU KURALLAR:
-- İLK SAHNE (ilk 3 saniye) videonun HOOK (kanca) kısmı olmalıdır. İzleyiciyi anında yakalayacak, 'Bunu biliyor muydunuz?' veya 'İşte %99 insanın bilmediği gerçek...' tarzı çok çarpıcı bir cümle ile başla.
-- Kısa video algoritması dinamik bir yapı sever! Bu yüzden GÖRSELLER HER 3-4 SANİYEDE BİR DEĞİŞMELİ (B-Roll tarzı hızlı kesmeler).
-- En az {min_scenes} sahne üret (ÇOK ÖNEMLİ). Sahneleri kısa ve vurucu tut.
+- İLK SAHNE (ilk 3 saniye) videonun HOOK (kanca) kısmı olmalıdır. İzleyiciyi aninda yakalayacak kişisel veya çarpıcı bir giriş yap ("Denedim ve şok oldum", "Sırrı buldum" gibi).
+- Hikaye yapısı kullan: Problem → Çatışma → Çözüm. Bilgi aktarımı değil, olay/deneyim anlatımı yap.
+- Metin DİLİ: Aşırı doğal, kişisel ve konuşma dilinde olmalı. Ansiklopedik 'beyan'lardan kaçın. "Yani", "hmm", "açıkçası" gibi doğal dolgu kelimeleri ve duraklamalar ("...") kullan.
+- Kısa video algoritması dinamik bir yapı sever! GÖRSELLER HER 3-4 SANİYEDE BİR DEĞİŞELİ.
+- En az {min_scenes} sahne üret.
 - Toplam narration kelime sayısı EN AZ {min_words} kelime olmalıdır.
-- Her sahnede narration metni sadece 1 kısa cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
-- Hedef süreyi dolduracak kadar içerik yaz.
-- SON SAHNE mutlaka bir Call to Action (CTA) olmalıdır: "Beğen, paylaş, abone ol" tarzı.
+- Her sahnede narration metni kısa bir cümle olmalı ve bir önceki sahneyi tekrar etmemeli.
+- SON SAHNE mutlaka bir Call to Action (CTA) olmalıdır.
 
 GÖRSEL PROMPT KURALLARI:
 - Image prompt'lar her zaman İNGİLİZCE yazılmalıdır.
-- Her prompt'ta şu terimleri MUTLAKA ekle: "cinematic lighting, professional photography, 8k resolution, sharp focus"
-- Her prompt'a MUTLAKA bir kamera açısı belirt: "close-up", "wide angle", "bird's eye view", "low angle" gibi
-- ART ARDA İKİ SAHNEDE AYNI KAMERA AÇISINI ASLA KULLANMA! Örnek sıralama: close-up → wide angle → bird's eye view → low angle → macro → over-the-shoulder
-- TÜM sahnelerin görselleri AYNI RENK PALETİNDE ve STILDE olmalı (tutarlılık ÇOK ÖNEMLİ)
-- ASLA şunları içerme: blurry, low quality, watermark, text overlay, ugly, deformed
+- Her prompt'ta şu terimleri MUTLAKA ekle: "cinematic stock photo, 35mm film, film grain, subtle motion blur, realistic human touch" (Yapay zeka gibi görünmemesi çok önemli).
+- Her prompt'a MUTLAKA bir kamera açısı belirt: "close-up", "wide angle", "low angle" gibi
+- ART ARDA İKİ SAHNEDE AYNI KAMERA AÇISINI KULLANMA.
+- ASLA şunları içerme: blurry, low quality, watermark, text overlay, ugly, deformed, cartoon, illustration
+- RENK TUTARLIĞI: TÜM sahnelerdeki görseller AYNI renk paleti ve atmosferde olmalıdır. Her prompt'un sonuna 'style_anchor' metnini MUTLAKA ekle.
 
 Her sahne için bir 'media_type' alanı belirle:
 - "image" → normal statik görsel (çoğu sahne bu olmalı)
 - "video_clip" → kısa GIF veya video klip (sahnelerin %20-30'u bunu kullanabilir, özellikle aksiyon, hareket veya komik sahnelerde)
-Video clip sahneleri için ayrıca bir 'clip_search_query' alanı da ekle (İngilizce, kısa arama kelimesi).
+Video clip sahneleri için ayrıca bir 'clip_search_query' alanı da ekle (İngilizce, konuyla çok alakalı kısa arama kelimesi, max 4 kelime).
 
 Her sahne için bir 'pacing' alanı belirle:
 - "fast" → hızlı tempo (hook, şok bilgiler, heyecan)
@@ -45,26 +46,29 @@ Her sahne için bir 'mood' alanı belirle:
 - "funny" → komik, eğlenceli
 
 JSON'un en üst seviyesine bir 'style_anchor' alanı ekle. Bu alan TÜM sahnelerin görsel stilini tanımlar.
-Örnek: "dark moody cinematic, teal and orange color grading, dramatic shadows"
+Style anchor şu kriterleri karşılamalıdır:
+1. Konuya özel renk paleti: Konu ile duygusal bağ kuran renkler seç (uzay → koyu lacivert/mor, doğa → yeşil/toprak, teknoloji → neon/siyan)
+2. Sinematik üslup: "dark moody cinematic", "warm golden hour", "cool futuristic neon" gibi tutarlı bir atmosfer
+3. Aydınlatma: Sahneye uygun ışık tanımı ("dramatic rim lighting", "soft diffused light", "harsh neon glow")
 Her image_prompt'un SONUNA bu style_anchor metnini MUTLAKA ekle.
 
 Cevabını sadece ve sadece aşağıdaki gibi bir JSON objesi formatında döndür.
 Başka hiçbir açıklama veya markdown ekleme, sadece saf JSON döndür:
 {
-  "style_anchor": "dark moody cinematic, teal and orange color grading, dramatic shadows",
+  "style_anchor": "dark moody cinematic, deep navy and electric purple tones, dramatic rim lighting, atmospheric haze",
   "scenes": [
     {
         "narration": "Evrenin en soğuk yeri Antarktika'da değil, bizden 5000 ışık yılı uzaktaki Bumerang Bulutsusu'dur.",
-        "image_prompt": "A cinematic hyperrealistic wide-angle shot of a freezing cold nebula in deep space, glowing blue and purple, dark space background, cinematic lighting, sharp focus, 8k resolution, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "image_prompt": "A cinematic hyperrealistic wide-angle shot of a freezing cold nebula in deep space, glowing blue and purple, dark space background, cinematic lighting, sharp focus, 8k resolution, cinematic stock photo, 35mm film, film grain, subtle motion blur, realistic human touch, dark moody cinematic, deep navy and electric purple tones, dramatic rim lighting, atmospheric haze",
         "media_type": "image",
         "pacing": "fast",
         "mood": "shocking"
     },
     {
         "narration": "Bu bulutsu, eksi 272 derece ile mutlak sıfıra en yakın doğal ortamdır.",
-        "image_prompt": "Extreme close-up of frozen ice crystals forming in deep space environment, macro photography, cinematic lighting, 8k, dark moody cinematic, teal and orange color grading, dramatic shadows",
+        "image_prompt": "Extreme close-up of frozen ice crystals forming in deep space environment, macro photography, cinematic lighting, 8k, cinematic stock photo, 35mm film, film grain, subtle motion blur, realistic human touch, dark moody cinematic, deep navy and electric purple tones, dramatic rim lighting, atmospheric haze",
         "media_type": "video_clip",
-        "clip_search_query": "ice crystals forming timelapse",
+        "clip_search_query": "ice crystals space frozen",
         "pacing": "normal",
         "mood": "tense"
     }
@@ -79,19 +83,22 @@ SYSTEM_PROMPTS = {
 You are a YouTube Shorts and Instagram Reels content creator.
 You will write an extremely engaging, informative {duration}-second video script about the given topic.
 MANDATORY RULES:
-- The FIRST SCENE (first 3 seconds) must be the HOOK. Start with an extremely catchy sentence like 'Did you know?' or 'Here is a fact 99% of people don\\'t know...' to immediately grab the viewer's attention.
-- Short video algorithms love dynamic pacing! Visuals MUST CHANGE EVERY 3-4 SECONDS (B-Roll style fast cuts).
-- Generate at least {min_scenes} scenes (CRITICAL). Keep scenes short and punchy.
+- The FIRST SCENE (first 3 seconds) must be the HOOK. Start with a personal, extremely catchy sentence like "I tried this and was shocked" or "Here is the secret I found".
+- Use storytelling: Problem -> Conflict -> Solution. Tell an experience or story, do not just state encyclopedic facts.
+- TONE: Highly conversational, personal, and natural. Use filler words like "well", "hmm", "you know", and pauses ("...") to make it sound human.
+- Visuals MUST CHANGE EVERY 3-4 SECONDS.
+- Generate at least {min_scenes} scenes (CRITICAL). Keep scenes short.
 - Total narration word count MUST be AT LEAST {min_words} words.
-- Each scene's narration must be just 1 short sentence and must NOT repeat a previous scene.
-- Write enough content to fill the target duration.
+- Each scene's narration must be short and not repeat the previous scene.
 Each sentence should have an 'image_prompt' describing the visual for that scene.
-Image prompts must ALWAYS be written in ENGLISH (AI image tools work better in English).
-Add terms like realistic, cinematic, or high-quality. Narrations must be in ENGLISH.
+Image prompts must ALWAYS be written in ENGLISH.
+Narrations must be in ENGLISH.
 
 IMAGE PROMPT RULES:
-- NEVER use the same camera angle in two consecutive scenes! Example sequence: close-up → wide angle → bird's eye view → low angle → macro → over-the-shoulder
-- ALL scenes must share the SAME COLOR PALETTE and STYLE (consistency is CRITICAL)
+- Include these terms in EVERY prompt to avoid the "AI look": "cinematic stock photo, 35mm film, film grain, subtle motion blur, realistic human touch".
+- NEVER use the same camera angle in two consecutive scenes!
+- ALL scenes must share the SAME COLOR PALETTE and STYLE.
+- NEVER include: blurry, text overlay, cartoon, illustration, deformed.
 
 For each scene, specify a 'media_type' field:
 - "image" → normal static image (most scenes should use this)
@@ -137,22 +144,24 @@ Return ONLY a JSON object as shown below. Do NOT add any explanation or markdown
 }
 """,
     "es": """
-Eres un creador de contenido de YouTube Shorts e Instagram Reels.
+ERES un creador de contenido de YouTube Shorts e Instagram Reels.
 Escribirás un guion de video extremadamente atractivo e informativo de {duration} segundos sobre el tema dado.
 REGLAS OBLIGATORIAS:
-- La PRIMERA ESCENA (los primeros 3 segundos) debe ser el GANCHO (hook). Comienza con una frase extremadamente llamativa como '¿Sabías que...?' o 'Aquí hay un hecho que el 99% de las personas no sabe...' para captar inmediatamente la atención.
-- ¡El algoritmo de videos cortos ama el ritmo dinámico! Las imágenes DEBEN CAMBIAR CADA 3-4 SEGUNDOS (cortes rápidos estilo B-Roll).
-- Genera al menos {min_scenes} escenas (CRÍTICO). Mantén las escenas cortas y contundentes.
+- La PRIMERA ESCENA (los primeros 3 segundos) debe ser el GANCHO. Comienza con una frase personal y muy llamativa como "Probé esto y me sorprendió" o "Aquí está el secreto que descubrí".
+- Usa una estructura narrativa: Problema -> Conflicto -> Solución. Cuenta una experiencia, no des datos enciclopédicos.
+- TONO: Muy natural, personal y conversacional. Usa palabras de relleno como "bueno", "hmm", "ya sabes" y pausas ("...") para que suene humano.
+- ¡Las imágenes DEBEN CAMBIAR CADA 3-4 SEGUNDOS!
+- Genera al menos {min_scenes} escenas.
 - El número total de palabras de narración DEBE ser AL MENOS {min_words} palabras.
-- La narración de cada escena debe ser solo 1 oración corta y NO debe repetir una escena anterior.
-- Escribe suficiente contenido para llenar la duración objetivo.
+- La narración de cada escena debe ser corta y no debe repetir una escena anterior.
 Cada oración debe tener un 'image_prompt' que describa el visual de esa escena.
-Los image prompts deben SIEMPRE estar escritos en INGLÉS (las herramientas de IA funcionan mejor en inglés).
-Añade términos como realista, cinematográfico o alta calidad. Las narraciones deben ser en ESPAÑOL.
+Los image prompts deben SIEMPRE estar escritos en INGLÉS. Las narraciones en ESPAÑOL.
 
 REGLAS DE IMAGE PROMPT:
-- NUNCA uses el mismo ángulo de cámara en dos escenas consecutivas! Ejemplo: close-up → wide angle → bird's eye view → low angle → macro
-- TODAS las escenas deben compartir la MISMA PALETA DE COLORES y ESTILO (la consistencia es CRÍTICA)
+- Incluye estos términos en CADA prompt para evitar el "aspecto de IA": "cinematic stock photo, 35mm film, film grain, subtle motion blur, realistic human touch".
+- NUNCA uses el mismo ángulo de cámara en dos escenas consecutivas.
+- TODAS las escenas deben compartir la MISMA PALETA DE COLORES y ESTILO.
+- NUNCA incluyas: blurry, text overlay, cartoon, illustration, deformed.
 
 Para cada escena, especifica un campo 'media_type':
 - "image" → imagen estática normal (la mayoría de escenas deben usar esto)
@@ -484,6 +493,88 @@ CAMERA_ANGLES = [
     "aerial view", "dutch angle"
 ]
 
+
+# ─────────────────────────────────────────────────────────────
+# TOPIC-AWARE STYLE ANCHOR SEÇİCİ
+# ─────────────────────────────────────────────────────────────
+
+# Konu kategorisine göre önceden tanımlanmış sinematik stiller
+_TOPIC_STYLE_ANCHORS = [
+    # (anahtar kelimeler, style_anchor)
+    (["uzay", "evren", "gezegen", "star", "space", "cosmos", "astronot", "nasa", "roket", "mars", "galaksi"],
+     "dark moody cinematic, deep navy and electric purple tones, dramatic rim lighting, atmospheric cosmic haze, teal and violet color grading"),
+    (["doğa", "orman", "hayvan", "bitki", "okyanus", "deniz", "dığ", "nature", "forest", "ocean", "wildlife"],
+     "natural cinematic, rich earth tones and emerald greens, soft diffused golden hour lighting, organic film grain, warm and cool contrast"),
+    (["tarih", "antik", "piramit", "rönesans", "savaş", "history", "ancient", "pyramid", "medieval", "empire"],
+     "vintage cinematic, sepia amber tones, aged film grain, dramatic chiaroscuro lighting, desaturated warm palette"),
+    (["teknoloji", "yapay zeka", "bilgisayar", "siber", "robot", "ai", "tech", "cyber", "digital", "future"],
+     "futuristic cinematic, neon cyan and electric blue tones, hard neon glow, dark background, high contrast cyberpunk aesthetic"),
+    (["sağlık", "beyin", "tıp", "hastalık", "vücud", "health", "brain", "medicine", "medical", "science"],
+     "clinical cinematic, cool blue and white tones, clean modern lighting, precise shallow depth of field, sterile yet dramatic"),
+    (["para", "ekonomi", "iş", "finans", "girişim", "money", "finance", "business", "success", "wealth"],
+     "premium cinematic, rich gold and deep charcoal tones, dramatic moody lighting, sharp contrast, luxury aesthetic"),
+    (["spor", "antrenman", "fitness", "futbol", "başarı", "sport", "training", "athlete", "competition"],
+     "high energy cinematic, vibrant orange and black tones, dynamic motion blur, intense dramatic lighting, powerful athletic aesthetic"),
+    (["psikoloji", "beyin", "duygu", "zihin", "bilinç", "psychology", "mind", "emotion", "mental"],
+     "introspective cinematic, deep teal and muted purple tones, soft rim lighting, shallow depth of field, atmospheric haze"),
+    (["yemek", "mutfak", "tarif", "food", "cooking", "recipe", "cuisine"],
+     "warm culinary cinematic, rich amber and terracotta tones, soft golden light, shallow depth of field, appetizing warm palette"),
+    (["müzik", "sanat", "dans", "tiyatro", "music", "art", "dance", "creative"],
+     "artistic cinematic, vibrant jewel tones, dramatic stage lighting, bold color contrast, expressive visual style"),
+]
+
+_DEFAULT_STYLE_ANCHOR = "dark moody cinematic, teal and orange color grading, dramatic shadows, film grain, atmospheric depth"
+
+
+def _select_style_anchor(topic: str) -> str:
+    """
+    Konuya göre en uygun style_anchor'ı seçer.
+    Eşleşme bulunamazsa genel sinematik varsayılanı döndürür.
+    """
+    topic_lower = topic.lower()
+    for keywords, anchor in _TOPIC_STYLE_ANCHORS:
+        if any(kw in topic_lower for kw in keywords):
+            return anchor
+    return _DEFAULT_STYLE_ANCHOR
+
+
+def _enforce_style_anchor(script_data: dict, topic: str = "") -> dict:
+    """
+    Script'teki tüm image_prompt'ların sonuna style_anchor'ı ekler.
+    style_anchor yoksa konuya göre otomatik üretir.
+    Tutarsız veya eksik style_anchor kullanımını düzenler.
+    """
+    scenes = script_data.get("scenes", [])
+    if not scenes:
+        return script_data
+
+    # style_anchor al veya üret
+    style_anchor = script_data.get("style_anchor", "").strip()
+    if not style_anchor:
+        style_anchor = _select_style_anchor(topic) if topic else _DEFAULT_STYLE_ANCHOR
+        script_data["style_anchor"] = style_anchor
+        print(f"[+] Style anchor konuya göre belirlendi: '{style_anchor[:60]}...'")
+    else:
+        print(f"[+] Style anchor kullanılıyor: '{style_anchor[:60]}...'")
+
+    fixes = 0
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        prompt = scene.get("image_prompt", "")
+        if not prompt:
+            continue
+        # style_anchor zaten eklenmiş mi kontrol et
+        anchor_fragment = style_anchor[:30].lower()
+        if anchor_fragment not in prompt.lower():
+            scene["image_prompt"] = f"{prompt.rstrip(', ')} {style_anchor}"
+            fixes += 1
+
+    if fixes > 0:
+        print(f"[+] Style anchor {fixes} sahnenin görsel prompt'una eklendi/düzeltildi.")
+
+    return script_data
+
 def _detect_camera_angle(prompt: str) -> str | None:
     """Prompt'tan kamera açısını tespit eder."""
     prompt_lower = prompt.lower()
@@ -638,6 +729,8 @@ def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", qua
                 )
                 # Kamera açısı çeşitliliğini zorla
                 script_data = _enforce_camera_angle_diversity(script_data)
+                # Style anchor tutarlılığını garanti et
+                script_data = _enforce_style_anchor(script_data, topic)
                 return script_data
 
             if attempt < MAX_SCRIPT_RETRIES:
@@ -667,6 +760,8 @@ def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", qua
                 f"[!] Senaryo minimum hedefin altında kaldı ancak kullanılabilir: "
                 f"{stats['word_count']} kelime, {stats['scene_count']} sahne"
             )
+            # Style anchor'ı fallback için de uygula
+            last_valid_script = _enforce_style_anchor(last_valid_script, topic)
             return last_valid_script
 
         return None

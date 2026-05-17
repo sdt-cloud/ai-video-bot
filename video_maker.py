@@ -113,7 +113,7 @@ def is_target_resolution_image(image_path, target_size=None, aspect_ratio="9:16"
     except Exception:
         return False
         
-def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.5, aspect_ratio="9:16"):
+def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.0, aspect_ratio="9:16"):
     """Kelimelerin zamanlamasını hesaplar ve karaoke stili bellekten oluşan bir klip döner."""
     from subtitle_enhancer import subtitle_enhancer
     from moviepy import ImageClip, concatenate_videoclips
@@ -152,8 +152,15 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
     overlay_height = int(box_bottom - box_top + 20)
     y_offset = box_top
     
-    base_color = (255, 255, 255, 255)
-    highlight_color = (255, 255, 80, 255) if subtitle_style == "tiktok" else (255, 200, 0, 255)
+    if subtitle_style == "tiktok":
+        base_color = (255, 255, 255, 255)
+        highlight_color = (255, 255, 80, 255)
+    elif subtitle_style == "mrbeast":
+        base_color = (255, 200, 200, 255)
+        highlight_color = (255, 80, 80, 255)
+    else:
+        base_color = (255, 255, 255, 255)
+        highlight_color = (255, 200, 0, 255)
     
     clips = []
     
@@ -328,6 +335,52 @@ def color_grade_image(image_path, output_path=None, style="auto_enhance"):
     except Exception as e:
         print(f"[-] Color grading hatası: {e}")
         return image_path
+
+
+def _apply_color_grade_to_clip(clip, style="auto_enhance"):
+    """
+    MoviePy VideoClip'e numpy tabanlı hafif color grading uygular.
+    video_clip sahneleri için color_grade_image'ın video versiyonu.
+    Ağır olmayan, frame-level basit renk tonu düzeltmesi yapar.
+    """
+    if style == "none":
+        return clip
+
+    try:
+        GRADE_PARAMS = {
+            "auto_enhance":    {"contrast": 1.10, "brightness": 1.03, "saturation": 1.12, "overlay": None},
+            "cinematic_warm":  {"contrast": 1.15, "brightness": 1.01, "saturation": 1.05, "overlay": (255, 200, 150, 0.05)},
+            "cinematic_cool":  {"contrast": 1.18, "brightness": 1.00, "saturation": 0.92, "overlay": (150, 180, 255, 0.05)},
+            "vintage":         {"contrast": 1.10, "brightness": 0.97, "saturation": 0.80, "overlay": (255, 230, 200, 0.08)},
+        }
+        params = GRADE_PARAMS.get(style, GRADE_PARAMS["auto_enhance"])
+
+        contrast    = params["contrast"]
+        brightness  = params["brightness"]
+        saturation  = params["saturation"]
+        overlay     = params["overlay"]  # (R, G, B, alpha) or None
+
+        def grade_frame(get_frame, t):
+            frame = get_frame(t).astype(np.float32)
+            # Contrast: ortalama etrafında ölçekle
+            mean = 127.5
+            frame = np.clip((frame - mean) * contrast + mean * brightness, 0, 255)
+            # Saturation: grayscale ile blend
+            if saturation != 1.0:
+                gray = 0.299 * frame[:, :, 0] + 0.587 * frame[:, :, 1] + 0.114 * frame[:, :, 2]
+                gray = gray[:, :, np.newaxis]
+                frame = np.clip(gray + (frame - gray) * saturation, 0, 255)
+            # Color overlay
+            if overlay:
+                r, g, b, alpha = overlay
+                ov = np.array([r, g, b], dtype=np.float32)
+                frame = np.clip(frame * (1 - alpha) + ov * alpha, 0, 255)
+            return frame.astype(np.uint8)
+
+        return apply_clip_transform(clip, grade_frame)
+    except Exception as e:
+        print(f"[!] Video color grade hatası (atlanıyor): {e}")
+        return clip
 
 
 # Sahne mood'una göre otomatik color grade eşleştirmesi
@@ -606,7 +659,7 @@ def generate_video_clip_ai(image_path, output_path):
         return False
 
 def create_video(image_paths, audio_path, output_filename="final_video.mp4", narrations=None,
-                 subtitle_style="tiktok", subtitle_delay=0.5, video_mode="slideshow",
+                 subtitle_style="tiktok", subtitle_delay=0.0, video_mode="slideshow",
                  watermark_enabled=False, transition_style="none",
                  bgm_enabled=False, bgm_tone="auto", aspect_ratio="9:16",
                  quality_level="medium", color_grade_style="auto_enhance",
@@ -729,6 +782,12 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                         clips_loop = [clip] * loop_count
                         clip = concatenate_videoclips(clips_loop, method="compose")
                     clip = apply_clip_duration(clip, slide_duration)
+
+                    # Video kliplere de color grade uygula (görsel tutarlılık için)
+                    if color_grade_style != "none":
+                        scene_grade = get_scene_color_grade(i, scene_pacings, color_grade_style)
+                        clip = _apply_color_grade_to_clip(clip, scene_grade)
+                        print(f"[+] Sahne {i} (video klip) renk düzeltmesi: {scene_grade}")
                 except Exception as vid_err:
                     print(f"[-] Video klip yüklenemedi ({img}): {vid_err}, statik görsel kullanılıyor.")
                     clip = ImageClip(processed_img)
@@ -743,8 +802,12 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 if i == 0:
                     clip = video_effects.apply_camera_shake(clip, duration=0.8, intensity=15)
                 
+                # Statikliği kırmak için her zaman hafif hareket ekle (slideshow olsa bile)
                 if video_mode == "cinematic":
                     clip = video_effects.smart_effect_for_scene(clip, i, len(image_paths))
+                else:
+                    # Sadece çok hafif bir zoom in (fake motion blur etkisi verir)
+                    clip = video_effects.zoom_in_effect(clip, zoom_ratio=0.02)
 
             # Dinamik Karaoke Altyazı Ekleme
             if narrations and i < len(narrations) and subtitle_style != "none":
@@ -784,7 +847,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             final_video = video_effects.apply_cinematic_post_effects(
                 final_video,
                 vignette=True,
-                grain=(quality_level == "high"),  # Film grain sadece high kalitede
+                grain=True,  # Film grain her zaman uygulansın (AI hissini gizler)
                 letterbox=letterbox_enabled,
             )
 

@@ -76,20 +76,22 @@ def convert_gif_to_mp4(gif_path: str, mp4_path: str) -> bool:
 # GIPHY API
 # ─────────────────────────────────────────────────────────────
 
-def fetch_gif_giphy(query: str, output_path: str) -> bool:
+def fetch_gif_giphy(query: str, output_path: str, topic: str = "") -> bool:
     """Giphy API ile GIF arayıp MP4 olarak indirir."""
     api_key = os.environ.get("GIPHY_API_KEY", "").strip()
     if not api_key:
         print("[!] GIPHY_API_KEY bulunamadı, Giphy atlanıyor.")
         return False
 
-    print(f"[+] GIF aranıyor... (Giphy: '{query}')")
+    # Konuyu sorguya ekle (daha alakalı sonuçlar için)
+    enriched_query = f"{query} {topic}".strip() if topic else query
+    print(f"[+] GIF aranıyor... (Giphy: '{enriched_query}')")
     session = _get_session()
 
     try:
         params = {
             "api_key": api_key,
-            "q": query,
+            "q": enriched_query,
             "limit": 15,
             "offset": random.randint(0, 50),
             "rating": "g",
@@ -132,20 +134,21 @@ def fetch_gif_giphy(query: str, output_path: str) -> bool:
 # TENOR API
 # ─────────────────────────────────────────────────────────────
 
-def fetch_gif_tenor(query: str, output_path: str) -> bool:
+def fetch_gif_tenor(query: str, output_path: str, topic: str = "") -> bool:
     """Tenor API ile GIF arayıp MP4 olarak indirir."""
     api_key = os.environ.get("TENOR_API_KEY", "").strip()
     if not api_key:
         print("[!] TENOR_API_KEY bulunamadı, Tenor atlanıyor.")
         return False
 
-    print(f"[+] GIF aranıyor... (Tenor: '{query}')")
+    enriched_query = f"{query} {topic}".strip() if topic else query
+    print(f"[+] GIF aranıyor... (Tenor: '{enriched_query}')")
     session = _get_session()
 
     try:
         params = {
             "key": api_key,
-            "q": query,
+            "q": enriched_query,
             "limit": 15,
             "media_filter": "mp4,gif",
             "contentfilter": "medium",
@@ -189,20 +192,21 @@ def fetch_gif_tenor(query: str, output_path: str) -> bool:
 # PEXELS VIDEO API
 # ─────────────────────────────────────────────────────────────
 
-def fetch_video_pexels(query: str, output_path: str) -> bool:
+def fetch_video_pexels(query: str, output_path: str, topic: str = "") -> bool:
     """Pexels Video API ile kısa stok video indirir."""
     api_key = os.environ.get("PEXELS_API_KEY", "").strip()
     if not api_key:
         print("[!] PEXELS_API_KEY bulunamadı, Pexels Video atlanıyor.")
         return False
 
-    print(f"[+] Video klip aranıyor... (Pexels Video: '{query}')")
+    enriched_query = f"{query} {topic}".strip() if topic else query
+    print(f"[+] Video klip aranıyor... (Pexels Video: '{enriched_query}')")
     session = _get_session()
     headers = {"Authorization": api_key}
 
     try:
         params = {
-            "query": query,
+            "query": enriched_query,
             "orientation": "portrait",
             "per_page": 10,
             "page": random.randint(1, 3),
@@ -245,20 +249,21 @@ def fetch_video_pexels(query: str, output_path: str) -> bool:
 # PIXABAY VIDEO API
 # ─────────────────────────────────────────────────────────────
 
-def fetch_video_pixabay(query: str, output_path: str) -> bool:
+def fetch_video_pixabay(query: str, output_path: str, topic: str = "") -> bool:
     """Pixabay Video API ile kısa stok video indirir."""
     api_key = os.environ.get("PIXABAY_API_KEY", "").strip()
     if not api_key:
         print("[!] PIXABAY_API_KEY bulunamadı, Pixabay Video atlanıyor.")
         return False
 
-    print(f"[+] Video klip aranıyor... (Pixabay Video: '{query}')")
+    enriched_query = f"{query} {topic}".strip() if topic else query
+    print(f"[+] Video klip aranıyor... (Pixabay Video: '{enriched_query}')")
     session = _get_session()
 
     try:
         params = {
             "key": api_key,
-            "q": urllib.parse.quote(query),
+            "q": urllib.parse.quote(enriched_query),
             "video_type": "film",
             "per_page": 10,
             "page": random.randint(1, 3),
@@ -295,28 +300,39 @@ def fetch_video_pixabay(query: str, output_path: str) -> bool:
 # OTOMATİK FALLBACK ZİNCİRİ
 # ─────────────────────────────────────────────────────────────
 
-def fetch_clip_auto(query: str, output_path: str) -> bool:
+def fetch_clip_auto(query: str, output_path: str, topic: str = "") -> bool:
     """
     Otomatik klip arama: Pexels Video → Pixabay Video → Giphy → Tenor
     Stok videoları önce dener (daha kaliteli), sonra GIF kaynaklarına düşer.
+    topic: Video konusu. Aramaya eklenerek daha alakalı klipler bulunur.
     """
-    print(f"[+] Clip-Auto modu başlatıldı: '{query}'")
+    enriched_query = f"{query} {topic}".strip() if topic else query
+    print(f"[+] Clip-Auto modu başlatıldı: '{enriched_query}'")
 
     # 1. Pexels Video (en yüksek kalite, portrait desteği)
-    if fetch_video_pexels(query, output_path):
+    if fetch_video_pexels(query, output_path, topic):
         return True
 
     # 2. Pixabay Video
-    if fetch_video_pixabay(query, output_path):
+    if fetch_video_pixabay(query, output_path, topic):
         return True
 
-    # 3. Giphy (GIF → MP4)
-    if fetch_gif_giphy(query, output_path):
+    # 3. Giphy (GIF → MP4) - Konu dahil arama
+    if fetch_gif_giphy(query, output_path, topic):
         return True
 
     # 4. Tenor (GIF → MP4)
-    if fetch_gif_tenor(query, output_path):
+    if fetch_gif_tenor(query, output_path, topic):
         return True
+
+    # 5. Fallback: Sadece konu ile tekrar dene (daha geniş sonuç kümesi)
+    if topic:
+        topic_keywords = " ".join(topic.split()[:2])
+        print(f"[!] Konu bazlı fallback: '{topic_keywords}' ile tekrar deneniyor...")
+        if fetch_video_pexels(topic_keywords, output_path):
+            return True
+        if fetch_video_pixabay(topic_keywords, output_path):
+            return True
 
     print(f"[-] Tüm klip kaynakları başarısız: '{query}'")
     return False

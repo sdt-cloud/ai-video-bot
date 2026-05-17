@@ -201,8 +201,8 @@ async def process_video(task):
         # Önce video kliplerini indir
         for i, media_type in enumerate(media_types):
             if media_type == "video_clip" and clip_queries[i]:
-                print(f"[{task_id}] Sahne {i}: Video klip indiriliyor... ('{clip_queries[i]}')")
-                clip_success = fetch_clip_auto(clip_queries[i], output_paths[i])
+                print(f"[{task_id}] Sahne {i}: Video klip indiriliyor... ('{clip_queries[i]}' konu: '{topic}')")
+                clip_success = fetch_clip_auto(clip_queries[i], output_paths[i], topic=topic)
                 if clip_success:
                     video_logger.log_video_production_step("clip_fetched", str(task_id), {
                         "scene": i, "query": clip_queries[i]
@@ -227,7 +227,8 @@ async def process_video(task):
                 parallel_process_images,
                 image_prompts,
                 image_outputs,
-                image_providers
+                image_providers,
+                topic,
             )
             
             # Başarısız görselleri işaretle

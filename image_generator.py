@@ -88,9 +88,12 @@ def generate_image_openai(prompt, output_filename, quality="standard"):
             
     except Exception as e:
         print(f"[-] DALL-E Görseli üretilirken hata oluştu: {e}")
-        # Fallback: Pollinations kullan
+        # Fallback: Pollinations → HuggingFace zinciri
         print(f"[+] Fallback: Pollinations ile deneniyor...")
-        return generate_image_pollinations(prompt, output_filename)
+        if generate_image_pollinations(prompt, output_filename):
+            return True
+        print(f"[+] Fallback: Hugging Face ile deneniyor...")
+        return generate_image_huggingface(prompt, output_filename)
 
 
 def generate_image_pollinations(prompt, output_filename):
@@ -125,6 +128,157 @@ def generate_image_pollinations(prompt, output_filename):
             print(f"[-] Pollinations denemesi {attempt} hata: {e}")
 
     return False
+
+
+def generate_image_huggingface(prompt, output_filename, model="black-forest-labs/FLUX.1-schnell"):
+    """
+    Hugging Face Inference API ile görsel üretir.
+    Yeni router endpoint (2025+): router.huggingface.co/hf-inference/
+    API key .env'de HUGGINGFACE_API_KEY olmalı.
+    Token: https://huggingface.co/settings/tokens → Fine-grained → Inference Providers izni
+    """
+    api_key = os.environ.get("HUGGINGFACE_API_KEY", "").strip()
+    if not api_key:
+        print("[!] HUGGINGFACE_API_KEY bulunamadı, Hugging Face atlanıyor.")
+        return False
+
+    model_short = model.split("/")[-1]
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: HuggingFace - {model_short})")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    # HuggingFace 2025+ endpoint stratejisi (önce yeni, sonra eski)
+    # Yeni: router.huggingface.co (OpenAI uyumlu, JSON yanıt → base64 URL)
+    # Eski: api-inference.huggingface.co (binary yanıt)
+    endpoint_strategies = [
+        {
+            "name": "router-openai",
+            "url": f"https://router.huggingface.co/hf-inference/models/{model}/v1/images/generations",
+            "payload": {"prompt": prompt, "n": 1},
+            "response_type": "openai_json",  # {"data": [{"b64_json": "..."}]} veya {"data": [{"url": "..."}]}
+        },
+        {
+            "name": "router-binary",
+            "url": f"https://router.huggingface.co/hf-inference/models/{model}",
+            "payload": {"inputs": prompt, "parameters": {"num_inference_steps": 4}},
+            "response_type": "binary",
+        },
+        {
+            "name": "legacy-binary",
+            "url": f"https://api-inference.huggingface.co/models/{model}",
+            "payload": {
+                "inputs": prompt,
+                "parameters": {
+                    "width": 768,
+                    "height": 1360,
+                    "num_inference_steps": 4,
+                    "guidance_scale": 0.0,
+                }
+            },
+            "response_type": "binary",
+        },
+    ]
+
+    session = get_session()
+
+    for strategy in endpoint_strategies:
+        url = strategy["url"]
+        payload = strategy["payload"]
+        resp_type = strategy["response_type"]
+        name = strategy["name"]
+
+        for attempt in range(1, 4):
+            try:
+                resp = session.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=(15, 120),
+                )
+
+                if resp.status_code == 200:
+                    if resp_type == "openai_json":
+                        # OpenAI uyumlu JSON yanıt: data[0].b64_json veya data[0].url
+                        try:
+                            data = resp.json()
+                            img_data = data.get("data", [{}])[0]
+                            if "b64_json" in img_data:
+                                import base64
+                                img_bytes = base64.b64decode(img_data["b64_json"])
+                                with open(output_filename, "wb") as f:
+                                    f.write(img_bytes)
+                                print(f"[+] HuggingFace (router) görseli kaydedildi: {output_filename}")
+                                return True
+                            elif "url" in img_data:
+                                img_resp = session.get(img_data["url"], timeout=30)
+                                if img_resp.status_code == 200:
+                                    with open(output_filename, "wb") as f:
+                                        f.write(img_resp.content)
+                                    print(f"[+] HuggingFace (router-url) görseli kaydedildi: {output_filename}")
+                                    return True
+                        except Exception as parse_err:
+                            print(f"[!] HuggingFace JSON parse hatası ({name}): {parse_err}")
+                            # İçerik binary image olabilir
+                            if len(resp.content) > 1000:
+                                with open(output_filename, "wb") as f:
+                                    f.write(resp.content)
+                                print(f"[+] HuggingFace (binary fallback) görseli kaydedildi: {output_filename}")
+                                return True
+                    else:
+                        # Binary image yanıt
+                        content_type = resp.headers.get("content-type", "")
+                        if "image" in content_type or len(resp.content) > 1000:
+                            with open(output_filename, "wb") as f:
+                                f.write(resp.content)
+                            print(f"[+] HuggingFace ({name}) görseli kaydedildi: {output_filename}")
+                            return True
+                        else:
+                            print(f"[-] HuggingFace ({name}) yanıt görsel değil: {content_type} ({len(resp.content)} byte)")
+
+                elif resp.status_code == 503:
+                    try:
+                        wait_time = min(float(resp.json().get("estimated_time", 20)), 45)
+                    except Exception:
+                        wait_time = 20
+                    print(f"[!] HuggingFace model yükleniyor ({name}), {wait_time:.0f}s bekleniyor... (deneme {attempt}/3)")
+                    time.sleep(wait_time)
+                    continue
+
+                elif resp.status_code == 429:
+                    print(f"[-] HuggingFace rate limit ({name}). {10*attempt}s bekleniyor...")
+                    time.sleep(10 * attempt)
+                    continue
+
+                elif resp.status_code == 404:
+                    # Bu endpoint yok, bir sonraki stratejiye geç
+                    print(f"[!] HuggingFace endpoint bulunamadı ({name}), bir sonraki deneniyor...")
+                    break
+
+                elif resp.status_code == 401:
+                    print(f"[-] HuggingFace yetki hatası (401). Token'ın 'Make calls to Inference Providers' iznine sahip olması gerekiyor.")
+                    print(f"    Token oluşturma: https://huggingface.co/settings/tokens → Fine-grained → Inference → Inference Providers")
+                    return False
+
+                else:
+                    try:
+                        err_msg = resp.json().get("error", resp.text[:200])
+                    except Exception:
+                        err_msg = resp.text[:200]
+                    print(f"[-] HuggingFace ({name}) hata: HTTP {resp.status_code} - {err_msg}")
+                    break
+
+            except requests.exceptions.Timeout:
+                print(f"[!] HuggingFace timeout ({name}, deneme {attempt}/3)")
+            except Exception as e:
+                print(f"[-] HuggingFace hata ({name}): {e}")
+                break
+
+    print("[-] HuggingFace: Tüm endpoint stratejileri başarısız.")
+    return False
+
 
 def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell"):
     if not is_replicate_available():
@@ -198,26 +352,78 @@ _STOCK_NOISE_WORDS = frozenset({
     "render", "rendering", "generated", "digital", "illustration",
     "no", "without", "blurry", "watermark", "text", "overlay",
     "ugly", "deformed", "concept", "art",
+    # Style anchor / color grading terimleri
+    "moody", "teal", "orange", "grading", "shadows", "color", "grain",
+    "film", "35mm", "motion", "blur", "touch", "human", "realistic",
+    "stock", "subtle", "dark", "bright", "vivid", "warm", "cool",
 })
 
-def _stock_search_keyword(prompt: str) -> str:
-    """Uzun AI prompt'undan noise word'leri filtreleyerek anlamlı arama terimi çıkarır."""
+
+def _topic_to_english_keywords(topic: str) -> list[str]:
+    """
+    Türkçe/diğer dil konuları için basit İngilizce eşleme tablosu.
+    Konuyu önce temizler, sonra anahtar kelimelere çevirir.
+    Tam çeviri yapmaz; sadece stok aramalarda kullanılacak kısa İngilizce terimler üretir.
+    """
+    topic_lower = topic.lower().strip()
+    # Sık kullanılan Türkçe → İngilizce eşleştirmeler
+    mappings = {
+        "uzay": "space", "güneş": "sun", "ay": "moon", "yıldız": "stars",
+        "okyanus": "ocean", "deniz": "sea", "orman": "forest", "dağ": "mountain",
+        "şehir": "city", "insan": "person", "çocuk": "child", "bilim": "science",
+        "teknoloji": "technology", "yapay zeka": "artificial intelligence",
+        "robot": "robot", "tarih": "history", "savaş": "war", "doğa": "nature",
+        "hayvan": "animal", "kuş": "bird", "köpek": "dog", "kedi": "cat",
+        "yemek": "food", "para": "money", "ekonomi": "economy",
+        "spor": "sport", "futbol": "football", "müzik": "music",
+        "film": "movie", "kitap": "book", "sağlık": "health",
+        "hastalık": "disease", "ilaç": "medicine", "beyin": "brain",
+        "evren": "universe", "gezegen": "planet", "iklim": "climate",
+        "deprem": "earthquake", "volkan": "volcano", "fırtına": "storm",
+        "piramit": "pyramid", "antik": "ancient", "mısır": "egypt",
+        "roket": "rocket", "astronot": "astronaut", "mars": "mars",
+    }
+    keywords = []
+    for tr_word, en_word in mappings.items():
+        if tr_word in topic_lower:
+            keywords.append(en_word)
+    # Eşleşme bulunamazsa orijinal konuyu kelimelerine böl (max 3)
+    if not keywords:
+        words = topic_lower.split()[:3]
+        keywords = [w for w in words if len(w) > 2]
+    return keywords[:3]
+
+
+def _stock_search_keyword(prompt: str, topic: str = "") -> str:
+    """
+    Uzun AI prompt'undan noise word'leri filtreleyerek anlamlı arama terimi çıkarır.
+    topic parametresi verilirse konu kelimeleri sonuçta öncelikli olarak yer alır.
+    """
     words = [w.lower().strip(",.;:!?\"'()[]") for w in prompt.strip().split()]
     meaningful = [w for w in words if w and len(w) > 2 and w not in _STOCK_NOISE_WORDS]
-    if meaningful:
-        return " ".join(meaningful[:5])
+
+    # Konu anahtar kelimelerini öne al
+    topic_keywords = []
+    if topic:
+        topic_keywords = _topic_to_english_keywords(topic)
+        # Prompt'ta olmayan konu kelimelerini başa ekle
+        topic_keywords = [k for k in topic_keywords if k not in " ".join(meaningful)]
+
+    combined = topic_keywords + meaningful
+    if combined:
+        return " ".join(combined[:5])
     # Fallback: hiç anlamlı kelime bulunamazsa ilk 4 kelimeyi kullan
     return " ".join(words[:4]) if len(words) >= 4 else prompt[:60]
 
 
-def fetch_stock_image_pexels(prompt: str, output_filename: str) -> bool:
+def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "") -> bool:
     """Pexels API ile ücretsiz stok görsel indir. API key .env'de PEXELS_API_KEY olmalı."""
     api_key = os.environ.get("PEXELS_API_KEY", "").strip()
     if not api_key:
         print("[!] PEXELS_API_KEY bulunamadı, Pexels atlanıyor.")
         return False
 
-    keyword = _stock_search_keyword(prompt)
+    keyword = _stock_search_keyword(prompt, topic)
     print(f"[+] '{output_filename}' için görsel aranıyor... (Pexels: '{keyword}')")
 
     session = get_session()
@@ -263,14 +469,14 @@ def fetch_stock_image_pexels(prompt: str, output_filename: str) -> bool:
         return False
 
 
-def fetch_stock_image_pixabay(prompt: str, output_filename: str) -> bool:
+def fetch_stock_image_pixabay(prompt: str, output_filename: str, topic: str = "") -> bool:
     """Pixabay API ile ücretsiz stok görsel indir. API key .env'de PIXABAY_API_KEY olmalı."""
     api_key = os.environ.get("PIXABAY_API_KEY", "").strip()
     if not api_key:
         print("[!] PIXABAY_API_KEY bulunamadı, Pixabay atlanıyor.")
         return False
 
-    keyword = _stock_search_keyword(prompt)
+    keyword = _stock_search_keyword(prompt, topic)
     print(f"[+] '{output_filename}' için görsel aranıyor... (Pixabay: '{keyword}')")
 
     session = get_session()
@@ -315,14 +521,14 @@ def fetch_stock_image_pixabay(prompt: str, output_filename: str) -> bool:
         return False
 
 
-def fetch_stock_image_unsplash(prompt: str, output_filename: str) -> bool:
+def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "") -> bool:
     """Unsplash API ile ücretsiz stok görsel indir. API key .env'de UNSPLASH_ACCESS_KEY olmalı."""
     access_key = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
     if not access_key:
         print("[!] UNSPLASH_ACCESS_KEY bulunamadı, Unsplash atlanıyor.")
         return False
 
-    keyword = _stock_search_keyword(prompt)
+    keyword = _stock_search_keyword(prompt, topic)
     print(f"[+] '{output_filename}' için görsel aranıyor... (Unsplash: '{keyword}')")
 
     session = get_session()
@@ -365,20 +571,20 @@ def fetch_stock_image_unsplash(prompt: str, output_filename: str) -> bool:
         return False
 
 
-def fetch_stock_image_auto(prompt: str, output_filename: str) -> bool:
+def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "") -> bool:
     """Otomatik stok görsel: Pexels → Pixabay → Unsplash → Pollinations → DALL-E"""
     print(f"[+] Stock-Auto modu başlatıldı: '{output_filename}'")
 
     # 1. Pexels
-    if fetch_stock_image_pexels(prompt, output_filename):
+    if fetch_stock_image_pexels(prompt, output_filename, topic):
         return True
 
     # 2. Pixabay
-    if fetch_stock_image_pixabay(prompt, output_filename):
+    if fetch_stock_image_pixabay(prompt, output_filename, topic):
         return True
 
     # 3. Unsplash
-    if fetch_stock_image_unsplash(prompt, output_filename):
+    if fetch_stock_image_unsplash(prompt, output_filename, topic):
         return True
 
     # 4. DALL-E 3
@@ -386,27 +592,37 @@ def fetch_stock_image_auto(prompt: str, output_filename: str) -> bool:
     if generate_image_openai(prompt, output_filename):
         return True
 
-    # 5. Pollinations (son çare - ücretsiz AI)
-    print("[!] DALL-E da başarısız. Son çare: Pollinations deneniyor...")
-    return generate_image_pollinations(prompt, output_filename)
+    # 5. Pollinations
+    print("[!] DALL-E başarısız. Pollinations deneniyor...")
+    if generate_image_pollinations(prompt, output_filename):
+        return True
+
+    # 6. Hugging Face (son çare - ücretsiz AI)
+    print("[!] Pollinations başarısız. Son çare: Hugging Face deneniyor...")
+    return generate_image_huggingface(prompt, output_filename)
 
 
 # ─────────────────────────────────────────────────────────────
 # ANA YÖNLENDIRICI
 # ─────────────────────────────────────────────────────────────
 
-def generate_image(prompt, output_filename, ai_provider="Stock-Auto"):
+def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str = ""):
+    """
+    Görsel üretici / indiricisi.
+    topic: Video konusu (Türkçe/İngilizce). Stok aramalarda konuya göre
+           daha alakalı sonuçlar elde etmek için kullanılır.
+    """
     provider_lower = ai_provider.lower()
 
     # Stok görsel sağlayıcıları
     if provider_lower == "pexels":
-        return fetch_stock_image_pexels(prompt, output_filename) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pexels(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "pixabay":
-        return fetch_stock_image_pixabay(prompt, output_filename) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pixabay(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "unsplash":
-        return fetch_stock_image_unsplash(prompt, output_filename) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_unsplash(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "stock-auto":
-        return fetch_stock_image_auto(prompt, output_filename)
+        return fetch_stock_image_auto(prompt, output_filename, topic)
 
     # AI görsel sağlayıcıları
     elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd":
@@ -425,10 +641,19 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto"):
         return generate_image_replicate(prompt, output_filename)
     elif "pollinations" in provider_lower:
         return generate_image_pollinations(prompt, output_filename)
+    elif "huggingface" in provider_lower or "hugging" in provider_lower or "hf" == provider_lower:
+        # Model seçimi: huggingface-flux, huggingface-dev, huggingface-sdxl
+        if "dev" in provider_lower:
+            hf_model = "black-forest-labs/FLUX.1-dev"
+        elif "sdxl" in provider_lower:
+            hf_model = "stabilityai/stable-diffusion-xl-base-1.0"
+        else:
+            hf_model = "black-forest-labs/FLUX.1-schnell"  # Varsayılan: hızlı ve ücretsiz
+        return generate_image_huggingface(prompt, output_filename, hf_model)
     else:
         # Bilinmeyen sağlayıcı → Stock-Auto
         print(f"[!] Bilinmeyen sağlayıcı '{ai_provider}', Stock-Auto kullanılıyor.")
-        return fetch_stock_image_auto(prompt, output_filename)
+        return fetch_stock_image_auto(prompt, output_filename, topic)
 
 if __name__ == "__main__":
     # Test

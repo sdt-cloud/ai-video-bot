@@ -122,14 +122,48 @@ class SubtitleEnhancer:
         
         return enhanced_scenes
     
-    def generate_subtitle_timing(self, text: str, duration: float = 30.0, speed_ratio: float = 0.80, delay: float = 0.5) -> List[Dict]:
-        """Altyazı zamanlaması oluşturur. Hız ve gecikme ayarlıdır."""
+    def generate_subtitle_timing(self, text: str, duration: float = 30.0, speed_ratio: float = 0.80, delay: float = 0.0) -> List[Dict]:
+        """Altyazı zamanlaması oluşturur. Hız ve gecikme ayarlıdır.
+        
+        Noktalama duraklamaları:
+          - Virgül (,)      → +0.08s  (kısa nefes)
+          - Nokta (.)       → +0.14s  (cümle sonu)
+          - Ünlem/Soru (!?) → +0.16s  (vurgu + nefes)
+          - Üç nokta (...)  → +0.20s  (dramatik duraklama)
+        Bu değerler TTS motorlarının (Edge-TTS, ElevenLabs) doğal
+        beklemesine yakın tutularak karaoke senkronizasyonunu korur.
+        """
         words = text.split()
         total_words = len(words)
         
         if total_words == 0:
             return []
         
+        # Noktalama duraklamaları (saniye cinsinden)
+        PAUSE_COMMA     = 0.08   # virgül → kısa nefes
+        PAUSE_PERIOD    = 0.14   # nokta → cümle sonu
+        PAUSE_EXCLAIM   = 0.16   # ünlem / soru işareti
+        PAUSE_ELLIPSIS  = 0.20   # üç nokta → dramatik duraklama
+
+        def _punctuation_pause(word: str) -> float:
+            """Kelimenin sonundaki noktalamaya göre ek süre döner."""
+            stripped = word.rstrip()
+            if not stripped:
+                return 0.0
+            if stripped.endswith("...") or stripped.endswith("…"):
+                return PAUSE_ELLIPSIS
+            last = stripped[-1]
+            if last in ("!", "?"):
+                return PAUSE_EXCLAIM
+            if last == ".":
+                return PAUSE_PERIOD
+            if last == ",":
+                return PAUSE_COMMA
+            return 0.0
+
+        # Toplam noktalama ek süresi (available_duration hesabından düşülecek)
+        total_pause = sum(_punctuation_pause(w) for w in words)
+
         total_chars = sum(len(word) for word in words)
         if total_chars == 0:
             return []
@@ -139,8 +173,9 @@ class SubtitleEnhancer:
         
         # Konuşma sonlarındaki sessizlik ve esleri telafi etmek için
         # altyazı akışını belirtilen hız oranında hesapla (%80 hız gibi)
+        # Noktalama duraklamalarını da düş ki toplam = duration olsun
         available_duration = duration - actual_delay
-        active_duration = available_duration * speed_ratio
+        active_duration = max(0.1, available_duration * speed_ratio - total_pause)
         time_per_char = active_duration / total_chars
         
         subtitles = []
@@ -159,6 +194,7 @@ class SubtitleEnhancer:
         
         for i, word in enumerate(words):
             word_duration = len(word) * time_per_char
+            pause_extra   = _punctuation_pause(word)
             
             subtitles.append({
                 'index': i,
@@ -169,6 +205,17 @@ class SubtitleEnhancer:
             })
             
             current_time += word_duration
+
+            # Noktalama duraklaması: altyazı bir sonraki kelimeye geçmeden önce bekler
+            if pause_extra > 0 and i < total_words - 1:
+                subtitles.append({
+                    'index': -1,   # -1 = hiçbir kelime vurgulanmaz (sessizlik frame'i)
+                    'text': '',
+                    'start_time': current_time,
+                    'end_time': current_time + pause_extra,
+                    'duration': pause_extra
+                })
+                current_time += pause_extra
             
         # Sahnenin geri kalan kısmında sessizlik olacağı için 
         # hiçbir kelimenin sarı yanmadığı (highlight_idx = -1) bir bitiş frame'i ekle.
@@ -183,6 +230,7 @@ class SubtitleEnhancer:
             })
         
         return subtitles
+
 
 # Global enhancer instance
 subtitle_enhancer = SubtitleEnhancer()
