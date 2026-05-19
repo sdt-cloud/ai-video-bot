@@ -421,6 +421,64 @@ async def add_multi_lang_video(req: MultiLangVideoRequest):
 
 
 
+class SettingsRequest(BaseModel):
+    openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
+    elevenlabs_api_key: Optional[str] = None
+    pexels_api_key: Optional[str] = None
+    pixabay_api_key: Optional[str] = None
+    unsplash_api_key: Optional[str] = None
+
+@app.get("/api/settings")
+async def get_settings_api():
+    return {
+        "openai_api_key": os.environ.get("OPENAI_API_KEY", ""),
+        "gemini_api_key": os.environ.get("GEMINI_API_KEY", ""),
+        "elevenlabs_api_key": os.environ.get("ELEVENLABS_API_KEY", ""),
+        "pexels_api_key": os.environ.get("PEXELS_API_KEY", ""),
+        "pixabay_api_key": os.environ.get("PIXABAY_API_KEY", ""),
+        "unsplash_api_key": os.environ.get("UNSPLASH_API_KEY", "")
+    }
+
+@app.post("/api/settings")
+async def save_settings_api(req: SettingsRequest):
+    keys = {
+        "OPENAI_API_KEY": req.openai_api_key,
+        "GEMINI_API_KEY": req.gemini_api_key,
+        "ELEVENLABS_API_KEY": req.elevenlabs_api_key,
+        "PEXELS_API_KEY": req.pexels_api_key,
+        "PIXABAY_API_KEY": req.pixabay_api_key,
+        "UNSPLASH_API_KEY": req.unsplash_api_key
+    }
+    
+    for env_key, val in keys.items():
+        if val is not None:
+            os.environ[env_key] = val.strip()
+            
+    # .env dosyasını güncelle
+    try:
+        existing_keys = {}
+        if os.path.exists(".env"):
+            with open(".env", "r", encoding="utf-8") as f:
+                for line in f:
+                    if "=" in line and not line.strip().startswith("#"):
+                        parts = line.split("=", 1)
+                        if len(parts) == 2:
+                            k, v = parts
+                            existing_keys[k.strip()] = v.strip()
+        
+        for env_key, val in keys.items():
+            if val is not None:
+                existing_keys[env_key] = val.strip()
+        
+        with open(".env", "w", encoding="utf-8") as f:
+            for k, v in existing_keys.items():
+                f.write(f"{k}={v}\n")
+    except Exception as e:
+        print(f"[-] .env güncelleme hatası: {e}")
+        
+    return {"status": "success"}
+
 @app.get("/api/stats")
 async def get_stats():
     return database.get_stats()

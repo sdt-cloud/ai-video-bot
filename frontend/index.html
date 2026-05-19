@@ -44,6 +44,10 @@
                         <span class="material-symbols-rounded">perm_media</span>
                         <span data-i18n="nav_assets">Assets</span>
                     </a>
+                    <a href="#" class="nav-item" id="nav-api-keys-btn">
+                        <span class="material-symbols-rounded">key</span>
+                        <span>API Anahtarları</span>
+                    </a>
                 </nav>
             </div>
 
@@ -320,10 +324,6 @@
                                     </select>
                                 </div>
                                 <div class="option-group" style="display:flex; align-items:center; gap:10px;">
-                                    <label data-i18n="opt_watermark" style="margin:0;">Filigran (Watermark)</label>
-                                    <input type="checkbox" id="opt-watermark-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
-                                </div>
-                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
                                     <label style="margin:0;">🎬 Sinema Bantları (Letterbox)</label>
                                     <input type="checkbox" id="opt-letterbox-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
                                 </div>
@@ -512,10 +512,6 @@
                             </select>
                         </div>
                         <div class="option-group" style="display:flex; align-items:center; gap:10px;">
-                            <label data-i18n="opt_watermark" style="margin:0;">Filigran (Watermark)</label>
-                            <input type="checkbox" id="bulk-watermark-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
-                        </div>
-                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
                             <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
                             <input type="checkbox" id="bulk-bgm-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);" onchange="document.getElementById('bulk-bgm-options').style.display=this.checked?'block':'none'">
                         </div>
@@ -633,6 +629,118 @@
     <div class="toast hidden" id="toast">
         <span class="material-symbols-rounded toast-icon">check_circle</span>
         <span class="toast-message" id="toast-message"></span>
+    </div>
+
+    <!-- Glassmorphism API Key Kurulum Portalı -->
+    <div id="setup-portal" class="setup-overlay">
+        <div class="setup-container">
+            <div class="setup-header">
+                <h1 class="setup-title">Geliştirici Portalına Hoş Geldiniz!</h1>
+                <p class="setup-subtitle">VideoGenius AI tamamen açık kaynaklı ve yerel olarak çalışan bir sistemdir. Başlamak için kullanmak istediğiniz yapay zeka ve stok API anahtarlarınızı girin. Bilgileriniz tarayıcınızda ve yerel .env dosyanızda güvenle saklanır.</p>
+            </div>
+            
+            <div class="setup-grid">
+                <!-- OpenAI Card -->
+                <div class="api-setup-card">
+                    <div>
+                        <div class="api-card-header">
+                            <span class="api-name"><i class="fa-solid fa-brain"></i> OpenAI API Key</span>
+                            <span class="api-badge premium">Ücretli / Kotasız</span>
+                        </div>
+                        <p class="api-desc">En gelişmiş script üretimi, ElevenLabs kalitesinde seslendirme ve yüksek kaliteli gpt-image-1 (DALL-E) görselleri için gereklidir.</p>
+                    </div>
+                    <div>
+                        <div class="api-input-wrap">
+                            <span class="material-symbols-rounded api-input-icon">key</span>
+                            <input type="password" id="setup-openai-key" class="api-input" placeholder="sk-...">
+                        </div>
+                        <a href="https://platform.openai.com/api-keys" target="_blank" class="api-guide-link">
+                            API Key Al <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <div class="api-alt">
+                            <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Gemini AI (Script)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gemini Card -->
+                <div class="api-setup-card">
+                    <div>
+                        <div class="api-card-header">
+                            <span class="api-name"><i class="fa-solid fa-robot"></i> Google Gemini Key</span>
+                            <span class="api-badge free">Tamamen Ücretsiz</span>
+                        </div>
+                        <p class="api-desc">Script, senaryo ve kapak (thumbnail) tasarımı üretmek için ücretsiz ve son derece hızlı bir yapay zeka modelidir.</p>
+                    </div>
+                    <div>
+                        <div class="api-input-wrap">
+                            <span class="material-symbols-rounded api-input-icon">key</span>
+                            <input type="password" id="setup-gemini-key" class="api-input" placeholder="AIzaSy...">
+                        </div>
+                        <a href="https://aistudio.google.com/" target="_blank" class="api-guide-link">
+                            Ücretsiz Gemini Key Al <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <div class="api-alt">
+                            <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Edge-TTS (Ses)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ElevenLabs Card -->
+                <div class="api-setup-card">
+                    <div>
+                        <div class="api-card-header">
+                            <span class="api-name"><i class="fa-solid fa-volume-high"></i> ElevenLabs Key</span>
+                            <span class="api-badge premium">Ücretsiz Plan Var</span>
+                        </div>
+                        <p class="api-desc">Profesyonel, doğal tonlamalı ve ultra gerçekçi klonlanmış insan sesleri üretmek için en iyi ses platformudur.</p>
+                    </div>
+                    <div>
+                        <div class="api-input-wrap">
+                            <span class="material-symbols-rounded api-input-icon">key</span>
+                            <input type="password" id="setup-elevenlabs-key" class="api-input" placeholder="eleven_...">
+                        </div>
+                        <a href="https://elevenlabs.io/" target="_blank" class="api-guide-link">
+                            Üye Ol & 10K Karakter Ücretsiz Al <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <div class="api-alt">
+                            <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Edge-TTS (Sınırsız)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pexels Card -->
+                <div class="api-setup-card">
+                    <div>
+                        <div class="api-card-header">
+                            <span class="api-name"><i class="fa-solid fa-photo-film"></i> Pexels API Key</span>
+                            <span class="api-badge free">Tamamen Ücretsiz</span>
+                        </div>
+                        <p class="api-desc">Videolarınızda kullanılacak yüksek kaliteli telifsiz gerçekçi stok videoları ve resimleri aramak/indirmek için gereklidir.</p>
+                    </div>
+                    <div>
+                        <div class="api-input-wrap">
+                            <span class="material-symbols-rounded api-input-icon">key</span>
+                            <input type="password" id="setup-pixels-key" class="api-input" placeholder="ApiKey...">
+                        </div>
+                        <a href="https://www.pexels.com/api/" target="_blank" class="api-guide-link">
+                            Ücretsiz Pexels Key Al <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <div class="api-alt">
+                            <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Pixabay API (Sınırsız)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-actions">
+                <button class="btn-setup-bypass" id="setup-bypass-btn">Daha Sonra Kur</button>
+                <button class="btn-setup-save" id="setup-save-btn">
+                    <span class="material-symbols-rounded">save</span>
+                    <span>Kurulumu Tamamla & Kaydet</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="/static/app.js?v=3"></script>

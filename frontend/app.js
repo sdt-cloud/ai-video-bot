@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 0.5,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
-                        watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
+                        watermark_enabled: false,
                         bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
                         bgm_tone: document.getElementById('opt-bgm-tone').value,
                         quality_level: document.getElementById('opt-quality-level').value,
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 0.5,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
-                        watermark_enabled: document.getElementById('opt-watermark-enabled').checked,
+                        watermark_enabled: false,
                         bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
                         bgm_tone: document.getElementById('opt-bgm-tone').value,
                         quality_level: document.getElementById('opt-quality-level').value,
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     subtitle_delay: parseFloat(document.getElementById('bulk-subtitle-delay').value) || 0.5,
                     video_mode: document.getElementById('bulk-video-mode').value,
                     transition_style: document.getElementById('bulk-transition-style').value,
-                    watermark_enabled: document.getElementById('bulk-watermark-enabled').checked,
+                    watermark_enabled: false,
                     bgm_enabled: document.getElementById('bulk-bgm-enabled').checked,
                     bgm_tone: document.getElementById('bulk-bgm-tone').value,
                     quality_level: document.getElementById('bulk-quality-level').value,
@@ -701,9 +701,95 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ==========================================================================
+    // API KEY PORTAL & CONFIGURATION MANAGEMENT
+    // ==========================================================================
+    const setupPortal = document.getElementById('setup-portal');
+    const navApiKeysBtn = document.getElementById('nav-api-keys-btn');
+    const setupBypassBtn = document.getElementById('setup-bypass-btn');
+    const setupSaveBtn = document.getElementById('setup-save-btn');
 
+    async function loadApiKeys() {
+        try {
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const data = await res.json();
+                
+                document.getElementById('setup-openai-key').value = data.openai_api_key || '';
+                document.getElementById('setup-gemini-key').value = data.gemini_api_key || '';
+                document.getElementById('setup-elevenlabs-key').value = data.elevenlabs_api_key || '';
+                document.getElementById('setup-pixels-key').value = data.pexels_api_key || '';
+                
+                // Eğer hayati API anahtarları (OpenAI veya Gemini) tamamen boşsa ve bypass edilmemişse otomatik göster
+                const hasKeys = (data.openai_api_key && data.openai_api_key.trim() !== '') || 
+                                (data.gemini_api_key && data.gemini_api_key.trim() !== '');
+                
+                const bypass = localStorage.getItem('setup-passed') === 'true';
+                
+                if (!hasKeys && !bypass && setupPortal) {
+                    setupPortal.classList.add('active');
+                }
+            }
+        } catch (e) {
+            console.error("API key yükleme hatası:", e);
+        }
+    }
 
+    if (setupBypassBtn && setupPortal) {
+        setupBypassBtn.addEventListener('click', () => {
+            setupPortal.classList.remove('active');
+            localStorage.setItem('setup-passed', 'true');
+        });
+    }
 
+    if (navApiKeysBtn && setupPortal) {
+        navApiKeysBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            setupPortal.classList.add('active');
+        });
+    }
+
+    if (setupSaveBtn && setupPortal) {
+        setupSaveBtn.addEventListener('click', async () => {
+            const openaiKey = document.getElementById('setup-openai-key').value.trim();
+            const geminiKey = document.getElementById('setup-gemini-key').value.trim();
+            const elevenKey = document.getElementById('setup-elevenlabs-key').value.trim();
+            const pixelsKey = document.getElementById('setup-pixels-key').value.trim();
+
+            setupSaveBtn.innerHTML = '<span class="material-symbols-rounded spin">rotate_right</span> <span>Kaydediliyor...</span>';
+            setupSaveBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        openai_api_key: openaiKey,
+                        gemini_api_key: geminiKey,
+                        elevenlabs_api_key: elevenKey,
+                        pexels_api_key: pixelsKey
+                    })
+                });
+
+                if (res.ok) {
+                    showToast("API Anahtarları başarıyla güncellendi!");
+                    setupPortal.classList.remove('active');
+                    localStorage.setItem('setup-passed', 'true');
+                } else {
+                    showToast("API anahtarları kaydedilemedi!", "error");
+                }
+            } catch (e) {
+                console.error("Kaydetme hatası:", e);
+                showToast("Sunucu bağlantı hatası!", "error");
+            } finally {
+                setupSaveBtn.innerHTML = '<span class="material-symbols-rounded">save</span> <span>Kurulumu Tamamla & Kaydet</span>';
+                setupSaveBtn.disabled = false;
+            }
+        });
+    }
+
+    // API Key'leri ilk yüklemede çağır
+    loadApiKeys();
 
     // Initial fetch & intervals
     fetchStats();

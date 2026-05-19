@@ -583,38 +583,9 @@ def burn_subtitle_on_image(image_path, text, output_path, subtitle_style="tiktok
     result.save(output_path, quality=92, optimize=True)
 
 def apply_watermark(image_path, output_path, opacity=0.35, padding=30, max_size=180):
-    """Görselin sağ üst köşesine şeffaf logo watermark uygular."""
-    watermark_path = "assets/watermark/logo.png"
-    if not os.path.exists(watermark_path):
-        # Logo yoksa görseli olduğu gibi kopyala
-        import shutil
-        shutil.copy2(image_path, output_path)
-        return
-
-    try:
-        base = Image.open(image_path).convert("RGBA")
-        wm = Image.open(watermark_path).convert("RGBA")
-
-        # Watermark boyutunu sınırla (max max_size x max_size)
-        wm_ratio = min(max_size / wm.width, max_size / wm.height)
-        new_wm_size = (int(wm.width * wm_ratio), int(wm.height * wm_ratio))
-        wm = wm.resize(new_wm_size, Image.LANCZOS)
-
-        # Opacity uygula — alpha kanalını ölçekle
-        r, g, b, a = wm.split()
-        a = a.point(lambda x: int(x * opacity))
-        wm = Image.merge("RGBA", (r, g, b, a))
-
-        # Sağ üst köşeye yerleştir
-        x = base.width - new_wm_size[0] - padding
-        y = padding
-        base.paste(wm, (x, y), wm)
-
-        base.convert("RGB").save(output_path, quality=85, optimize=True)
-    except Exception as e:
-        print(f"[-] Watermark uygulama hatası: {e}")
-        import shutil
-        shutil.copy2(image_path, output_path)
+    """Görselin sağ üst köşesine şeffaf logo watermark uygular (Pasifleştirildi)."""
+    import shutil
+    shutil.copy2(image_path, output_path)
 
 
 def generate_video_clip_ai(image_path, output_path):
