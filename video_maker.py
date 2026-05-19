@@ -124,40 +124,69 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
     if not timings:
         return None
         
-    wrapped = textwrap.fill(text, width=18 if subtitle_style == "tiktok" else 24)
+    # Alex Hormozi stili için tamamen büyük harf ve satırda az kelime (CapCut tarzı)
+    if subtitle_style == "hormozi":
+        text = text.upper()
+        
+    wrap_width = 14 if subtitle_style in ("tiktok", "hormozi") else (18 if subtitle_style == "mrbeast" else 24)
+    wrapped = textwrap.fill(text, width=wrap_width)
     lines = wrapped.split("\n")
     
     font_path = ensure_font(subtitle_style)
-    font_size = 52 if subtitle_style == "tiktok" else 46
+    
+    # Hormozi ve MrBeast stilleri için çok daha büyük ve baskın font boyutu
+    if subtitle_style in ("hormozi", "mrbeast"):
+        font_size = 64
+    elif subtitle_style == "tiktok":
+        font_size = 54
+    else:
+        font_size = 46
+        
     font = None
     pop_font = None
     bold_fonts = [font_path]
     for f in bold_fonts:
         if os.path.exists(f):
             font = ImageFont.truetype(f, font_size)
-            pop_font = ImageFont.truetype(f, int(font_size * 1.15))  # %15 pop-in (overlap önlemek için küçültüldü)
+            # MrBeast ve Hormozi'de kelime vurgusu daha baskın pop-in (%25 daha büyük)
+            pop_ratio = 1.25 if subtitle_style in ("hormozi", "mrbeast") else 1.15
+            pop_font = ImageFont.truetype(f, int(font_size * pop_ratio))
             break
     if font is None:
         font = ImageFont.load_default()
         pop_font = font
         
-    line_height = int(font_size * 1.15) + 12  # Pop fontuna göre boşluk bırak, üst üste binmesin
+    line_height = int(font_size * 1.2) + 16  # Pop fontuna göre boşluk bırak, üst üste binmesin
     total_text_height = len(lines) * line_height
-    start_y = target_h - total_text_height - (200 if subtitle_style == "tiktok" else 260)
     
-    box_padding = 25 if subtitle_style == "tiktok" else 18
+    # Hormozi tarzı dikey ekranın tam ortasına daha yakındır ( Shorts/Reels göz hizası )
+    if subtitle_style == "hormozi":
+        start_y = (target_h - total_text_height) // 2 - 80
+    elif subtitle_style == "tiktok":
+        start_y = target_h - total_text_height - 240
+    else:
+        start_y = target_h - total_text_height - 280
+        
+    box_padding = 30 if subtitle_style in ("tiktok", "hormozi") else 18
     box_top = start_y - box_padding
     box_bottom = start_y + total_text_height + box_padding
     
-    overlay_height = int(box_bottom - box_top + 20)
+    overlay_height = int(box_bottom - box_top + 40)
     y_offset = box_top
     
+    # Gelişmiş Sosyal Medya Renk Paletleri
     if subtitle_style == "tiktok":
         base_color = (255, 255, 255, 255)
         highlight_color = (255, 255, 80, 255)
     elif subtitle_style == "mrbeast":
-        base_color = (255, 200, 200, 255)
-        highlight_color = (255, 80, 80, 255)
+        base_color = (255, 255, 255, 255)
+        highlight_color = (255, 40, 40, 255) # Canlı Kırmızı
+    elif subtitle_style == "hormozi":
+        base_color = (255, 255, 255, 255)
+        highlight_color = (0, 255, 0, 255) # Fosforlu Yeşil
+    elif subtitle_style == "neon":
+        base_color = (245, 245, 255, 255)
+        highlight_color = (168, 85, 247, 255) # Neon Mor
     else:
         base_color = (255, 255, 255, 255)
         highlight_color = (255, 200, 0, 255)
@@ -171,18 +200,22 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
         overlay = Image.new("RGBA", (target_w, overlay_height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
         
-        local_box_top = 0
-        local_box_bottom = box_bottom - box_top
+        local_box_top = 10
+        local_box_bottom = box_bottom - box_top + 10
         
         if subtitle_style == "tiktok":
-            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=15, fill=(0, 0, 0, 120))
+            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=15, fill=(0, 0, 0, 130))
         elif subtitle_style == "netflix":
-            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=12, fill=(0, 0, 0, 70))
+            draw.rounded_rectangle([40, local_box_top, target_w - 40, local_box_bottom], radius=12, fill=(0, 0, 0, 80))
             
-        shadow_offset = 2
+        shadow_offset = 3 if subtitle_style in ("mrbeast", "hormozi") else 2
         word_counter = 0
         
         for i, line in enumerate(lines):
+            # Büyük harfe duyarlı kelimeleri ayır
+            if subtitle_style == "hormozi":
+                line = line.upper()
+                
             y = (start_y + (i * line_height)) - y_offset
             
             bbox = draw.textbbox((0, 0), line, font=font)
@@ -195,24 +228,35 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
                 
                 # Pop-in animasyonu için konum ve font ayarla
                 active_font = pop_font if is_highlight else font
-                pop_offset_x = -2 if is_highlight else 0
-                pop_offset_y = -4 if is_highlight else 0
+                pop_offset_x = -4 if is_highlight and subtitle_style in ("hormozi", "mrbeast") else (-2 if is_highlight else 0)
+                pop_offset_y = -6 if is_highlight and subtitle_style in ("hormozi", "mrbeast") else (-4 if is_highlight else 0)
                 
-                # Gölge
-                for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
-                               (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
-                    draw.text((current_x + dx + pop_offset_x, y + dy + pop_offset_y), lw, font=active_font, fill=(0, 0, 0, 255))
+                # Kalın Çerçeve/Gölge (Social Media Outline Efekti)
+                outline_color = (0, 0, 0, 255)
+                if subtitle_style in ("mrbeast", "hormozi"):
+                    # 8 yönlü kalın çerçeve çizerek profesyonel CapCut/Premiere altyazısı oluştur
+                    for dx, dy in [(-3, -3), (3, -3), (-3, 3), (3, 3), (-3, 0), (3, 0), (0, -3), (0, 3)]:
+                        draw.text((current_x + dx + pop_offset_x, y + dy + pop_offset_y), lw, font=active_font, fill=outline_color)
+                elif subtitle_style == "neon" and is_highlight:
+                    # Neon parıltı efekti (Glow)
+                    for r_glow in range(1, 8):
+                        glow_alpha = int(70 / r_glow)
+                        draw.text((current_x + pop_offset_x, y + pop_offset_y), lw, font=active_font, fill=(168, 85, 247, glow_alpha))
+                else:
+                    for dx, dy in [(-shadow_offset, -shadow_offset), (shadow_offset, -shadow_offset), 
+                                   (-shadow_offset, shadow_offset), (shadow_offset, shadow_offset)]:
+                        draw.text((current_x + dx + pop_offset_x, y + dy + pop_offset_y), lw, font=active_font, fill=outline_color)
                     
-                # Text
+                # Gerçek Metin Çizimi
                 color = highlight_color if is_highlight else base_color
                 draw.text((current_x + pop_offset_x, y + pop_offset_y), lw, font=active_font, fill=color)
                 
-                # Space width
+                # Boşluk Genişliği Hesabı
                 lw_bbox = draw.textbbox((0, 0), lw + " ", font=font)
                 current_x += (lw_bbox[2] - lw_bbox[0])
                 word_counter += 1
                 
-        # Disk I/O yerine doğrudan bellekten numpy array kullan (performans: ~%30-40 hızlanma)
+        # Bellekten doğrudan ImageClip üret (Disk I/O engellenir)
         overlay_array = np.array(overlay)
         
         c = ImageClip(overlay_array)
