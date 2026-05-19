@@ -719,6 +719,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('setup-gemini-key').value = data.gemini_api_key || '';
                 document.getElementById('setup-elevenlabs-key').value = data.elevenlabs_api_key || '';
                 document.getElementById('setup-pixels-key').value = data.pexels_api_key || '';
+                if(document.getElementById('setup-stability-key')) document.getElementById('setup-stability-key').value = data.stability_api_key || '';
+                if(document.getElementById('setup-replicate-key')) document.getElementById('setup-replicate-key').value = data.replicate_api_token || '';
+                if(document.getElementById('setup-luma-key')) document.getElementById('setup-luma-key').value = data.luma_api_key || '';
+                if(document.getElementById('setup-runway-key')) document.getElementById('setup-runway-key').value = data.runway_api_key || '';
                 
                 // Eğer hayati API anahtarları (OpenAI veya Gemini) tamamen boşsa ve bypass edilmemişse otomatik göster
                 const hasKeys = (data.openai_api_key && data.openai_api_key.trim() !== '') || 
@@ -755,6 +759,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const geminiKey = document.getElementById('setup-gemini-key').value.trim();
             const elevenKey = document.getElementById('setup-elevenlabs-key').value.trim();
             const pixelsKey = document.getElementById('setup-pixels-key').value.trim();
+            const stabilityKey = document.getElementById('setup-stability-key')?.value.trim() || '';
+            const replicateKey = document.getElementById('setup-replicate-key')?.value.trim() || '';
+            const lumaKey = document.getElementById('setup-luma-key')?.value.trim() || '';
+            const runwayKey = document.getElementById('setup-runway-key')?.value.trim() || '';
 
             setupSaveBtn.innerHTML = '<span class="material-symbols-rounded spin">rotate_right</span> <span>Kaydediliyor...</span>';
             setupSaveBtn.disabled = true;
@@ -767,7 +775,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         openai_api_key: openaiKey,
                         gemini_api_key: geminiKey,
                         elevenlabs_api_key: elevenKey,
-                        pexels_api_key: pixelsKey
+                        pexels_api_key: pixelsKey,
+                        stability_api_key: stabilityKey,
+                        replicate_api_token: replicateKey,
+                        luma_api_key: lumaKey,
+                        runway_api_key: runwayKey
                     })
                 });
 

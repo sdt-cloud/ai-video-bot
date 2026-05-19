@@ -428,6 +428,10 @@ class SettingsRequest(BaseModel):
     pexels_api_key: Optional[str] = None
     pixabay_api_key: Optional[str] = None
     unsplash_api_key: Optional[str] = None
+    stability_api_key: Optional[str] = None
+    replicate_api_token: Optional[str] = None
+    luma_api_key: Optional[str] = None
+    runway_api_key: Optional[str] = None
 
 @app.get("/api/settings")
 async def get_settings_api():
@@ -437,7 +441,11 @@ async def get_settings_api():
         "elevenlabs_api_key": os.environ.get("ELEVENLABS_API_KEY", ""),
         "pexels_api_key": os.environ.get("PEXELS_API_KEY", ""),
         "pixabay_api_key": os.environ.get("PIXABAY_API_KEY", ""),
-        "unsplash_api_key": os.environ.get("UNSPLASH_API_KEY", "")
+        "unsplash_api_key": os.environ.get("UNSPLASH_API_KEY", ""),
+        "stability_api_key": os.environ.get("STABILITY_API_KEY", ""),
+        "replicate_api_token": os.environ.get("REPLICATE_API_TOKEN", ""),
+        "luma_api_key": os.environ.get("LUMA_API_KEY", ""),
+        "runway_api_key": os.environ.get("RUNWAY_API_KEY", "")
     }
 
 @app.post("/api/settings")
@@ -448,7 +456,11 @@ async def save_settings_api(req: SettingsRequest):
         "ELEVENLABS_API_KEY": req.elevenlabs_api_key,
         "PEXELS_API_KEY": req.pexels_api_key,
         "PIXABAY_API_KEY": req.pixabay_api_key,
-        "UNSPLASH_API_KEY": req.unsplash_api_key
+        "UNSPLASH_API_KEY": req.unsplash_api_key,
+        "STABILITY_API_KEY": req.stability_api_key,
+        "REPLICATE_API_TOKEN": req.replicate_api_token,
+        "LUMA_API_KEY": req.luma_api_key,
+        "RUNWAY_API_KEY": req.runway_api_key
     }
     
     for env_key, val in keys.items():
