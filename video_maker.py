@@ -337,16 +337,18 @@ def get_render_settings(video_mode, total_duration, quality_level="medium"):
         ],
     }
 
-    # Donanım ivmeli encode için CRF yerine uygun bitrate veya parametreleri ata
+    # Donanım ivmeli encode için tüm sistemlerle %100 uyumlu bitrate profillerini tanımla
     if gpu_codec:
-        # GPU codec'lerinde CRF her zaman doğrudan desteklenmeyebilir, onun yerine qp veya global bitrate kullanırız
-        if gpu_codec == "h264_nvenc":
-            settings["ffmpeg_params"].extend(["-cq", profile["crf"], "-preset", "p4", "-rc", "constqp"])
-        elif gpu_codec == "h264_videotoolbox":
-            # macOS için q:v parametresi
-            settings["ffmpeg_params"].extend(["-q:v", str(100 - int(profile["crf"]) * 3)])
-        else:
-            settings["ffmpeg_params"].extend(["-crf", profile["crf"]])
+        # Bitrate belirleyerek tüm GPU markalarında (Nvidia/macOS/Intel/Linux) parametre hatalarını engelliyoruz
+        if quality_level == "low":
+            settings["ffmpeg_params"].extend(["-b:v", "2.5M", "-maxrate", "3.5M", "-bufsize", "5M"])
+        elif quality_level == "high":
+            settings["ffmpeg_params"].extend(["-b:v", "8M", "-maxrate", "12M", "-bufsize", "16M"])
+        else: # medium
+            settings["ffmpeg_params"].extend(["-b:v", "4.5M", "-maxrate", "7M", "-bufsize", "9M"])
+            
+        # Donanım ivmeli codec'ler CPU-only preset parametrelerini (fast, medium vb.) tanımayacağı için temizle
+        settings["preset"] = None
     else:
         settings["ffmpeg_params"].extend(["-crf", profile["crf"]])
 
@@ -1023,18 +1025,20 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             f"[+] Render işlemi başlıyor... "
             f"(fps={render_settings['fps']}, preset={render_settings['preset']}, threads={render_settings['threads']})"
         )
-        final_video.write_videofile(
-            output_filename,
-            fps=render_settings["fps"],
-            codec=render_settings["codec"],
-            audio_codec="aac",
-            preset=render_settings["preset"],
-            threads=render_settings["threads"],
-            ffmpeg_params=render_settings["ffmpeg_params"],
-            temp_audiofile=f"temp-audio-{os.path.basename(output_filename)}.m4a",
-            remove_temp=True,
-            logger=None
-        )
+        write_kwargs = {
+            "fps": render_settings["fps"],
+            "codec": render_settings["codec"],
+            "audio_codec": "aac",
+            "threads": render_settings["threads"],
+            "ffmpeg_params": render_settings["ffmpeg_params"],
+            "temp_audiofile": f"temp-audio-{os.path.basename(output_filename)}.m4a",
+            "remove_temp": True,
+            "logger": None
+        }
+        if render_settings.get("preset"):
+            write_kwargs["preset"] = render_settings["preset"]
+            
+        final_video.write_videofile(output_filename, **write_kwargs)
         
         # --- POST-PROCESSING ---
         if quality_level in ("medium", "high") and os.path.exists(output_filename):
