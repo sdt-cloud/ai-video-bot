@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  video-bot:
+    build: .
+    container_name: videogenius-ai
+    ports:
+      - "8001:8001"
+    volumes:
+      # Ortam değişkenleri ve veritabanlarının yerelde saklanıp kaybolmaması için volume eşlemesi
+      - ./.env:/app/.env
+      - ./assets:/app/assets
+      - ./aivid_data.db:/app/aivid_data.db
+      - ./video_tasks.db:/app/video_tasks.db
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always

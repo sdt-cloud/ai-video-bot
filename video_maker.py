@@ -253,24 +253,58 @@ RENDER_QUALITY_PROFILES = {
     },
 }
 
+def check_gpu_support():
+    """Sistemde hangi donanım ivmeli video encoder'ın desteklendiğini hızlıca tespit eder."""
+    import subprocess
+    try:
+        # ffmpeg'in yardımcı codec listesini soralım
+        res = subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=3)
+        encoders = res.stdout
+        if "h264_nvenc" in encoders:
+            return "h264_nvenc"  # NVIDIA GPU
+        elif "h264_videotoolbox" in encoders:
+            return "h264_videotoolbox"  # Apple Silicon / macOS
+        elif "h264_qsv" in encoders:
+            return "h264_qsv"  # Intel Quick Sync
+        elif "h264_vaapi" in encoders:
+            return "h264_vaapi"  # Generic Linux GPU
+    except Exception:
+        pass
+    return None
+
 def get_render_settings(video_mode, total_duration, quality_level="medium"):
     """Kalite düzeyine, süreye ve moda göre render ayarlarını belirler."""
     cpu_threads = max(2, min(8, (os.cpu_count() or 4)))
     profile = RENDER_QUALITY_PROFILES.get(quality_level, RENDER_QUALITY_PROFILES["medium"])
 
+    gpu_codec = check_gpu_support()
+    
     settings = {
         "fps": profile["fps"],
         "preset": profile["preset"],
         "threads": cpu_threads,
+        "codec": gpu_codec if gpu_codec else "libx264",
         "ffmpeg_params": [
             "-movflags", "+faststart",
-            "-crf", profile["crf"],
             "-pix_fmt", "yuv420p",
             "-profile:v", "high",
             "-level", "4.2",
             "-b:a", "192k",  # İlk render'da da ses kalitesini garanti altına al
         ],
     }
+
+    # Donanım ivmeli encode için CRF yerine uygun bitrate veya parametreleri ata
+    if gpu_codec:
+        # GPU codec'lerinde CRF her zaman doğrudan desteklenmeyebilir, onun yerine qp veya global bitrate kullanırız
+        if gpu_codec == "h264_nvenc":
+            settings["ffmpeg_params"].extend(["-cq", profile["crf"], "-preset", "p4", "-rc", "constqp"])
+        elif gpu_codec == "h264_videotoolbox":
+            # macOS için q:v parametresi
+            settings["ffmpeg_params"].extend(["-q:v", str(100 - int(profile["crf"]) * 3)])
+        else:
+            settings["ffmpeg_params"].extend(["-crf", profile["crf"]])
+    else:
+        settings["ffmpeg_params"].extend(["-crf", profile["crf"]])
 
     # Uzun videolarda (3dk+) encode süresini kontrol altına al
     if total_duration >= 180 and quality_level != "high":
@@ -948,7 +982,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         final_video.write_videofile(
             output_filename,
             fps=render_settings["fps"],
-            codec="libx264",
+            codec=render_settings["codec"],
             audio_codec="aac",
             preset=render_settings["preset"],
             threads=render_settings["threads"],
