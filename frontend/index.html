@@ -45,8 +45,8 @@
                         <span data-i18n="nav_assets">Assets</span>
                     </a>
                     <a href="#" class="nav-item" id="nav-api-keys-btn">
-                        <span class="material-symbols-rounded">key</span>
-                        <span>API Anahtarları</span>
+                        <span class="material-symbols-rounded">settings</span>
+                        <span>Ayarlar</span>
                     </a>
                 </nav>
             </div>
@@ -64,12 +64,12 @@
                 </div>
                 
                 <a href="#" class="nav-item" data-target="settings-view" style="margin-top: 1rem;">
-                    <span class="material-symbols-rounded">settings</span>
-                    <span data-i18n="nav_settings">Settings</span>
+                    <span class="material-symbols-rounded">info</span>
+                    <span>Hakkında</span>
                 </a>
-                <a href="#" class="nav-item">
+                <a href="https://github.com/sdt-cloud/ai-video-bot" target="_blank" class="nav-item">
                     <span class="material-symbols-rounded">help</span>
-                    <span data-i18n="nav_help">Help</span>
+                    <span>Yardım & Destek</span>
                 </a>
             </div>
         </aside>
@@ -589,21 +589,77 @@
 
             <!-- Settings View -->
             <section id="settings-view" class="view-section">
-                <h1 class="page-title" data-i18n="nav_settings">Settings</h1>
-                <p class="page-subtitle" data-i18n="set_subtitle">Configure your AI models and preferences.</p>
-                <div class="settings-card">
-                    <div class="settings-group">
-                        <h3 data-i18n="set_api">API Keys</h3>
-                        <div class="option-group" style="margin-bottom: 1rem;">
-                            <label>Gemini API Key</label>
-                            <input type="password" placeholder="AIza..." disabled>
-                            <span class="hint" data-i18n="set_hint">Configured in .env file</span>
+                <h1 class="page-title"><span class="accent">VideoGenius AI</span> Hakkında</h1>
+                <p class="page-subtitle">Açık Kaynaklı, Yerel Yapay Zeka Video Üretim İstasyonu v2.5</p>
+                
+                <div class="about-grid">
+                    <!-- AI Brains -->
+                    <div class="about-card animate-hover">
+                        <div class="about-card-header">
+                            <span class="material-symbols-rounded about-icon purple">psychology</span>
+                            <h3>Yapay Zeka Beyinleri</h3>
                         </div>
-                        <div class="option-group">
-                            <label>OpenAI API Key</label>
-                            <input type="password" placeholder="sk-..." disabled>
-                            <span class="hint" data-i18n="set_hint">Configured in .env file</span>
+                        <p>En son teknoloji metin, ses ve video yapay zeka modellerini tek bir merkezde birleştirir:</p>
+                        <ul class="about-list">
+                            <li><strong>Google Gemini 2.0:</strong> Ücretsiz, ultra-hızlı senaryo ve kapak tasarımı üretimi.</li>
+                            <li><strong>OpenAI GPT-4o:</strong> Üstün kaliteli script yazımı ve DALL-E 3 sinematik görselleri.</li>
+                            <li><strong>ElevenLabs & Edge-TTS:</strong> İnsan tonlamasında gerçekçi yapay zeka seslendirmeleri.</li>
+                            <li><strong>Stability, Luma & Runway:</strong> Statik sahneleri 3D kamerayla anime eden video jeneratörleri.</li>
+                        </ul>
+                    </div>
+
+                    <!-- GPU Acceleration -->
+                    <div class="about-card animate-hover">
+                        <div class="about-card-header">
+                            <span class="material-symbols-rounded about-icon cyan">speed</span>
+                            <h3>Donanım Hızlandırma</h3>
                         </div>
+                        <p>İşlemci ve ekran kartınızın tüm gücünden (GPU) eşzamanlı olarak yararlanır:</p>
+                        <ul class="about-list">
+                            <li><strong>NVIDIA NVENC H.264:</strong> GeForce ekran kartlarında ultra-hızlı donanım ivmeli video render.</li>
+                            <li><strong>macOS Videotoolbox:</strong> Apple Silicon çiplerine (M1/M2/M3) özel donanımsal H.264 işleme.</li>
+                            <li><strong>Akıllı Fallback Sistemi:</strong> Sürücü hatalarında çökme olmadan otomatik CPU moduna geçiş koruması.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Editing Talents -->
+                    <div class="about-card animate-hover">
+                        <div class="about-card-header">
+                            <span class="material-symbols-rounded about-icon orange">movie_filter</span>
+                            <h3>Kurgu & Efekt Yetenekleri</h3>
+                        </div>
+                        <p>Sosyal medya algoritmalarını domine etmeniz için geliştirilen profesyonel araçlar:</p>
+                        <ul class="about-list">
+                            <li><strong>Karaoke Altyazıları:</strong> MrBeast tarzı kelime vurgulu, dinamik animasyonlu altyazılar.</li>
+                            <li><strong>Auto-Ducking Müzik:</strong> Seslendirme başladığında arka plan müziğini otomatik kısmak.</li>
+                            <li><strong>Hook & Transition SFX:</strong> İzleyiciyi videoda tutan geçiş ve başlangıç ses efektleri.</li>
+                            <li><strong>Sinematik Renk Derecelendirme:</strong> Sıcak, soğuk, siberpunk tonlarında otomatik renk iyileştirmesi.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Open Source & Privacy -->
+                    <div class="about-card animate-hover">
+                        <div class="about-card-header">
+                            <span class="material-symbols-rounded about-icon green">shield</span>
+                            <h3>Açık Kaynak & Gizlilik</h3>
+                        </div>
+                        <p>Verileriniz ve API anahtarlarınız tamamen yerel bilgisayarınızda (local) kalır:</p>
+                        <ul class="about-list">
+                            <li><strong>Sıfır Bulut İletimi:</strong> API anahtarlarınız asla harici bir sunucuya veya üçüncü şahıslara gönderilmez.</li>
+                            <li><strong>Yerel Veritabanı:</strong> Tüm üretim istatistikleri ve projeleriniz yerel SQLite dosyasında saklanır.</li>
+                            <li><strong>%100 Şeffaflık:</strong> Tüm kod tabanını inceleyebilir, özelleştirebilir veya kendi sunucunuza kurabilirsiniz.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Footer / Credits -->
+                <div class="about-footer">
+                    <div class="developer-info">
+                        <span class="material-symbols-rounded">code</span>
+                        <span>Developed with ❤️ by <a href="https://github.com/sdt-cloud" target="_blank" class="dev-link">Sedat (sdt-cloud)</a></span>
+                    </div>
+                    <div class="project-links">
+                        <a href="https://github.com/sdt-cloud/ai-video-bot" target="_blank" class="about-btn"><i class="fa-brands fa-github"></i> GitHub Repository</a>
                     </div>
                 </div>
             </section>

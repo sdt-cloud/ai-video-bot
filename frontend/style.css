@@ -945,3 +945,156 @@ body:not(.light-theme) .refresh-btn:hover { background: rgba(255,255,255,0.1); }
 .btn-setup-bypass:hover {
     background: rgba(255, 255, 255, 0.1);
 }
+
+/* ==========================================================================
+   HAKKINDA (ABOUT) SEKME STİLLERİ
+   ========================================================================== */
+.about-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.about-card {
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.about-card:hover {
+    transform: translateY(-5px);
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+}
+
+.about-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.about-card-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.about-icon {
+    font-size: 2rem;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.about-icon.purple {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.1);
+}
+
+.about-icon.cyan {
+    color: #06b6d4;
+    background: rgba(6, 182, 212, 0.1);
+}
+
+.about-icon.orange {
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.about-icon.green {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.about-card p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+}
+
+.about-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.about-list li {
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    position: relative;
+    padding-left: 20px;
+    line-height: 1.5;
+}
+
+.about-list li::before {
+    content: "✦";
+    position: absolute;
+    left: 0;
+    color: #6366f1;
+    font-size: 0.8rem;
+}
+
+.about-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    margin-top: 3rem;
+}
+
+.developer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+.dev-link {
+    color: #6366f1;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.dev-link:hover {
+    color: #818cf8;
+    text-decoration: underline;
+}
+
+.about-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f1f5f9;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.about-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
