@@ -298,20 +298,49 @@ RENDER_QUALITY_PROFILES = {
 }
 
 def check_gpu_support():
-    """Sistemde hangi donanım ivmeli video encoder'ın desteklendiğini hızlıca tespit eder."""
+    """Sistemde hangi donanım ivmeli video encoder'ın desteklendiğini ve aktif olarak çalışabildiğini doğrular."""
     import subprocess
+    
+    # MoviePy'nin sistemdeki donanım ivmeli FFmpeg binary'sini kullanmasını garanti edelim
+    os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
+    
     try:
         # ffmpeg'in yardımcı codec listesini soralım
         res = subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=3)
         encoders = res.stdout
+        
+        # Sadece listede var olması yetmez, aktif çalışabilirliğini test edelim (lavfi null render testi)
         if "h264_nvenc" in encoders:
-            return "h264_nvenc"  # NVIDIA GPU
-        elif "h264_videotoolbox" in encoders:
-            return "h264_videotoolbox"  # Apple Silicon / macOS
-        elif "h264_qsv" in encoders:
-            return "h264_qsv"  # Intel Quick Sync
-        elif "h264_vaapi" in encoders:
-            return "h264_vaapi"  # Generic Linux GPU
+            test = subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_nvenc", "-f", "null", "-"],
+                capture_output=True, timeout=2
+            )
+            if test.returncode == 0:
+                return "h264_nvenc"
+                
+        if "h264_videotoolbox" in encoders:
+            test = subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_videotoolbox", "-f", "null", "-"],
+                capture_output=True, timeout=2
+            )
+            if test.returncode == 0:
+                return "h264_videotoolbox"
+                
+        if "h264_qsv" in encoders:
+            test = subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_qsv", "-f", "null", "-"],
+                capture_output=True, timeout=2
+            )
+            if test.returncode == 0:
+                return "h264_qsv"
+                
+        if "h264_vaapi" in encoders:
+            test = subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_vaapi", "-f", "null", "-"],
+                capture_output=True, timeout=2
+            )
+            if test.returncode == 0:
+                return "h264_vaapi"
     except Exception:
         pass
     return None
