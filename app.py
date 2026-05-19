@@ -42,7 +42,7 @@ class VideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.5
+    subtitle_delay: Optional[float] = 0.75
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -63,7 +63,7 @@ class BulkVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.5
+    subtitle_delay: Optional[float] = 0.75
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -318,7 +318,7 @@ async def process_video(task):
             output_video_path, 
             narrations=narrations, 
             subtitle_style=subtitle_style, 
-            subtitle_delay=task.get("subtitle_delay", 0.5),
+            subtitle_delay=task.get("subtitle_delay", 0.75),
             video_mode=video_mode,
             watermark_enabled=watermark_enabled,
             transition_style=transition_style,
@@ -414,7 +414,7 @@ class MultiLangVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.5
+    subtitle_delay: Optional[float] = 0.75
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False

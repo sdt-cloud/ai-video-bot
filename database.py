@@ -50,7 +50,7 @@ def init_db():
                 image_ai TEXT,
                 custom_script TEXT,
                 subtitle_style TEXT DEFAULT 'tiktok',
-                subtitle_delay REAL DEFAULT 0.5,
+                subtitle_delay REAL DEFAULT 0.75,
                 status TEXT DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
                 video_mode TEXT DEFAULT 'slideshow',
@@ -77,7 +77,7 @@ def init_db():
             pass
 
         try:
-            cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_delay REAL DEFAULT 0.5")
+            cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_delay REAL DEFAULT 0.75")
         except sqlite3.OperationalError:
             pass
             
@@ -150,7 +150,7 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                    subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek",
                    custom_script=None, sentence_pause=0.0,
                    watermark_enabled=False, transition_style="none",
-                   bgm_enabled=False, bgm_tone="auto", subtitle_delay=0.5,
+                   bgm_enabled=False, bgm_tone="auto", subtitle_delay=0.75,
                    quality_level="medium", aspect_ratio="9:16", animation_provider="none",
                    color_grade_style="auto_enhance"):
     with get_db() as conn:
