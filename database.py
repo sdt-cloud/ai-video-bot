@@ -242,18 +242,22 @@ def get_stats():
         """)
         
         row = cursor.fetchone()
-        total, pending, processing, completed, failed = row
+        total = row[0] or 0
+        pending = row[1] or 0
+        processing = row[2] or 0
+        completed = row[3] or 0
+        failed = row[4] or 0
         
         success_rate = 0
         if (completed + failed) > 0:
             success_rate = int((completed / (completed + failed)) * 100)
             
         return {
-            "total": total or 0,
-            "pending": pending or 0,
-            "processing": processing or 0,
-            "completed": completed or 0,
-            "failed": failed or 0,
+            "total": total,
+            "pending": pending,
+            "processing": processing,
+            "completed": completed,
+            "failed": failed,
             "success_rate": success_rate
         }
 
