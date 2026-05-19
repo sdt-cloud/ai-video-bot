@@ -58,36 +58,52 @@ def get_session():
     return _session
 
 def generate_image_openai(prompt, output_filename, quality="standard"):
+    import base64
     from openai import OpenAI
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     
-    quality_label = "HD" if quality == "hd" else "Standard"
-    print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: DALL-E 3, Kalite: {quality_label})")
+    # DALL-E 3 → gpt-image-1 migrasyonu (DALL-E 3 emekli: 12 Mayıs 2026)
+    # gpt-image-1 kalite seçenekleri: "low", "medium", "high"
+    quality_map = {"hd": "high", "standard": "medium"}
+    mapped_quality = quality_map.get(quality, "medium")
+    quality_label = mapped_quality.upper()
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: GPT Image 1, Kalite: {quality_label})")
     try:
         response = client.images.generate(
-            model="dall-e-3",
+            model="gpt-image-1",
             prompt=prompt,
-            size="1024x1792", # DALL-E 3 desteklenen en yakın portre çözünürlüğü
-            quality=quality,
+            size="1024x1536",  # gpt-image-1 desteklenen portre çözünürlüğü
+            quality=mapped_quality,
             n=1,
         )
-        image_url = response.data[0].url
         
-        # Resmi URL'den indirip kaydetme - session kullan
-        session = get_session()
-        img_response = session.get(image_url, stream=True, timeout=30)
-        if img_response.status_code == 200:
+        # GPT Image modelleri base64 döner (URL değil!)
+        img_data = response.data[0]
+        if hasattr(img_data, 'b64_json') and img_data.b64_json:
+            img_bytes = base64.b64decode(img_data.b64_json)
             with open(output_filename, 'wb') as f:
-                for chunk in img_response.iter_content(1024):
-                    f.write(chunk)
-            print(f"[+] Görsel kaydedildi: {output_filename}")
+                f.write(img_bytes)
+            print(f"[+] Görsel kaydedildi: {output_filename} ({len(img_bytes)} bytes)")
             return True
+        elif hasattr(img_data, 'url') and img_data.url:
+            # Eski API uyumluluğu: URL döndürülürse indir
+            session = get_session()
+            img_response = session.get(img_data.url, stream=True, timeout=30)
+            if img_response.status_code == 200:
+                with open(output_filename, 'wb') as f:
+                    for chunk in img_response.iter_content(1024):
+                        f.write(chunk)
+                print(f"[+] Görsel kaydedildi: {output_filename}")
+                return True
+            else:
+                print(f"[-] Görsel indirilemedi, HTTP {img_response.status_code}")
+                return False
         else:
-            print(f"[-] Görsel indirilemedi, HTTP {img_response.status_code}")
+            print(f"[-] GPT Image beklenmeyen yanıt formatı")
             return False
             
     except Exception as e:
-        print(f"[-] DALL-E Görseli üretilirken hata oluştu: {e}")
+        print(f"[-] GPT Image görseli üretilirken hata oluştu: {e}")
         # Fallback: Pollinations → HuggingFace zinciri
         print(f"[+] Fallback: Pollinations ile deneniyor...")
         if generate_image_pollinations(prompt, output_filename):
@@ -572,7 +588,7 @@ def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "
 
 
 def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "") -> bool:
-    """Otomatik stok görsel: Pexels → Pixabay → Unsplash → Pollinations → DALL-E"""
+    """Otomatik stok görsel: Pexels → Pixabay → Unsplash → GPT Image → Pollinations → HuggingFace"""
     print(f"[+] Stock-Auto modu başlatıldı: '{output_filename}'")
 
     # 1. Pexels
@@ -587,13 +603,13 @@ def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "") -
     if fetch_stock_image_unsplash(prompt, output_filename, topic):
         return True
 
-    # 4. DALL-E 3
-    print("[!] Tüm stok kaynaklar başarısız. DALL-E 3 deneniyor...")
+    # 4. GPT Image 1 (eski DALL-E 3'ün yerini aldı)
+    print("[!] Tüm stok kaynaklar başarısız. GPT Image 1 deneniyor...")
     if generate_image_openai(prompt, output_filename):
         return True
 
     # 5. Pollinations
-    print("[!] DALL-E başarısız. Pollinations deneniyor...")
+    print("[!] GPT Image başarısız. Pollinations deneniyor...")
     if generate_image_pollinations(prompt, output_filename):
         return True
 
@@ -625,10 +641,10 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str
         return fetch_stock_image_auto(prompt, output_filename, topic)
 
     # AI görsel sağlayıcıları
-    elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd":
-        # Hook ve CTA sahneleri için HD kalite
+    elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd" or provider_lower == "gpt-image-hd":
+        # Hook ve CTA sahneleri için HD kalite (gpt-image-1 quality="high")
         return generate_image_openai(prompt, output_filename, quality="hd")
-    elif "dall-e" in provider_lower or "openai" in provider_lower:
+    elif "dall-e" in provider_lower or "openai" in provider_lower or "gpt-image" in provider_lower:
         return generate_image_openai(prompt, output_filename)
     elif "flux" in provider_lower:
         model = "black-forest-labs/flux-schnell"

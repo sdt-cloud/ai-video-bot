@@ -55,7 +55,7 @@ class PerformanceOptimizer:
             # 3 deneme de başarısızsa (veya görsel kalitesizse) AI ile zorla (Fallback)
             self.logger.warning(f"[*] 3 deneme başarısız. AI ile zorla üretiliyor: {output_path}")
             try:
-                # "DALL-E" veya "OpenAI" diyerek garanti bir model çağırıyoruz
+                # "OpenAI" diyerek GPT Image 1 modelini çağırıyoruz (garanti fallback)
                 return generate_image(prompt, output_path, "OpenAI", topic=topic)
             except Exception as e:
                 self.logger.error(f"Zorunlu AI fallback hatası: {e}")

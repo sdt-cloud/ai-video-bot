@@ -23,7 +23,7 @@ from image_generator import generate_image
 from video_maker import create_video
 from clip_fetcher import fetch_clip_auto
 from image_animator import animate_image
-from nedir_integration import NedirIntegration
+
 from queue_manager import start_queue_manager, get_queue_status
 from performance_optimizer import parallel_process_images, get_optimized_settings
 from error_handler import error_recovery, video_logger
@@ -192,7 +192,7 @@ async def process_video(task):
                 # İlk sahne (Hook) ve son sahne için Premium AI (HD kalite)
                 if (i == 0 or i == len(scenes) - 1) and image_ai_provider not in premium_models:
                     providers.append("OpenAI-HD")
-                    log_info = "İlk sahne DALL-E 3 HD ile yükseltildi." if i == 0 else "Son sahne DALL-E 3 HD ile yükseltildi."
+                    log_info = "İlk sahne GPT Image 1 HD ile yükseltildi." if i == 0 else "Son sahne GPT Image 1 HD ile yükseltildi."
                     step_name = "premium_hook" if i == 0 else "premium_outro"
                     video_logger.log_video_production_step(step_name, str(task_id), {"info": log_info})
                 else:
@@ -423,165 +423,7 @@ async def add_multi_lang_video(req: MultiLangVideoRequest):
     })
     return {"status": "success", "topic": req.topic, "tasks": task_ids}
 
-@app.get("/api/nedir/fetch")
-async def fetch_nedir_contents(post_type: str = "posts", limit: int = 20):
-    import requests
-    import re
-    import html
-    import random
-    import math
-    
-    wp_api_base = os.environ.get("NEDIR_WP_API_URL", "http://localhost/wp-json/wp/v2")
 
-    # Bu secenekler sitelerde cogunlukla post type degil kategori slug olarak tanimlidir.
-    category_slug_aliases = {
-        "kavram": "kavram",
-        "kisaltma": "kisaltma",
-        "kisi": "kisi",
-        "terim": "terim",
-        "gunluk-dil": "gunluk-dil",
-        "yeni-kavram": "yeni-kavramlar",
-        "yeni-kavramlar": "yeni-kavramlar",
-    }
-    
-    # Daha önce kuyruğa alınmış / tamamlanmış başlıkları al
-    existing_topics = database.get_existing_topics()
-    
-    try:
-        selected = post_type.strip().lower()
-        endpoint = selected if selected else "posts"
-        query_parts = ["per_page=1"]
-
-        if selected in category_slug_aliases:
-            category_slug = category_slug_aliases[selected]
-            cat_url = f"{wp_api_base}/categories?slug={category_slug}"
-            cat_resp = requests.get(cat_url, timeout=10)
-            if cat_resp.status_code != 200:
-                return {"status": "error", "message": f"Kategori bilgisi alinamadi: {cat_resp.status_code}"}
-
-            cat_data = cat_resp.json()
-            if not cat_data:
-                return {"status": "error", "message": f"'{category_slug}' kategorisi bulunamadi."}
-
-            category_id = cat_data[0].get("id")
-            endpoint = "posts"
-            query_parts.append(f"categories={category_id}")
-
-        # Once toplam post sayisini ogren (header bilgisi icin per_page=1)
-        head_url = f"{wp_api_base}/{endpoint}?{'&'.join(query_parts)}"
-        head_resp = requests.get(head_url, timeout=10)
-        if head_resp.status_code != 200:
-            return {"status": "error", "message": f"WordPress API Hatası: {head_resp.status_code}"}
-        
-        total_posts = int(head_resp.headers.get("X-WP-Total", 0))
-        
-        if total_posts == 0:
-            return {"status": "error", "message": f"'{post_type}' tipinde içerik bulunamadı. show_in_rest ayarını kontrol edin."}
-        
-        # Sayfa sayisini asil limit degerine gore hesapla
-        total_pages = math.ceil(total_posts / limit)
-        
-        # Rastgele bir sayfa seç
-        random_page = random.randint(1, max(1, total_pages))
-        
-        fetch_query = [f"per_page={limit}", f"page={random_page}"]
-        if len(query_parts) > 1:
-            fetch_query.extend(query_parts[1:])
-
-        fetch_url = f"{wp_api_base}/{endpoint}?{'&'.join(fetch_query)}"
-        response = requests.get(fetch_url, timeout=10)
-        
-        # Sayfa aşımı olursa son sayfayı dene
-        if response.status_code == 400:
-            random_page = 1
-            fetch_query = [f"per_page={limit}", "page=1"]
-            if len(query_parts) > 1:
-                fetch_query.extend(query_parts[1:])
-            fetch_url = f"{wp_api_base}/{endpoint}?{'&'.join(fetch_query)}"
-            response = requests.get(fetch_url, timeout=10)
-        
-        if response.status_code != 200:
-            return {"status": "error", "message": f"WordPress API Hatası: {response.status_code}"}
-            
-        posts = response.json()
-        results = []
-        skipped = 0
-        for post in posts:
-            title = post.get("title", {}).get("rendered", "Başlıksız")
-            excerpt = post.get("excerpt", {}).get("rendered", "")
-            
-            clean_excerpt = re.sub(r'<[^>]+>', '', excerpt).strip()
-            clean_excerpt = html.unescape(clean_excerpt)
-            title = html.unescape(title)
-            
-            # Daha önce yapılmışsa atla
-            if title.lower() in existing_topics:
-                skipped += 1
-                continue
-            
-            if not clean_excerpt:
-                content = post.get("content", {}).get("rendered", "")
-                clean_excerpt = html.unescape(re.sub(r'<[^>]+>', '', content).strip())[:250] + "..."
-                
-            results.append({
-                "id": post.get("id"),
-                "title": title,
-                "excerpt": clean_excerpt
-            })
-            
-        return {
-            "status": "success",
-            "data": results,
-            "meta": {
-                "total_posts": total_posts,
-                "page": random_page,
-                "total_pages": total_pages,
-                "skipped_already_done": skipped
-            }
-        }
-    except Exception as e:
-        return {"status": "error", "message": f"Veri çekilirken bağlantı hatası: {str(e)}"}
-
-@app.get("/api/nedir/concepts")
-async def get_nedir_concepts(category: Optional[str] = None, limit: int = 20):
-    """Nedir.me'den kavramları çeker"""
-    try:
-        integration = NedirIntegration()
-        concepts = integration.get_concepts(category=category, limit=limit)
-        return {
-            "status": "success",
-            "data": concepts,
-            "count": len(concepts)
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-@app.post("/api/nedir/bulk-videos")
-async def create_bulk_videos_from_nedir(category: Optional[str] = None, max_concepts: int = 10):
-    """Nedir.me kavramlarından otomatik video konuları oluşturur"""
-    try:
-        integration = NedirIntegration()
-        video_topics = integration.batch_process_for_videos(max_concepts=max_concepts)
-        
-        if not video_topics:
-            return {"status": "error", "message": "Video konuları oluşturulamadı"}
-        
-        # Veritabanına ekle
-        task_ids = []
-        for topic in video_topics:
-            task_id = database.add_video_task(topic, category, "Otomatik", 60, "Türkçe", "Gemini", "Edge-TTS", "Pollinations", "tiktok", "slideshow", "erkek", None, 1.0, False, "none", False, "auto", 0.5)
-            task_ids.append(task_id)
-        
-        # NOT: Artık kuyruk yöneticisi otomatik işleyecek
-        # asyncio.create_task(process_video(task)) kaldırıldı
-        
-        return {
-            "status": "success", 
-            "message": f"{len(task_ids)} video kuyruğa eklendi",
-            "task_ids": task_ids
-        }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 @app.get("/api/stats")
 async def get_stats():

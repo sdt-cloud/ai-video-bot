@@ -812,16 +812,15 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             # Dinamik Karaoke Altyazı Ekleme
             if narrations and i < len(narrations) and subtitle_style != "none":
                 enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
-                narration_with_emojis = subtitle_enhancer.add_emojis(enhanced_narration)
                 try:
                     from moviepy import CompositeVideoClip
-                    dynamic_sub_clip = generate_karaoke_subtitle_clips(narration_with_emojis, slide_duration, temp_files, subtitle_style, subtitle_delay, aspect_ratio)
+                    dynamic_sub_clip = generate_karaoke_subtitle_clips(enhanced_narration, slide_duration, temp_files, subtitle_style, subtitle_delay, aspect_ratio)
                     if dynamic_sub_clip:
                         clip = CompositeVideoClip([clip, dynamic_sub_clip])
                     else:
                         # Fallback to static if dynamic fails
                         subtitle_img = f"assets/sub_{os.path.basename(img)}"
-                        burn_subtitle_on_image(processed_img, narration_with_emojis, subtitle_img, subtitle_style, aspect_ratio)
+                        burn_subtitle_on_image(processed_img, enhanced_narration, subtitle_img, subtitle_style, aspect_ratio)
                         clip = ImageClip(subtitle_img)
                         clip = apply_clip_duration(clip, slide_duration)
                         temp_files.append(subtitle_img)

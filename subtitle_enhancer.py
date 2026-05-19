@@ -8,24 +8,6 @@ from typing import List, Dict
 class SubtitleEnhancer:
     def __init__(self):
         self.turkish_vowels = "aeıioöü"
-        self.emoji_dict = {
-            "para": "💰", "kazanç": "💸", "zengin": "🤑", "milyoner": "🤑",
-            "zaman": "⏳", "saat": "⏰", "dakika": "⏱️",
-            "şok": "😱", "inanılmaz": "🤯", "sır": "🤫", "gizli": "🕵️",
-            "dikkat": "⚠️", "önemli": "❗", "uyarı": "🛑",
-            "dünya": "🌍", "uzay": "🚀", "bilim": "🔬", "gezegen": "🪐",
-            "aşk": "❤️", "sevgi": "😍", "kalp": "💖",
-            "ateş": "🔥", "sıcak": "🥵", "güneş": "☀️",
-            "soğuk": "❄️", "buz": "🧊",
-            "başarı": "🏆", "hedef": "🎯", "zafer": "🥇",
-            "beyin": "🧠", "zeka": "💡", "fikir": "💡", "akıllı": "🧠",
-            "göz": "👀", "bak": "👁️", "gör": "👁️",
-            "mutlu": "😊", "komik": "😂", "üzgün": "😢",
-            "korkunç": "👻", "karanlık": "🌑", "gece": "🌙",
-            "yemek": "🍔", "su": "💧", "kahve": "☕",
-            "ölüm": "💀", "tehlike": "☢️",
-            "neden": "❓", "nasıl": "🤔"
-        }
     
     def enhance_text_for_speech(self, text: str) -> str:
         """Metni seslendirmeye uygun hale getirir"""
@@ -40,17 +22,6 @@ class SubtitleEnhancer:
         
         return text
     
-    def add_emojis(self, text: str) -> str:
-        """Kelimelere uygun emojileri ekler"""
-        words = text.split()
-        result = []
-        for word in words:
-            clean_word = re.sub(r'[^\w\s]', '', word).lower()
-            if clean_word in self.emoji_dict:
-                # Emojiyi kelimeye bitiştir (beraber highlight olmaları için)
-                word = f"{word} {self.emoji_dict[clean_word]}"
-            result.append(word)
-        return " ".join(result)
     
     def fix_punctuation(self, text: str) -> str:
         """Noktalama işaretlerini düzeltir"""
@@ -122,16 +93,21 @@ class SubtitleEnhancer:
         
         return enhanced_scenes
     
-    def generate_subtitle_timing(self, text: str, duration: float = 30.0, speed_ratio: float = 0.80, delay: float = 0.0) -> List[Dict]:
+    def generate_subtitle_timing(self, text: str, duration: float = 30.0, speed_ratio: float = 0.92, delay: float = 0.0) -> List[Dict]:
         """Altyazı zamanlaması oluşturur. Hız ve gecikme ayarlıdır.
         
+        speed_ratio: Altyazıların sahne süresinin yüzde kaçını kaplayacağı.
+          0.92 = altyazılar sürenin %92'sinde biter, %8 son sessizlik.
+          Bu değer TTS motorlarının (Edge-TTS, ElevenLabs) konuşma
+          sonundaki doğal sessizliğine karşılık gelir.
+        
         Noktalama duraklamaları:
-          - Virgül (,)      → +0.08s  (kısa nefes)
-          - Nokta (.)       → +0.14s  (cümle sonu)
-          - Ünlem/Soru (!?) → +0.16s  (vurgu + nefes)
-          - Üç nokta (...)  → +0.20s  (dramatik duraklama)
-        Bu değerler TTS motorlarının (Edge-TTS, ElevenLabs) doğal
-        beklemesine yakın tutularak karaoke senkronizasyonunu korur.
+          - Virgül (,)      → +0.12s  (kısa nefes)
+          - Nokta (.)       → +0.20s  (cümle sonu)
+          - Ünlem/Soru (!?) → +0.22s  (vurgu + nefes)
+          - Üç nokta (...)  → +0.28s  (dramatik duraklama)
+        Bu değerler TTS motorlarının doğal beklemesine yakın
+        tutularak karaoke senkronizasyonunu korur.
         """
         words = text.split()
         total_words = len(words)
@@ -140,10 +116,10 @@ class SubtitleEnhancer:
             return []
         
         # Noktalama duraklamaları (saniye cinsinden)
-        PAUSE_COMMA     = 0.08   # virgül → kısa nefes
-        PAUSE_PERIOD    = 0.14   # nokta → cümle sonu
-        PAUSE_EXCLAIM   = 0.16   # ünlem / soru işareti
-        PAUSE_ELLIPSIS  = 0.20   # üç nokta → dramatik duraklama
+        PAUSE_COMMA     = 0.12   # virgül → kısa nefes
+        PAUSE_PERIOD    = 0.20   # nokta → cümle sonu
+        PAUSE_EXCLAIM   = 0.22   # ünlem / soru işareti
+        PAUSE_ELLIPSIS  = 0.28   # üç nokta → dramatik duraklama
 
         def _punctuation_pause(word: str) -> float:
             """Kelimenin sonundaki noktalamaya göre ek süre döner."""
