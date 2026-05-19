@@ -970,8 +970,8 @@ body:not(.light-theme) .refresh-btn:hover { background: rgba(255,255,255,0.1); }
 .about-card:hover {
     transform: translateY(-5px);
     background: rgba(30, 41, 59, 0.6);
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+    border-color: rgba(99, 102, 241, 0.45);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4), 0 0 25px 2px rgba(99, 102, 241, 0.2);
 }
 
 .about-card-header {
@@ -1037,6 +1037,12 @@ body:not(.light-theme) .refresh-btn:hover { background: rgba(255,255,255,0.1); }
     position: relative;
     padding-left: 20px;
     line-height: 1.5;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.about-list li:hover {
+    color: #f8fafc;
+    transform: translateX(4px);
 }
 
 .about-list li::before {

@@ -351,6 +351,10 @@ def get_render_settings(video_mode, total_duration, quality_level="medium"):
     profile = RENDER_QUALITY_PROFILES.get(quality_level, RENDER_QUALITY_PROFILES["medium"])
 
     gpu_codec = check_gpu_support()
+    if gpu_codec:
+        print(f"🔥 [GPU HIZLANDIRICI] Donanım ivmeli ultra hızlı video kurgu aktif! (Kullanılan Encoder: {gpu_codec})")
+    else:
+        print("💻 [CPU RENDER] Donanım ivmesi algılanamadı veya uyumsuz. İşlemci (libx264) moduna geçiliyor.")
     
     settings = {
         "fps": profile["fps"],
