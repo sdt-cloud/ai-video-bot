@@ -19,18 +19,103 @@
 
 /* Light Theme Variables */
 body.light-theme {
-    --bg-color: #f3f4f6;
+    --bg-color: #f8fafc;
     --sidebar-bg: #ffffff;
     --card-bg: #ffffff;
-    --card-hover: #f9fafb;
-    --text-primary: #111827;
-    --text-secondary: #6b7280;
-    --accent-color: #4f46e5;
-    --accent-hover: #4338ca;
-    --border-color: #e5e7eb;
-    --input-bg: #f9fafb;
-    --table-header-bg: rgba(0, 0, 0, 0.05);
-    --hover-bg: rgba(0, 0, 0, 0.05);
+    --card-hover: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --accent-color: #6366f1;
+    --accent-hover: #4f46e5;
+    --border-color: #e2e8f0;
+    --input-bg: #f8fafc;
+    --table-header-bg: rgba(0, 0, 0, 0.02);
+    --hover-bg: rgba(0, 0, 0, 0.03);
+}
+
+/* Light Theme Component Overrides (Göz Yormayan Soft Arayüz) */
+body.light-theme .create-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.light-theme .topic-input {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-theme .topic-input::placeholder {
+    color: #94a3b8 !important;
+}
+
+body.light-theme .topic-input:focus {
+    background: #ffffff !important;
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+}
+
+body.light-theme .custom-script-area {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .about-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.light-theme .about-card:hover {
+    background: #ffffff !important;
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.08) !important;
+}
+
+body.light-theme .about-icon {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+body.light-theme .about-list li {
+    color: #334155 !important;
+}
+
+body.light-theme .about-list li:hover {
+    color: #0f172a !important;
+}
+
+body.light-theme .about-footer {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .stat-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.light-theme .sidebar {
+    border-right: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .section-block {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    padding: 2.25rem !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02) !important;
+}
+
+body.light-theme .nav-item.active {
+    background-color: var(--accent-color) !important;
+    color: #ffffff !important;
+}
+
+body.light-theme .lang-btn.active {
+    background-color: var(--accent-color) !important;
+    color: #ffffff !important;
 }
 
 * {
