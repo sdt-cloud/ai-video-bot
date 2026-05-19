@@ -238,18 +238,18 @@ def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="
 RENDER_QUALITY_PROFILES = {
     "low": {
         "fps": 24,
-        "preset": "fast",
-        "crf": "26",
+        "preset": "ultrafast",  # Maksimum hızda test çıktısı
+        "crf": "28",
     },
     "medium": {
         "fps": 30,
-        "preset": "medium",
-        "crf": "20",
+        "preset": "fast",       # Dengeli, hızlı render
+        "crf": "22",
     },
     "high": {
         "fps": 30,
-        "preset": "slow",
-        "crf": "18",  # 16→18: platformlar zaten re-encode ediyor, dosya boyutunu optimize eder
+        "preset": "medium",     # slow yerine medium: gözle görülür kayıp olmadan %40 daha hızlı
+        "crf": "18",            # Profesyonel ultra kalite
     },
 }
 

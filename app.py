@@ -1,7 +1,7 @@
 import asyncio
 import os
 import tempfile
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
@@ -504,7 +504,7 @@ async def shutdown_event():
     print("🛑 Kuyruk yöneticisi durduruldu.")
 
 @app.post("/api/test-voice")
-async def test_voice_api(request):
+async def test_voice_api(request: Request):
     """Ses test API endpoint'i"""
     try:
         data = await request.json()

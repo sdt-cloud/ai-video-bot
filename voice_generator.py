@@ -251,13 +251,13 @@ async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", vo
         return False
         
     temp_files = []
+    clips = []
     success = True
     
     try:
         from moviepy import AudioFileClip, CompositeAudioClip
         import uuid
         
-        clips = []
         current_time = 0.0
         
         # Hedef süre oranını parçalara dağıtmak yerine otomatik hızlandırma kullanmıyoruz
@@ -304,12 +304,6 @@ async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", vo
             print("[i] Ses klipsleri birleştiriliyor...")
             final_audio = CompositeAudioClip(clips)
             final_audio.write_audiofile(output_filename, fps=44100, logger=None)
-            
-            for c in clips:
-                try:
-                    c.close()
-                except:
-                    pass
             print(f"[+] Özel boşluklu ses başarıyla oluşturuldu: {output_filename}")
             return True
             
@@ -318,6 +312,11 @@ async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", vo
         print(f"[-] Cümle arası boşluk eklenirken beklenmedik hata: {e}")
         return False
     finally:
+        for c in clips:
+            try:
+                c.close()
+            except:
+                pass
         for f in temp_files:
             if os.path.exists(f):
                 try:
