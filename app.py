@@ -27,12 +27,8 @@ from image_animator import animate_image
 from queue_manager import start_queue_manager, get_queue_status
 from performance_optimizer import parallel_process_images, get_optimized_settings
 from error_handler import error_recovery, video_logger
-from custom_social_api import custom_social_router
 
 app = FastAPI()
-
-# Sosyal medya yönetimi route'larını ekle
-app.include_router(custom_social_router)
 
 class VideoRequest(BaseModel):
     topic: str
@@ -433,16 +429,6 @@ async def get_stats():
 async def get_completed_videos():
     """Get completed videos for social media posting"""
     return database.get_tasks_by_status("completed")
-
-@app.get("/social")
-async def social_dashboard():
-    """Serve the new social media dashboard HTML"""
-    return FileResponse("custom_social_dashboard.html")
-
-@app.get("/custom-social")
-async def custom_social_dashboard():
-    """Alias for the new social media dashboard HTML"""
-    return FileResponse("custom_social_dashboard.html")
 
 @app.get("/favicon.ico")
 async def favicon():
