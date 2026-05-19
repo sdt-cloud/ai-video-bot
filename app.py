@@ -194,21 +194,38 @@ async def process_video(task):
                 else:
                     providers.append(image_ai_provider)
         
-        # Önce video kliplerini indir
-        for i, media_type in enumerate(media_types):
-            if media_type == "video_clip" and clip_queries[i]:
+        # Önce video kliplerini paralel olarak indir (G/Ç Paralelleştirmesi)
+        clip_indices = [i for i, mt in enumerate(media_types) if mt == "video_clip" and clip_queries[i]]
+        
+        if clip_indices:
+            print(f"[{task_id}] Toplam {len(clip_indices)} video klip paralel olarak indiriliyor...")
+            
+            def download_single_clip(i):
                 print(f"[{task_id}] Sahne {i}: Video klip indiriliyor... ('{clip_queries[i]}' konu: '{topic}')")
                 clip_success = fetch_clip_auto(clip_queries[i], output_paths[i], topic=topic)
                 if clip_success:
                     video_logger.log_video_production_step("clip_fetched", str(task_id), {
                         "scene": i, "query": clip_queries[i]
                     })
+                    return i, True
                 else:
-                    # Klip bulunamadı → normal görsel olarak devam et
-                    print(f"[{task_id}] Sahne {i}: Klip bulunamadı, statik görsel kullanılacak.")
-                    media_types[i] = "image"
-                    output_paths[i] = f"assets/scene_{task_id}_{i}.jpg"
-                    temp_files.append(output_paths[i])
+                    return i, False
+            
+            import concurrent.futures
+            loop = asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(clip_indices))) as executor:
+                clip_results = await loop.run_in_executor(
+                    None,
+                    lambda: list(executor.map(download_single_clip, clip_indices))
+                )
+            
+            # Başarısız klipleri statik görsele dönüştür
+            for idx, success in clip_results:
+                if not success:
+                    print(f"[{task_id}] Sahne {idx}: Klip bulunamadı, statik görsel kullanılacak.")
+                    media_types[idx] = "image"
+                    output_paths[idx] = f"assets/scene_{task_id}_{idx}.jpg"
+                    temp_files.append(output_paths[idx])
         
         # Statik görselleri paralel olarak üret (sadece image tipindekiler)
         image_indices = [i for i, mt in enumerate(media_types) if mt == "image"]
@@ -233,19 +250,36 @@ async def process_video(task):
                     real_idx = image_indices[idx]
                     output_paths[real_idx] = None  # Başarısız
         
-        # Animasyon provider aktifse, görselleri videoya dönüştür
+        # Animasyon provider aktifse, görselleri paralel olarak videoya dönüştür
         if animation_provider and animation_provider != "none":
-            for i, media_type in enumerate(media_types):
-                if media_type == "image" and output_paths[i] and os.path.exists(output_paths[i]):
+            anim_indices = [i for i, mt in enumerate(media_types) if mt == "image" and output_paths[i] and os.path.exists(output_paths[i])]
+            
+            if anim_indices:
+                print(f"[{task_id}] Toplam {len(anim_indices)} görsel paralel olarak anime ediliyor ({animation_provider})...")
+                
+                def animate_single_image(i):
                     anim_output = f"assets/anim_{task_id}_{i}.mp4"
                     print(f"[{task_id}] Sahne {i}: Animasyon uygulanıyor ({animation_provider})...")
                     anim_success = animate_image(output_paths[i], anim_output, animation_provider)
                     if anim_success:
-                        temp_files.append(anim_output)
-                        output_paths[i] = anim_output
-                        media_types[i] = "animated"  # video_maker'a bildir
+                        return i, anim_output
+                    return i, None
+                
+                import concurrent.futures
+                loop = asyncio.get_running_loop()
+                with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(anim_indices))) as executor:
+                    anim_results = await loop.run_in_executor(
+                        None,
+                        lambda: list(executor.map(animate_single_image, anim_indices))
+                    )
+                
+                for idx, anim_path in anim_results:
+                    if anim_path:
+                        temp_files.append(anim_path)
+                        output_paths[idx] = anim_path
+                        media_types[idx] = "animated"
                         video_logger.log_video_production_step("animated", str(task_id), {
-                            "scene": i, "provider": animation_provider
+                            "scene": idx, "provider": animation_provider
                         })
         
         # Başarılı medya dosyalarını filtrele
@@ -530,8 +564,15 @@ async def delete_videos(req: DeleteRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# Frontend Statik Dosyalarını Sun
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Frontend Statik Dosyalarını Sun (Önbellekleme Aktif)
+class CachedStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        # CSS, JS, resimler ve yazı tiplerini 7 gün boyunca önbelleğe al (Hız: 0ms)
+        response.headers["Cache-Control"] = "public, max-age=604800, must-revalidate"
+        return response
+
+app.mount("/static", CachedStaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
 async def serve_home():

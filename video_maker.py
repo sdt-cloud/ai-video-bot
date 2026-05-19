@@ -1198,6 +1198,10 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     os.remove(temp_file)
             except Exception:
                 pass
+        
+        # RAM temizliği ve bellek sızıntılarını önlemek için garbage collector tetiklendi
+        import gc
+        gc.collect()
 
 if __name__ == "__main__":
     test_imgs = ["test_image.jpg"]

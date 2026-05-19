@@ -33,6 +33,9 @@ def get_db():
 def init_db():
     with get_db() as conn:
         cursor = conn.cursor()
+        # Okuma/yazma çakışmalarını önlemek ve eşzamanlılığı artırmak için WAL modu aktif
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS videos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
