@@ -88,6 +88,8 @@ class VoiceSelector {
 
     async testVoice(voiceType) {
         const testText = "Bu bir test metnidir. Ses kalitesini kontrol etmek için kullanılır.";
+        const voiceAiSelect = document.getElementById('opt-voice-ai') || document.getElementById('bulk-voice-ai');
+        const voiceAi = voiceAiSelect ? voiceAiSelect.value : 'Edge-TTS';
         
         try {
             const response = await fetch('/api/test-voice', {
@@ -97,7 +99,8 @@ class VoiceSelector {
                 },
                 body: JSON.stringify({
                     text: testText,
-                    voice_type: voiceType
+                    voice_type: voiceType,
+                    voice_ai: voiceAi
                 })
             });
 

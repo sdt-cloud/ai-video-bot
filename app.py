@@ -617,14 +617,20 @@ async def test_voice_api(request: Request):
         data = await request.json()
         text = data.get("text", "Test metni")
         voice_type = data.get("voice_type", "erkek")
+        voice_ai = data.get("voice_ai", "Edge-TTS")
         
         # Geçici ses dosyası oluştur
         import tempfile
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_file:
             tmp_filename = tmp_file.name
             
-            # Ses üret
-            success = await generate_voice_async(text, tmp_filename, "ElevenLabs", voice_type)
+            # Ses üret (Eğer ElevenLabs seçilirse ve hata verirse Edge-TTS'e fallback yap)
+            print(f"[Ses Testi] Üretiliyor: {voice_ai} ({voice_type})")
+            success = await generate_voice_async(text, tmp_filename, voice_ai, voice_type)
+            
+            if not success and voice_ai == "ElevenLabs":
+                print("[⚠️ Ses Testi] ElevenLabs testi başarısız oldu (muhtemelen API anahtarı geçersiz veya limit doldu). Edge-TTS'e geçiliyor...")
+                success = await generate_voice_async(text, tmp_filename, "Edge-TTS", voice_type)
             
             if success and os.path.exists(tmp_filename):
                 # Dosyayı binary olarak geri döndür
