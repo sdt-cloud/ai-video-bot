@@ -42,7 +42,7 @@ class VideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.75
+    subtitle_delay: Optional[float] = 1.0
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -53,6 +53,7 @@ class VideoRequest(BaseModel):
     aspect_ratio: Optional[str] = "9:16"
     animation_provider: Optional[str] = "none"
     color_grade_style: Optional[str] = "auto_enhance"
+    light_leak_enabled: Optional[bool] = False
 
 class BulkVideoRequest(BaseModel):
     topics: List[str]
@@ -63,7 +64,7 @@ class BulkVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.75
+    subtitle_delay: Optional[float] = 1.0
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -73,6 +74,7 @@ class BulkVideoRequest(BaseModel):
     quality_level: Optional[str] = "medium"
     aspect_ratio: Optional[str] = "9:16"
     animation_provider: Optional[str] = "none"
+    light_leak_enabled: Optional[bool] = False
 
 async def process_video(task):
     task_id = task["id"]
@@ -310,6 +312,7 @@ async def process_video(task):
         transition_style = task.get("transition_style", "none")
         bgm_enabled = bool(task.get("bgm_enabled", False))
         bgm_tone = task.get("bgm_tone", "auto") or "auto"
+        light_leak_enabled = bool(task.get("light_leak_enabled", False))
         
         video_success = await error_recovery.retry_with_backoff(
             create_video,
@@ -318,7 +321,7 @@ async def process_video(task):
             output_video_path, 
             narrations=narrations, 
             subtitle_style=subtitle_style, 
-            subtitle_delay=task.get("subtitle_delay", 0.75),
+            subtitle_delay=task.get("subtitle_delay", 1.0),
             video_mode=video_mode,
             watermark_enabled=watermark_enabled,
             transition_style=transition_style,
@@ -329,6 +332,7 @@ async def process_video(task):
             color_grade_style=task.get("color_grade_style", "auto_enhance"),
             scene_pacings=scene_pacings,
             letterbox_enabled=bool(task.get("letterbox_enabled", False)),
+            light_leak_enabled=light_leak_enabled,
         )
         
         if video_success:
@@ -379,7 +383,7 @@ async def add_single_video(req: VideoRequest):
         req.bgm_enabled, req.bgm_tone,
         req.subtitle_delay,
         req.quality_level, req.aspect_ratio, req.animation_provider,
-        req.color_grade_style
+        req.color_grade_style, req.light_leak_enabled
     )
     video_logger.log_video_production_step("queued", str(task_id), {"topic": req.topic})
     return {"status": "success", "task_id": task_id}
@@ -397,7 +401,8 @@ async def add_bulk_videos(req: BulkVideoRequest):
                 req.watermark_enabled, req.transition_style,
                 req.bgm_enabled, req.bgm_tone,
                 req.subtitle_delay,
-                req.quality_level, req.aspect_ratio, req.animation_provider
+                req.quality_level, req.aspect_ratio, req.animation_provider,
+                "auto_enhance", req.light_leak_enabled
             )
             task_ids.append(task_id)
     
@@ -414,7 +419,7 @@ class MultiLangVideoRequest(BaseModel):
     voice_type: Optional[str] = "erkek"
     image_ai: Optional[str] = "Pollinations"
     subtitle_style: Optional[str] = "tiktok"
-    subtitle_delay: Optional[float] = 0.75
+    subtitle_delay: Optional[float] = 1.0
     video_mode: Optional[str] = "slideshow"
     sentence_pause: Optional[float] = 0.0
     watermark_enabled: Optional[bool] = False
@@ -424,13 +429,14 @@ class MultiLangVideoRequest(BaseModel):
     quality_level: Optional[str] = "medium"
     aspect_ratio: Optional[str] = "9:16"
     animation_provider: Optional[str] = "none"
+    light_leak_enabled: Optional[bool] = False
 
 
 @app.post("/api/videos/multi-lang")
 async def add_multi_lang_video(req: MultiLangVideoRequest):
     """Aynı konuyu birden fazla dilde kuyruğa ekler (TR/EN/ES)."""
     task_ids = []
-    lang_names = {"tr": "Türkçe", "en": "English", "es": "Español"}
+    lang_names = {"tr": "Türkçe", "en": "English", "es": "Espayıol"}
     for lang in req.languages:
         lang = lang.strip().lower()
         if lang not in ["tr", "en", "es"]:
@@ -444,7 +450,8 @@ async def add_multi_lang_video(req: MultiLangVideoRequest):
             req.watermark_enabled, req.transition_style,
             req.bgm_enabled, req.bgm_tone,
             req.subtitle_delay,
-            req.quality_level, req.aspect_ratio, req.animation_provider
+            req.quality_level, req.aspect_ratio, req.animation_provider,
+            "auto_enhance", req.light_leak_enabled
         )
         task_ids.append({"language": lang, "task_id": task_id})
     
@@ -466,6 +473,7 @@ class SettingsRequest(BaseModel):
     replicate_api_token: Optional[str] = None
     luma_api_key: Optional[str] = None
     runway_api_key: Optional[str] = None
+    huggingface_api_key: Optional[str] = None
 
 @app.get("/api/settings")
 async def get_settings_api():
@@ -479,7 +487,8 @@ async def get_settings_api():
         "stability_api_key": os.environ.get("STABILITY_API_KEY", ""),
         "replicate_api_token": os.environ.get("REPLICATE_API_TOKEN", ""),
         "luma_api_key": os.environ.get("LUMA_API_KEY", ""),
-        "runway_api_key": os.environ.get("RUNWAY_API_KEY", "")
+        "runway_api_key": os.environ.get("RUNWAY_API_KEY", ""),
+        "huggingface_api_key": os.environ.get("HUGGINGFACE_API_KEY", "")
     }
 
 @app.post("/api/settings")
@@ -494,7 +503,8 @@ async def save_settings_api(req: SettingsRequest):
         "STABILITY_API_KEY": req.stability_api_key,
         "REPLICATE_API_TOKEN": req.replicate_api_token,
         "LUMA_API_KEY": req.luma_api_key,
-        "RUNWAY_API_KEY": req.runway_api_key
+        "RUNWAY_API_KEY": req.runway_api_key,
+        "HUGGINGFACE_API_KEY": req.huggingface_api_key
     }
     
     for env_key, val in keys.items():

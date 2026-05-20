@@ -747,7 +747,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                  watermark_enabled=False, transition_style="none",
                  bgm_enabled=False, bgm_tone="auto", aspect_ratio="9:16",
                  quality_level="medium", color_grade_style="auto_enhance",
-                 scene_pacings=None, letterbox_enabled=False):
+                 scene_pacings=None, letterbox_enabled=False, light_leak_enabled=False):
     target_w, target_h = get_resolution(aspect_ratio)
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}, Boyut: {target_w}x{target_h}, Kalite: {quality_level}): {output_filename}...")
     temp_files = []
@@ -812,6 +812,15 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     per_scene = deficit / others
                     for j in range(len(slide_durations) - 1):
                         slide_durations[j] = max(2.0, slide_durations[j] - per_scene)
+            
+            # --- RİTMİK KURGU (BGM BEAT-SYNCING) ENTEGRASYONU ---
+            if bgm_enabled and len(slide_durations) > 1:
+                try:
+                    bgm_path = get_bgm_path(bgm_tone)
+                    if bgm_path and os.path.exists(bgm_path):
+                        slide_durations = video_effects.align_durations_to_beats(slide_durations, bgm_path)
+                except Exception as sync_err:
+                    print(f"[-] Beat-Sync hatası (devam ediliyor): {sync_err}")
         
         for i, img in enumerate(image_paths):
             slide_duration = slide_durations[i]
@@ -911,27 +920,56 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 except Exception as sub_err:
                     print(f"[-] Dinamik altyazı hatası (devam ediliyor): {sub_err}")
 
-            # Geçiş efektleri (crossfade / fade)
-            transition_dur = 0.4
-            if transition_style in ("crossfade", "fade") and clip.duration > transition_dur * 2:
-                clip = video_effects.apply_fade_in(clip, transition_dur)
-                clip = video_effects.apply_fade_out(clip, transition_dur)
+            # --- PREMIUM GEÇİŞ EFEKTLERİ ENTEGRASYONU ---
+            transition_dur = 0.45
+            
+            # Otomatik modda her sahne geçişi için farklı bir gelişmiş efekt seçelim!
+            active_transition = transition_style
+            if transition_style == "auto":
+                import random
+                active_transition = random.choice(["zoom", "spin", "glitch", "slide_left", "slide_right", "slide_up", "slide_down"])
+                
+            if active_transition != "none" and clip.duration > transition_dur * 2:
+                if active_transition == "fade":
+                    clip = video_effects.apply_fade_in(clip, transition_dur)
+                    clip = video_effects.apply_fade_out(clip, transition_dur)
+                elif active_transition == "crossfade":
+                    clip = video_effects.apply_fade_in(clip, transition_dur)
+                    clip = video_effects.apply_fade_out(clip, transition_dur)
+                elif active_transition == "zoom":
+                    clip = video_effects.apply_zoom_transition_in(clip, transition_dur)
+                    clip = video_effects.apply_zoom_transition_out(clip, transition_dur)
+                elif active_transition == "spin":
+                    clip = video_effects.apply_spin_transition_in(clip, transition_dur)
+                    clip = video_effects.apply_spin_transition_out(clip, transition_dur)
+                elif active_transition == "glitch":
+                    clip = video_effects.apply_glitch_transition(clip, transition_dur, is_outgoing=False)
+                    clip = video_effects.apply_glitch_transition(clip, transition_dur, is_outgoing=True)
+                elif active_transition in ("slide_left", "slide_right", "slide_up", "slide_down"):
+                    direction = active_transition.replace("slide_", "")
+                    pos_fn = video_effects.make_slide_in_position(target_w, target_h, direction, transition_dur)
+                    if hasattr(clip, 'with_position'):
+                        clip = clip.with_position(pos_fn)
+                    elif hasattr(clip, 'set_position'):
+                        clip = clip.set_position(pos_fn)
             
             clips.append(clip)
         
-        if transition_style == "crossfade" and len(clips) > 1:
-            # Crossfade: klipleri 0.4 saniye overlap ile birleştir
-            final_video = concatenate_videoclips(clips, method="compose", padding=-0.4)
+        # Slayt ve diğer kompozisyon geçişleri için overlap padding uygula
+        overlap_styles = ("crossfade", "zoom", "spin", "glitch", "slide_left", "slide_right", "slide_up", "slide_down")
+        if (transition_style == "auto" or transition_style in overlap_styles) and len(clips) > 1:
+            final_video = concatenate_videoclips(clips, method="compose", padding=-transition_dur)
         else:
             final_video = concatenate_videoclips(clips, method="compose")
 
-        # --- Sinematik Post-Efektler (Vignette + Film Grain + Letterbox) ---
-        if quality_level in ("medium", "high"):
+        # --- Sinematik Post-Efektler (Vignette + Film Grain + Letterbox + Light Leak) ---
+        if quality_level in ("medium", "high") or light_leak_enabled:
             final_video = video_effects.apply_cinematic_post_effects(
                 final_video,
                 vignette=True,
                 grain=True,  # Film grain her zaman uygulansın (AI hissini gizler)
                 letterbox=letterbox_enabled,
+                light_leak=light_leak_enabled,
             )
 
         # --- Ses Katmanları (BGM ve SFX) ---

@@ -12,3 +12,5 @@ google-genai
 replicate
 psutil
 pyTelegramBotAPI
+librosa
+soundfile

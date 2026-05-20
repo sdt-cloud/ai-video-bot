@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 8001
 
 # Uygulamayı başlat
-CMD ["python", "main.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]

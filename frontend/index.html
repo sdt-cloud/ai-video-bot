@@ -311,8 +311,8 @@
                                     <select id="opt-subtitle-delay">
                                         <option value="0.0">Yok</option>
                                         <option value="0.5">0.5 Saniye</option>
-                                        <option value="0.75" selected>0.75 Saniye (Varsayılan)</option>
-                                        <option value="1.0">1.0 Saniye</option>
+                                        <option value="0.75">0.75 Saniye</option>
+                                        <option value="1.0" selected>1.0 Saniye (Varsayılan)</option>
                                         <option value="1.5">1.5 Saniye</option>
                                     </select>
                                 </div>
@@ -322,11 +322,16 @@
                                         <option value="none">Yok</option>
                                         <option value="fade">Fade (Karar/Açıl)</option>
                                         <option value="crossfade">Crossfade (Çapraz Geçiş)</option>
+                                        <option value="auto" selected>🔆 Otomatik (Dinamik Geçişler)</option>
                                     </select>
                                 </div>
                                 <div class="option-group" style="display:flex; align-items:center; gap:10px;">
                                     <label style="margin:0;">🎬 Sinema Bantları (Letterbox)</label>
                                     <input type="checkbox" id="opt-letterbox-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                                </div>
+                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                    <label style="margin:0;">🔆 Sinematik Işık Sızıntısı (Light Leak)</label>
+                                    <input type="checkbox" id="opt-light-leak-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
                                 </div>
                                 <div class="option-group" style="display:flex; align-items:center; gap:10px;">
                                     <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
@@ -503,8 +508,8 @@
                             <select id="bulk-subtitle-delay">
                                 <option value="0.0">Yok</option>
                                 <option value="0.5">0.5 Saniye</option>
-                                <option value="0.75" selected>0.75 Saniye (Varsayılan)</option>
-                                <option value="1.0">1.0 Saniye</option>
+                                <option value="0.75">0.75 Saniye</option>
+                                <option value="1.0" selected>1.0 Saniye (Varsayılan)</option>
                                 <option value="1.5">1.5 Saniye</option>
                             </select>
                         </div>
@@ -514,7 +519,12 @@
                                 <option value="none">Yok</option>
                                 <option value="fade">Fade</option>
                                 <option value="crossfade">Crossfade</option>
+                                <option value="auto" selected>🔆 Otomatik (Dinamik Geçişler)</option>
                             </select>
+                        </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label style="margin:0;">🔆 Sinematik Işık Sızıntısı (Light Leak)</label>
+                            <input type="checkbox" id="bulk-light-leak-enabled" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
                         </div>
                         <div class="option-group" style="display:flex; align-items:center; gap:10px;">
                             <label data-i18n="opt_bgm" style="margin:0;">Arka Plan Müziği (BGM)</label>
@@ -881,6 +891,29 @@
                         </a>
                         <div class="api-alt">
                             <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Stability AI (SVD)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hugging Face Inference Card -->
+                <div class="api-setup-card">
+                    <div>
+                        <div class="api-card-header">
+                            <span class="api-name">🤗 Hugging Face Key</span>
+                            <span class="api-badge free">Sınırsız / Ücretsiz</span>
+                        </div>
+                        <p class="api-desc">FLUX.1-schnell modelini en yüksek hızda ve kalitede ücretsiz olarak çalıştırmak için kullanılan topluluk anahtarıdır.</p>
+                    </div>
+                    <div>
+                        <div class="api-input-wrap">
+                            <span class="material-symbols-rounded api-input-icon">key</span>
+                            <input type="password" id="setup-huggingface-key" class="api-input" placeholder="hf_...">
+                        </div>
+                        <a href="https://huggingface.co/settings/tokens" target="_blank" class="api-guide-link">
+                            Hugging Face Token Al <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                        <div class="api-alt">
+                            <i class="fa-solid fa-circle-info"></i> Ücretsiz Alternatifi: <span class="api-alt-accent">Pollinations AI (Sınırsız)</span>
                         </div>
                     </div>
                 </div>

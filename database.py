@@ -50,7 +50,7 @@ def init_db():
                 image_ai TEXT,
                 custom_script TEXT,
                 subtitle_style TEXT DEFAULT 'tiktok',
-                subtitle_delay REAL DEFAULT 0.75,
+                subtitle_delay REAL DEFAULT 1.0,
                 status TEXT DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
                 video_mode TEXT DEFAULT 'slideshow',
@@ -77,7 +77,7 @@ def init_db():
             pass
 
         try:
-            cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_delay REAL DEFAULT 0.75")
+            cursor.execute("ALTER TABLE videos ADD COLUMN subtitle_delay REAL DEFAULT 1.0")
         except sqlite3.OperationalError:
             pass
             
@@ -140,6 +140,11 @@ def init_db():
             cursor.execute("ALTER TABLE videos ADD COLUMN color_grade_style TEXT DEFAULT 'auto_enhance'")
         except sqlite3.OperationalError:
             pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN light_leak_enabled INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
         
         # Index oluştur - performans için
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON videos(status)")
@@ -150,9 +155,9 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                    subtitle_style="tiktok", video_mode="slideshow", voice_type="erkek",
                    custom_script=None, sentence_pause=0.0,
                    watermark_enabled=False, transition_style="none",
-                   bgm_enabled=False, bgm_tone="auto", subtitle_delay=0.75,
+                   bgm_enabled=False, bgm_tone="auto", subtitle_delay=1.0,
                    quality_level="medium", aspect_ratio="9:16", animation_provider="none",
-                   color_grade_style="auto_enhance"):
+                   color_grade_style="auto_enhance", light_leak_enabled=False):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -160,13 +165,15 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                                 voice_type, image_ai, subtitle_style, video_mode, custom_script,
                                 sentence_pause, watermark_enabled, transition_style,
                                 bgm_enabled, bgm_tone, subtitle_delay,
-                                quality_level, aspect_ratio, animation_provider, color_grade_style)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                quality_level, aspect_ratio, animation_provider, color_grade_style,
+                                light_leak_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type,
                image_ai, subtitle_style, video_mode, custom_script,
                sentence_pause, int(watermark_enabled), transition_style,
                int(bgm_enabled), bgm_tone, subtitle_delay,
-               quality_level, aspect_ratio, animation_provider, color_grade_style))
+               quality_level, aspect_ratio, animation_provider, color_grade_style,
+               int(light_leak_enabled)))
         return cursor.lastrowid
 
 def update_status(task_id, status, progress=None, error_message=None, video_path=None):
@@ -196,12 +203,7 @@ def get_pending_tasks(limit: int = 10) -> List[dict]:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, topic, category, tone, duration, language, script_ai, voice_ai,
-                   voice_type, image_ai, subtitle_style, video_mode, custom_script,
-                   sentence_pause, watermark_enabled, transition_style,
-                   bgm_enabled, bgm_tone, subtitle_delay,
-                   quality_level, aspect_ratio, animation_provider
-            FROM videos 
+            SELECT * FROM videos 
             WHERE status = 'pending' 
             ORDER BY created_at ASC 
             LIMIT ?

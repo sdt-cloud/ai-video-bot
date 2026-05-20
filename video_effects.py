@@ -291,19 +291,267 @@ def apply_letterbox(clip, bar_ratio=0.04):
     return apply_clip_transform(clip, filter)
 
 
-def apply_cinematic_post_effects(clip, vignette=True, grain=True, letterbox=False):
+def apply_procedural_light_leak(clip, intensity=0.18):
+    """
+    Klip üzerine matematiksel (prosedürel) olarak sinematik, yumuşak akan bir 
+    ışık sızıntısı (light leak) katmanı ekler. Her karede farklı konumda parlar.
+    """
+    import numpy as np
+    import math
+
+    _grid_cache = {}
+
+    def filter(get_frame, t):
+        frame = get_frame(t).astype(np.float32)
+        h, w = frame.shape[:2]
+        
+        # Grid cache'leme
+        if (h, w) not in _grid_cache:
+            Y, X = np.ogrid[:h, :w]
+            _grid_cache[(h, w)] = (X, Y)
+        else:
+            X, Y = _grid_cache[(h, w)]
+
+        # Zaman bazlı yumuşak ve doğal hareket
+        cx1 = w * (0.5 + 0.45 * math.sin(t * 0.95 + 1.2))
+        cy1 = h * (0.2 + 0.3 * math.cos(t * 0.7 + 0.5))
+        r1 = max(w * 0.25, w * (0.4 + 0.15 * math.sin(t * 1.3)))
+        alpha1 = intensity * (0.6 + 0.4 * math.sin(t * 1.8))
+
+        cx2 = w * (0.3 + 0.45 * math.cos(t * 1.1 + 2.5))
+        cy2 = h * (0.7 + 0.25 * math.sin(t * 0.85 + 3.1))
+        r2 = max(w * 0.2, w * (0.3 + 0.12 * math.cos(t * 1.5)))
+        alpha2 = intensity * 0.6 * (0.5 + 0.5 * math.cos(t * 1.4 + 1.0))
+
+        dist_sq1 = (X - cx1) ** 2 + (Y - cy1) ** 2
+        g1 = np.exp(-dist_sq1 / (2 * (r1 ** 2))) * alpha1
+
+        dist_sq2 = (X - cx2) ** 2 + (Y - cy2) ** 2
+        g2 = np.exp(-dist_sq2 / (2 * (r2 ** 2))) * alpha2
+
+        color1 = np.array([255.0, 135.0, 30.0], dtype=np.float32) # Altın / Amber
+        color2 = np.array([245.0, 45.0, 95.0], dtype=np.float32)  # Sinematik Pembe / Kırmızı
+
+        leak = g1[:, :, np.newaxis] * color1 + g2[:, :, np.newaxis] * color2
+        blended = frame + leak
+        return np.clip(blended, 0, 255).astype(np.uint8)
+
+    return apply_clip_transform(clip, filter)
+
+
+def apply_zoom_transition_in(clip, duration=0.45):
+    """Giriş sahnesi için hızlı büyüyerek gelme efekti."""
+    import cv2
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        if t > duration:
+            return frame
+        h, w = frame.shape[:2]
+        progress = t / duration
+        scale = 0.45 + 0.55 * progress
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        x = (new_w - w) // 2
+        y = (new_h - h) // 2
+        if x >= 0 and y >= 0:
+            return resized[y:y+h, x:x+w]
+        else:
+            pad_y = max(0, -y)
+            pad_x = max(0, -x)
+            padded = cv2.copyMakeBorder(resized, pad_y, pad_y, pad_x, pad_x, cv2.BORDER_CONSTANT, value=[0,0,0])
+            return padded[pad_y:pad_y+h, pad_x:pad_x+w]
+    return apply_clip_transform(clip, filter)
+
+
+def apply_zoom_transition_out(clip, duration=0.45):
+    """Çıkış sahnesi için hızlı büyüyerek yok olma efekti."""
+    import cv2
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        total_dur = clip.duration or 5.0
+        if t < total_dur - duration:
+            return frame
+        h, w = frame.shape[:2]
+        progress = (t - (total_dur - duration)) / duration
+        scale = 1.0 + 0.55 * progress
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        x = (new_w - w) // 2
+        y = (new_h - h) // 2
+        return resized[y:y+h, x:x+w]
+    return apply_clip_transform(clip, filter)
+
+
+def apply_spin_transition_in(clip, duration=0.45):
+    """Giriş sahnesi için dönerek gelme efekti."""
+    import cv2
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        if t > duration:
+            return frame
+        h, w = frame.shape[:2]
+        progress = t / duration
+        angle = -180 * (1 - progress)
+        scale = 0.5 + 0.5 * progress
+        center = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D(center, angle, scale)
+        rotated = cv2.warpAffine(frame, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=[0,0,0])
+        return rotated
+    return apply_clip_transform(clip, filter)
+
+
+def apply_spin_transition_out(clip, duration=0.45):
+    """Çıkış sahnesi için dönerek gitme efekti."""
+    import cv2
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        total_dur = clip.duration or 5.0
+        if t < total_dur - duration:
+            return frame
+        h, w = frame.shape[:2]
+        progress = (t - (total_dur - duration)) / duration
+        angle = 180 * progress
+        scale = 1.0 - 0.5 * progress
+        center = (w // 2, h // 2)
+        M = cv2.getRotationMatrix2D(center, angle, scale)
+        rotated = cv2.warpAffine(frame, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=[0,0,0])
+        return rotated
+    return apply_clip_transform(clip, filter)
+
+
+def apply_glitch_transition(clip, duration=0.35, is_outgoing=True):
+    """Chromatic aberration ve rastgele blok satır kayması ile glitch geçişi."""
+    import random
+    import numpy as np
+    def filter(get_frame, t):
+        frame = get_frame(t)
+        total_dur = clip.duration or 5.0
+        if is_outgoing:
+            if t < total_dur - duration:
+                return frame
+            progress = (t - (total_dur - duration)) / duration
+        else:
+            if t > duration:
+                return frame
+            progress = 1.0 - (t / duration)
+        if progress <= 0:
+            return frame
+        h, w = frame.shape[:2]
+        glitched = frame.copy()
+        shift = int(w * 0.05 * progress)
+        if shift > 0:
+            r = frame[:, :, 0]
+            g = frame[:, :, 1]
+            b = frame[:, :, 2]
+            glitched[:, :, 0] = np.roll(r, shift, axis=1)
+            glitched[:, :, 1] = g
+            glitched[:, :, 2] = np.roll(b, -shift, axis=1)
+        num_slices = int(5 + 12 * progress)
+        for _ in range(num_slices):
+            slice_y = random.randint(0, h - 30)
+            slice_h = random.randint(10, 35)
+            slice_shift = random.randint(-int(w * 0.09 * progress), int(w * 0.09 * progress))
+            if slice_shift != 0:
+                slice_img = glitched[slice_y:slice_y+slice_h, :]
+                glitched[slice_y:slice_y+slice_h, :] = np.roll(slice_img, slice_shift, axis=1)
+        return glitched
+    return apply_clip_transform(clip, filter)
+
+
+def make_slide_in_position(w, h, direction="left", duration=0.45):
+    """Kompozit katmanlar için slayt geçiş pozisyon fonksiyonu."""
+    def pos(t):
+        if t > duration:
+            return (0, 0)
+        progress = t / duration
+        if direction == "left":
+            return (int(w * (1 - progress)), 0)
+        elif direction == "right":
+            return (int(-w * (1 - progress)), 0)
+        elif direction == "up":
+            return (0, int(h * (1 - progress)))
+        elif direction == "down":
+            return (0, int(-h * (1 - progress)))
+        return (0, 0)
+    return pos
+
+
+def apply_cinematic_post_effects(clip, vignette=True, grain=True, letterbox=False, light_leak=False):
     """
     Tüm sinematik post-efektleri tek çağrıyla uygular.
     Bu fonksiyon video_maker.py'den çağrılacak.
     """
     try:
+        if light_leak:
+            clip = apply_procedural_light_leak(clip, intensity=0.16)
         if vignette:
             clip = apply_vignette(clip, strength=0.35)
         if grain:
             clip = apply_film_grain(clip, intensity=0.020)
         if letterbox:
             clip = apply_letterbox(clip, bar_ratio=0.04)
-        print("[FX] Sinematik post-efektler uygulandı (vignette, film grain)")
+        print("[FX] Sinematik post-efektler uygulandı (vignette, film grain, light leak)")
     except Exception as e:
         print(f"[!] Sinematik post-efekt hatası (devam ediliyor): {e}")
     return clip
+
+
+def align_durations_to_beats(slide_durations, audio_path):
+    """
+    Slayt sürelerini (slide_durations) arka plan müziğinin vuruş anlarına (beats) kilitler.
+    Her geçişin tam bir davul vuruşunda/tempo anında gerçekleşmesini sağlar.
+    """
+    try:
+        import librosa
+        import numpy as np
+        import os
+        
+        if not audio_path or not os.path.exists(audio_path):
+            return slide_durations
+
+        print(f"[Beat-Sync] Müzik analiz ediliyor: {audio_path}...")
+        # Düşük örnekleme hızı (sr=22050) ve mono yükleme ile süper hızlı analiz
+        y, sr = librosa.load(audio_path, sr=22050, mono=True)
+        
+        # Tempo ve vuruş zaman kodları bulma
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+        
+        if len(beat_times) < 2:
+            print("[Beat-Sync] Yetersiz ritim vuruşu tespit edildi, varsayılan süreler kullanılıyor.")
+            return slide_durations
+            
+        print(f"[Beat-Sync] Ritim tespiti başarılı: {tempo:.1f} BPM. Vuruş sayısı: {len(beat_times)}")
+        
+        # Bitiş süreleri kümülatif toplam hesabı
+        cum_durations = np.cumsum(slide_durations)
+        new_cum_durations = []
+        
+        for t in cum_durations:
+            # En yakın vuruş zamanını bul
+            idx = (np.abs(np.array(beat_times) - t)).argmin()
+            closest_beat = beat_times[idx]
+            
+            # Aşırı konuşma senkron kaymasını engellemek için %35'lik koruma bariyeri
+            if abs(closest_beat - t) < t * 0.35:
+                new_cum_durations.append(closest_beat)
+            else:
+                new_cum_durations.append(t)
+                
+        # Tekrar tekil süreleri elde et
+        new_durations = []
+        last = 0.0
+        for t in new_cum_durations:
+            dur = t - last
+            new_durations.append(max(2.0, dur))
+            last = t
+            
+        print(f"[Beat-Sync] Sahne geçiş süreleri müzik ritmine kilitlendi! 🎵")
+        return new_durations
+        
+    except ImportError:
+        print("[Beat-Sync] 'librosa' kütüphanesi kurulu değil. Ritmik kurgu devre dışı bırakıldı.")
+        return slide_durations
+    except Exception as e:
+        print(f"[Beat-Sync] Ritim eşleme sırasında hata oluştu: {e}")
+        return slide_durations

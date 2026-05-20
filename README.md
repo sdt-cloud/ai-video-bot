@@ -12,6 +12,8 @@ Yapay zeka kullanarak **bilgilendirici kısa videolar** (YouTube Shorts, Instagr
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
+[English README](README_EN.md) • [Hata Bildir](https://github.com/sdt-cloud/ai-video-bot/issues/new?assignees=&labels=bug&projects=&template=bug_report.yml) • [Özellik Öner](https://github.com/sdt-cloud/ai-video-bot/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.yml)
+
 </div>
 
 ---

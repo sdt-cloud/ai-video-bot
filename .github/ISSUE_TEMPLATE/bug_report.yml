@@ -1,0 +1,68 @@
+name: "🐛 Hata Bildirimi (Bug Report)"
+description: "Sistemde karşılaştığınız bir hatayı bildirin."
+title: "[BUG]: <kısa açıklama>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hata bildirimi gönderdiğiniz için teşekkür ederiz! Sorunu en kısa sürede çözebilmemiz için lütfen aşağıdaki formu doldurun.
+  
+  - type: textarea
+    id: description
+    attributes:
+      label: "Hata Açıklaması"
+      description: "Karşılaştığınız hatayı net ve anlaşılır bir şekilde açıklayın."
+      placeholder: "Örn: Video oluşturma işlemi başladığında..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Adım Adım Hata Tekrarı"
+      description: "Hatanın tekrar oluşması için hangi adımları izlemeliyiz?"
+      placeholder: |
+        1. Web dashboard'u açın.
+        2. 'Nicola Tesla' konusunu girin.
+        3. 'Video Üret' butonuna tıklayın.
+        4. Hata konsolda görünüyor: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Beklenen Davranış"
+      description: "Hata olmasaydı ne olması gerekiyordu?"
+      placeholder: "Videonun başarıyla oluşturulup indirilmeye hazır hale gelmesi."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Hata Logları / Ekran Görüntüleri"
+      description: "Konsolda aldığınız hata loglarını veya terminal çıktılarını buraya yapıştırın."
+      render: bash
+      placeholder: "logs/production.log içeriği veya terminal hatası..."
+
+  - type: input
+    id: os
+    attributes:
+      label: "İşletim Sistemi"
+      placeholder: "Windows 11 / Ubuntu 22.04 / macOS Sonoma"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: python-version
+    attributes:
+      label: "Python Sürümü"
+      options:
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - "Diğer"
+    validations:
+      required: true

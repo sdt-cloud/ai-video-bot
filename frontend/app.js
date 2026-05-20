@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                         image_ai: document.getElementById('opt-image-ai').value,
                         subtitle_style: document.getElementById('opt-subtitle-style').value,
-                        subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 0.75,
+                        subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 1.0,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: false,
@@ -292,7 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         quality_level: document.getElementById('opt-quality-level').value,
                         aspect_ratio: document.getElementById('opt-aspect-ratio').value,
                         animation_provider: document.getElementById('opt-animation-provider').value,
-                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false
+                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false,
+                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false
                     };
                     const res = await fetch('/api/videos/multi-lang', {
                         method: 'POST',
@@ -323,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                         image_ai: document.getElementById('opt-image-ai').value,
                         subtitle_style: document.getElementById('opt-subtitle-style').value,
-                        subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 0.75,
+                        subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 1.0,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: false,
@@ -333,7 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         aspect_ratio: document.getElementById('opt-aspect-ratio').value,
                         animation_provider: document.getElementById('opt-animation-provider').value,
                         color_grade_style: document.getElementById('opt-color-grade')?.value || 'auto_enhance',
-                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false
+                        letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false,
+                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false
                     };
                     const res = await fetch('/api/videos/single', {
                         method: 'POST',
@@ -387,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     sentence_pause: parseFloat(document.getElementById('bulk-sentence-pause').value) || 0,
                     image_ai: document.getElementById('bulk-image-ai').value,
                     subtitle_style: document.getElementById('bulk-subtitle-style').value,
-                    subtitle_delay: parseFloat(document.getElementById('bulk-subtitle-delay').value) || 0.75,
+                    subtitle_delay: parseFloat(document.getElementById('bulk-subtitle-delay').value) || 1.0,
                     video_mode: document.getElementById('bulk-video-mode').value,
                     transition_style: document.getElementById('bulk-transition-style').value,
                     watermark_enabled: false,
@@ -395,7 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     bgm_tone: document.getElementById('bulk-bgm-tone').value,
                     quality_level: document.getElementById('bulk-quality-level').value,
                     aspect_ratio: document.getElementById('bulk-aspect-ratio').value,
-                    animation_provider: document.getElementById('bulk-animation-provider').value
+                    animation_provider: document.getElementById('bulk-animation-provider').value,
+                    light_leak_enabled: document.getElementById('bulk-light-leak-enabled')?.checked || false
                 };
 
                 const res = await fetch('/api/videos/bulk', {
@@ -723,6 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(document.getElementById('setup-replicate-key')) document.getElementById('setup-replicate-key').value = data.replicate_api_token || '';
                 if(document.getElementById('setup-luma-key')) document.getElementById('setup-luma-key').value = data.luma_api_key || '';
                 if(document.getElementById('setup-runway-key')) document.getElementById('setup-runway-key').value = data.runway_api_key || '';
+                if(document.getElementById('setup-huggingface-key')) document.getElementById('setup-huggingface-key').value = data.huggingface_api_key || '';
                 
                 // Eğer hayati API anahtarları (OpenAI veya Gemini) tamamen boşsa ve bypass edilmemişse otomatik göster
                 const hasKeys = (data.openai_api_key && data.openai_api_key.trim() !== '') || 
@@ -763,6 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const replicateKey = document.getElementById('setup-replicate-key')?.value.trim() || '';
             const lumaKey = document.getElementById('setup-luma-key')?.value.trim() || '';
             const runwayKey = document.getElementById('setup-runway-key')?.value.trim() || '';
+            const huggingfaceKey = document.getElementById('setup-huggingface-key')?.value.trim() || '';
 
             setupSaveBtn.innerHTML = '<span class="material-symbols-rounded spin">rotate_right</span> <span>Kaydediliyor...</span>';
             setupSaveBtn.disabled = true;
@@ -779,7 +784,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         stability_api_key: stabilityKey,
                         replicate_api_token: replicateKey,
                         luma_api_key: lumaKey,
-                        runway_api_key: runwayKey
+                        runway_api_key: runwayKey,
+                        huggingface_api_key: huggingfaceKey
                     })
                 });
 

@@ -1,0 +1,40 @@
+name: "💡 Özellik Önerisi (Feature Request)"
+description: "AI Video Bot için yeni bir özellik veya geliştirme önerin."
+title: "[FEATURE]: <özellik adı>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Harika fikirleriniz bizim için çok önemli! Projeyi geliştirmek adına önerilerinizi sabırsızlıkla bekliyoruz.
+  
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Bu özellik hangi probleme çözüm sunuyor?"
+      description: "Karşılaştığınız bir zorluğu veya eksikliği net bir şekilde açıklayın."
+      placeholder: "Örn: Şu an videoları manuel yüklüyoruz, bu zaman alıyor..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Önerdiğiniz Çözüm / Özellik Nedir?"
+      description: "İstediğiniz özelliğin nasıl çalışması gerektiğini detaylandırın."
+      placeholder: "Örn: YouTube API entegrasyonu ile biten videolar otomatik kanala yüklensin."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatif Çözümler"
+      description: "Düşündüğünüz başka alternatif yollar var mı?"
+      placeholder: "Örn: webhook desteği eklenip harici otomasyon araçları (n8n, Make) ile de çözülebilir."
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Ek Bilgiler"
+      description: "Öneri ile ilgili ekran görüntüleri, mockup'lar veya diğer referans materyalleri."
