@@ -1,0 +1,12 @@
+# .ruff.toml
+# Ruff configuration for AI Video Bot
+
+[lint]
+# Ignore specific non-critical or common stylistic rules in development
+ignore = [
+    "E402", # Module level import not at top of file (dotenv calls)
+    "E741", # Ambiguous variable name (e.g. using 'l' in list comprehensions)
+    "F401", # Unused imports (harmless in Python but annoying to enforce strictly)
+    "F841", # Local variable assigned but never used (useful for debug variables)
+    "E722", # Bare except (often used in simple try-except blocks)
+]

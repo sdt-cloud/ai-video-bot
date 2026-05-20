@@ -5,7 +5,7 @@ import sqlite3
 import threading
 from dotenv import load_dotenv
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, InputFile
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # .env dosyasını yükle
 load_dotenv()

@@ -1,6 +1,5 @@
 import sqlite3
 import threading
-from datetime import datetime
 from typing import List
 from contextlib import contextmanager
 

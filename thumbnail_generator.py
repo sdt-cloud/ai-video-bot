@@ -1,6 +1,6 @@
 import os
 import textwrap
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import google.generativeai as genai
 
 def generate_clickbait_title(topic: str) -> str:

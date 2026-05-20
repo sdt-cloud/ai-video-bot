@@ -88,7 +88,8 @@ def _generate_ambient_tone(output_path: str, tone: str = "calm", duration_secs: 
     """
     try:
         import numpy as np
-        import wave, struct
+        import wave
+        import struct
         print(f"[BGM] Ambient ton üretiliyor (ton={tone}, {duration_secs}sn)...")
 
         sample_rate = 44100

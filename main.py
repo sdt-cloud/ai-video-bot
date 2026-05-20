@@ -1,14 +1,11 @@
 import os
-import sys
 import argparse
 import asyncio
 import concurrent.futures
-from typing import List, Dict, Optional
 
 # Import bot modules
 from script_generator import generate_script, generate_script_from_custom_text
 from voice_generator import generate_voice_async
-from image_generator import generate_image
 from video_maker import create_video
 from clip_fetcher import fetch_clip_auto
 from image_animator import animate_image
@@ -339,7 +336,7 @@ async def main_async():
             
     if video_success and os.path.exists(output_video):
         print(f"\n{Color.GREEN}{Color.BOLD}=======================================")
-        print(f"🎉 TEBRİKLER! Videonuz başarıyla hazırlandı:")
+        print("🎉 TEBRİKLER! Videonuz başarıyla hazırlandı:")
         print(f"🎥 Video: {output_video}")
         if not args.no_thumbnail and os.path.exists(output_video.replace(".mp4", "_thumbnail.jpg")):
             print(f"🖼️ Kapak Resmi: {output_video.replace('.mp4', '_thumbnail.jpg')}")

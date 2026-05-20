@@ -409,7 +409,7 @@ def color_grade_image(image_path, output_path=None, style="auto_enhance"):
         return image_path
     
     try:
-        from PIL import ImageEnhance, ImageFilter
+        from PIL import ImageEnhance
         img = Image.open(image_path).convert("RGB")
         
         if style == "auto_enhance":
@@ -490,7 +490,7 @@ def _apply_color_grade_to_clip(clip, style="auto_enhance"):
                 frame = np.clip(frame * (1 - alpha) + ov * alpha, 0, 255)
             return frame.astype(np.uint8)
 
-        return apply_clip_transform(clip, grade_frame)
+        return video_effects.apply_clip_transform(clip, grade_frame)
     except Exception as e:
         print(f"[!] Video color grade hatası (atlanıyor): {e}")
         return clip

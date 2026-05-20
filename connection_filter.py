@@ -3,7 +3,6 @@ Connection Error Filter - asyncio ve diğer hataları filtreler
 """
 
 import logging
-import sys
 
 class ConnectionErrorFilter(logging.Filter):
     """ConnectionResetError ve boş JSON hatalarını filtreler"""

@@ -99,16 +99,16 @@ def generate_image_openai(prompt, output_filename, quality="standard"):
                 print(f"[-] Görsel indirilemedi, HTTP {img_response.status_code}")
                 return False
         else:
-            print(f"[-] GPT Image beklenmeyen yanıt formatı")
+            print("[-] GPT Image beklenmeyen yanıt formatı")
             return False
             
     except Exception as e:
         print(f"[-] GPT Image görseli üretilirken hata oluştu: {e}")
         # Fallback: Pollinations → HuggingFace zinciri
-        print(f"[+] Fallback: Pollinations ile deneniyor...")
+        print("[+] Fallback: Pollinations ile deneniyor...")
         if generate_image_pollinations(prompt, output_filename):
             return True
-        print(f"[+] Fallback: Hugging Face ile deneniyor...")
+        print("[+] Fallback: Hugging Face ile deneniyor...")
         return generate_image_huggingface(prompt, output_filename)
 
 
@@ -274,8 +274,8 @@ def generate_image_huggingface(prompt, output_filename, model="black-forest-labs
                     break
 
                 elif resp.status_code == 401:
-                    print(f"[-] HuggingFace yetki hatası (401). Token'ın 'Make calls to Inference Providers' iznine sahip olması gerekiyor.")
-                    print(f"    Token oluşturma: https://huggingface.co/settings/tokens → Fine-grained → Inference → Inference Providers")
+                    print("[-] HuggingFace yetki hatası (401). Token'ın 'Make calls to Inference Providers' iznine sahip olması gerekiyor.")
+                    print("    Token oluşturma: https://huggingface.co/settings/tokens → Fine-grained → Inference → Inference Providers")
                     return False
 
                 else:
@@ -346,7 +346,7 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
             
     except Exception as e:
         print(f"[-] Replicate hatası: {e}")
-        print(f"[+] Fallback: Pollinations ile yeniden deneniyor...")
+        print("[+] Fallback: Pollinations ile yeniden deneniyor...")
         return generate_image_pollinations(prompt, output_filename)
 
 # ─────────────────────────────────────────────────────────────

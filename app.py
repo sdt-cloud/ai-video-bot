@@ -1,14 +1,11 @@
 import asyncio
 import os
-import tempfile
-from fastapi import FastAPI, BackgroundTasks, Request
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import database
-import time
-import traceback
 
 # Connection error filter'ı import et
 from connection_filter import setup_connection_filter
@@ -19,13 +16,12 @@ setup_connection_filter()
 # Bot modüllerini içe aktar
 from script_generator import generate_script, generate_script_from_custom_text
 from voice_generator import generate_voice_async
-from image_generator import generate_image
 from video_maker import create_video
 from clip_fetcher import fetch_clip_auto
 from image_animator import animate_image
 
 from queue_manager import start_queue_manager, get_queue_status
-from performance_optimizer import parallel_process_images, get_optimized_settings
+from performance_optimizer import parallel_process_images
 from error_handler import error_recovery, video_logger
 
 app = FastAPI()

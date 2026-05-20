@@ -2,14 +2,13 @@
 Video Üretim Performans Optimizasyon Modülü
 """
 
-import asyncio
 import concurrent.futures
 import time
-from typing import List, Dict, Callable
+from typing import List, Dict
 import threading
 import queue
 import logging
-from typing import List, Dict, Callable, Union
+from typing import Union
 
 class PerformanceOptimizer:
     def __init__(self, max_workers: int = 4):
@@ -131,7 +130,6 @@ class PerformanceOptimizer:
     def cache_management(self, cache_dir: str = "cache", max_size_mb: int = 500):
         """Önbellek yönetimi"""
         import os
-        import shutil
         
         if not os.path.exists(cache_dir):
             return

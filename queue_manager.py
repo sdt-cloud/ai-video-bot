@@ -3,9 +3,8 @@ Otomatik Video Kuyruk Yöneticisi
 """
 
 import asyncio
-import time
 import logging
-from typing import List, Dict
+from typing import Dict
 import database
 
 # Circular import'i önlemek için app modülünü dinamik import et

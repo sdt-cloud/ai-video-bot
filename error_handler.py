@@ -3,11 +3,10 @@ Gelişmiş Hata Yönetimi ve Logging Sistemi
 """
 
 import logging
-import traceback
 import json
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 from functools import wraps
 import asyncio
 
@@ -90,7 +89,7 @@ class VideoProductionLogger:
                 self.logger.error(f"ERROR: {error_data['error_type']} - Boş hata objesi")
             else:
                 self.logger.error(f"ERROR: {json_str}")
-        except Exception as log_error:
+        except Exception:
             # JSON hata verirse basit log kullan
             self.logger.error(f"ERROR: {error_data['error_type']} - {error_data['error_message']}")
         

@@ -1,7 +1,5 @@
-from moviepy import vfx
 import numpy as np
 import cv2
-from PIL import Image
 
 def apply_clip_transform(clip, filter_func):
     """
@@ -546,7 +544,7 @@ def align_durations_to_beats(slide_durations, audio_path):
             new_durations.append(max(2.0, dur))
             last = t
             
-        print(f"[Beat-Sync] Sahne geçiş süreleri müzik ritmine kilitlendi! 🎵")
+        print("[Beat-Sync] Sahne geçiş süreleri müzik ritmine kilitlendi! 🎵")
         return new_durations
         
     except ImportError:
