@@ -57,22 +57,29 @@ def get_session():
     
     return _session
 
-def generate_image_openai(prompt, output_filename, quality="standard"):
+def generate_image_openai(prompt, output_filename, quality="standard", aspect_ratio="9:16"):
     import base64
     from openai import OpenAI
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     
-    # DALL-E 3 → gpt-image-1 migrasyonu (DALL-E 3 emekli: 12 Mayıs 2026)
-    # gpt-image-1 kalite seçenekleri: "low", "medium", "high"
+    # gpt-image-1 / dall-e-3 size maps
+    size_map = {
+        "9:16": "1024x1792",
+        "16:9": "1792x1024",
+        "1:1": "1024x1024"
+    }
+    image_size = size_map.get(aspect_ratio, "1024x1792")
+    
+    # DALL-E 3 → gpt-image-1 migrasyonu
     quality_map = {"hd": "high", "standard": "medium"}
     mapped_quality = quality_map.get(quality, "medium")
     quality_label = mapped_quality.upper()
-    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: GPT Image 1, Kalite: {quality_label})")
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: GPT Image 1, Boyut: {image_size}, Kalite: {quality_label})")
     try:
         response = client.images.generate(
             model="gpt-image-1",
             prompt=prompt,
-            size="1024x1536",  # gpt-image-1 desteklenen portre çözünürlüğü
+            size=image_size,
             quality=mapped_quality,
             n=1,
         )
@@ -112,17 +119,23 @@ def generate_image_openai(prompt, output_filename, quality="standard"):
         return generate_image_huggingface(prompt, output_filename)
 
 
-def generate_image_pollinations(prompt, output_filename):
-    print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: Pollinations)")
+def generate_image_pollinations(prompt, output_filename, aspect_ratio="9:16"):
+    print(f"[+] '{output_filename}' için görsel indiriliyor... (AI: Pollinations, Boyut: {aspect_ratio})")
     
     # URL Encode the prompt
     encoded_prompt = urllib.parse.quote(prompt)
 
+    width, height = 1080, 1920
+    if aspect_ratio == "16:9":
+        width, height = 1920, 1080
+    elif aspect_ratio == "1:1":
+        width, height = 1080, 1080
+
     # Timeout durumlarında farklı URL varyantlarıyla yeniden dene.
     seed = int(time.time() * 1000) % 1000000
     urls = [
-        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true&seed={seed}",
-        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&seed={seed + 1}",
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&seed={seed}",
+        f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed={seed + 1}",
     ]
 
     session = get_session()
@@ -146,7 +159,7 @@ def generate_image_pollinations(prompt, output_filename):
     return False
 
 
-def generate_image_huggingface(prompt, output_filename, model="black-forest-labs/FLUX.1-schnell"):
+def generate_image_huggingface(prompt, output_filename, model="black-forest-labs/FLUX.1-schnell", aspect_ratio="9:16"):
     """
     Hugging Face Inference API ile görsel üretir.
     Yeni router endpoint (2025+): router.huggingface.co/hf-inference/
@@ -158,15 +171,19 @@ def generate_image_huggingface(prompt, output_filename, model="black-forest-labs
         print("[!] HUGGINGFACE_API_KEY bulunamadı, Hugging Face atlanıyor.")
         return False
 
-    model_short = model.split("/")[-1]
-    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: HuggingFace - {model_short})")
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: HuggingFace, Model: {model}, Boyut: {aspect_ratio})")
+    
+    width, height = 768, 1360
+    if aspect_ratio == "16:9":
+        width, height = 1360, 768
+    elif aspect_ratio == "1:1":
+        width, height = 1024, 1024
 
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
 
-    # HuggingFace 2025+ endpoint stratejisi (önce yeni, sonra eski)
     # Yeni: router.huggingface.co (OpenAI uyumlu, JSON yanıt → base64 URL)
     # Eski: api-inference.huggingface.co (binary yanıt)
     endpoint_strategies = [
@@ -179,7 +196,7 @@ def generate_image_huggingface(prompt, output_filename, model="black-forest-labs
         {
             "name": "router-binary",
             "url": f"https://router.huggingface.co/hf-inference/models/{model}",
-            "payload": {"inputs": prompt, "parameters": {"num_inference_steps": 4}},
+            "payload": {"inputs": prompt, "parameters": {"num_inference_steps": 4, "width": width, "height": height}},
             "response_type": "binary",
         },
         {
@@ -188,8 +205,8 @@ def generate_image_huggingface(prompt, output_filename, model="black-forest-labs
             "payload": {
                 "inputs": prompt,
                 "parameters": {
-                    "width": 768,
-                    "height": 1360,
+                    "width": width,
+                    "height": height,
                     "num_inference_steps": 4,
                     "guidance_scale": 0.0,
                 }
@@ -296,20 +313,20 @@ def generate_image_huggingface(prompt, output_filename, model="black-forest-labs
     return False
 
 
-def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell"):
+def generate_image_replicate(prompt, output_filename, model_name="black-forest-labs/flux-schnell", aspect_ratio="9:16"):
     if not is_replicate_available():
         print(f"[+] Fallback: '{output_filename}' için Pollinations deneniyor...")
-        return generate_image_pollinations(prompt, output_filename)
+        return generate_image_pollinations(prompt, output_filename, aspect_ratio=aspect_ratio)
 
-    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: Replicate - {model_name})")
+    print(f"[+] '{output_filename}' için görsel üretiliyor... (AI: Replicate - {model_name}, Boyut: {aspect_ratio})")
     
     try:
         import replicate
 
-        # Replicate modelleri için en boy oranı ayarları (portre moduna zorla)
+        # Replicate modelleri için en boy oranı ayarları
         input_data = {
             "prompt": prompt,
-            "aspect_ratio": "9:16",
+            "aspect_ratio": aspect_ratio,
         }
         
         # Farklı modeller için farklı girdi parametreleri gerekebilir
@@ -317,10 +334,16 @@ def generate_image_replicate(prompt, output_filename, model_name="black-forest-l
             input_data["output_format"] = "webp"
             input_data["num_outputs"] = 1
         elif "sdxl" in model_name:
+            width, height = 768, 1344
+            if aspect_ratio == "16:9":
+                width, height = 1344, 768
+            elif aspect_ratio == "1:1":
+                width, height = 1024, 1024
+
             input_data = {
                 "prompt": prompt,
-                "width": 768,
-                "height": 1344, # SDXL portre
+                "width": width,
+                "height": height,
                 "refine": "expert_ensemble_refiner",
                 "apply_watermark": False,
                 "num_inference_steps": 25
@@ -617,17 +640,17 @@ def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "", a
 
     # 4. GPT Image 1 (eski DALL-E 3'ün yerini aldı)
     print("[!] Tüm stok kaynaklar başarısız. GPT Image 1 deneniyor...")
-    if generate_image_openai(prompt, output_filename):
+    if generate_image_openai(prompt, output_filename, aspect_ratio=aspect_ratio):
         return True
 
     # 5. Pollinations
     print("[!] GPT Image başarısız. Pollinations deneniyor...")
-    if generate_image_pollinations(prompt, output_filename):
+    if generate_image_pollinations(prompt, output_filename, aspect_ratio=aspect_ratio):
         return True
 
     # 6. Hugging Face (son çare - ücretsiz AI)
     print("[!] Pollinations başarısız. Son çare: Hugging Face deneniyor...")
-    return generate_image_huggingface(prompt, output_filename)
+    return generate_image_huggingface(prompt, output_filename, aspect_ratio=aspect_ratio)
 # ─────────────────────────────────────────────────────────────
 # ANA YÖNLENDIRICI
 # ─────────────────────────────────────────────────────────────
@@ -641,31 +664,31 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str
 
     # Stok görsel sağlayıcıları
     if provider_lower == "pexels":
-        return fetch_stock_image_pexels(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pexels(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif provider_lower == "pixabay":
-        return fetch_stock_image_pixabay(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pixabay(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif provider_lower == "unsplash":
-        return fetch_stock_image_unsplash(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_unsplash(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif provider_lower == "stock-auto":
         return fetch_stock_image_auto(prompt, output_filename, topic, aspect_ratio=aspect_ratio)
 
     # AI görsel sağlayıcıları
     elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd" or provider_lower == "gpt-image-hd":
         # Hook ve CTA sahneleri için HD kalite (gpt-image-1 quality="high")
-        return generate_image_openai(prompt, output_filename, quality="hd")
+        return generate_image_openai(prompt, output_filename, quality="hd", aspect_ratio=aspect_ratio)
     elif "dall-e" in provider_lower or "openai" in provider_lower or "gpt-image" in provider_lower:
-        return generate_image_openai(prompt, output_filename)
+        return generate_image_openai(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif "flux" in provider_lower:
         model = "black-forest-labs/flux-schnell"
         if "pro" in provider_lower:
             model = "black-forest-labs/flux-pro"
-        return generate_image_replicate(prompt, output_filename, model)
+        return generate_image_replicate(prompt, output_filename, model, aspect_ratio=aspect_ratio)
     elif "sdxl" in provider_lower:
-        return generate_image_replicate(prompt, output_filename, "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7f23bb69422f281454559869502b4")
+        return generate_image_replicate(prompt, output_filename, "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7f23bb69422f281454559869502b4", aspect_ratio=aspect_ratio)
     elif "replicate" in provider_lower:
-        return generate_image_replicate(prompt, output_filename)
+        return generate_image_replicate(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif "pollinations" in provider_lower:
-        return generate_image_pollinations(prompt, output_filename)
+        return generate_image_pollinations(prompt, output_filename, aspect_ratio=aspect_ratio)
     elif "huggingface" in provider_lower or "hugging" in provider_lower or "hf" == provider_lower:
         # Model seçimi: huggingface-flux, huggingface-dev, huggingface-sdxl
         if "dev" in provider_lower:
@@ -674,7 +697,7 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str
             hf_model = "stabilityai/stable-diffusion-xl-base-1.0"
         else:
             hf_model = "black-forest-labs/FLUX.1-schnell"  # Varsayılan: hızlı ve ücretsiz
-        return generate_image_huggingface(prompt, output_filename, hf_model)
+        return generate_image_huggingface(prompt, output_filename, hf_model, aspect_ratio=aspect_ratio)
     else:
         # Bilinmeyen sağlayıcı → Stock-Auto
         print(f"[!] Bilinmeyen sağlayıcı '{ai_provider}', Stock-Auto kullanılıyor.")

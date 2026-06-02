@@ -304,7 +304,9 @@ def check_gpu_support():
     import subprocess
     
     # MoviePy'nin sistemdeki donanım ivmeli FFmpeg binary'sini kullanmasını garanti edelim
-    os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
+    # Özel ffmpeg_wrapper betiğini kullanarak VAAPI device argümanının otomatik eklenmesini sağlayalım
+    wrapper_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ffmpeg_wrapper"))
+    os.environ["IMAGEIO_FFMPEG_EXE"] = wrapper_path
     
     try:
         # ffmpeg'in yardımcı codec listesini soralım
@@ -608,12 +610,39 @@ def smart_resize_image(image_path, target_w, target_h, output_path=None):
         return image_path
 
 def apply_clip_resize(clip, width=None, height=None):
-    """MoviePy v1'de resize(), v2'de resized() kullanılır."""
+    """Akıllı video resize: Oran farklıysa center crop yaparak uzamasını engeller."""
     if width is not None and height is not None:
-        if hasattr(clip, 'resized'):
-            return clip.resized((width, height))
-        if hasattr(clip, 'resize'):
-            return clip.resize((width, height))
+        target_ratio = width / height
+        orig_ratio = clip.w / clip.h
+        
+        if abs(orig_ratio - target_ratio) > 0.1:
+            # Aspect ratio uyumsuz, uzama (stretch) yerine akıllı boyutlandırma (center crop) yap
+            if orig_ratio > target_ratio:
+                # Daha geniş (örn: 16:9 videoyu 9:16 ekrana sığdırmak)
+                if hasattr(clip, 'resized'):
+                    clip = clip.resized(height=height)
+                else:
+                    clip = clip.resize(height=height)
+            else:
+                # Daha uzun (örn: 9:16 videoyu 16:9 ekrana sığdırmak)
+                if hasattr(clip, 'resized'):
+                    clip = clip.resized(width=width)
+                else:
+                    clip = clip.resize(width=width)
+                    
+            # Fazlalıkları ortadan kırp
+            if hasattr(clip, 'cropped'):
+                # MoviePy v2
+                return clip.cropped(x_center=clip.w/2, y_center=clip.h/2, width=width, height=height)
+            else:
+                # MoviePy v1
+                from moviepy.video.fx.all import crop
+                return crop(clip, x_center=clip.w/2, y_center=clip.h/2, width=width, height=height)
+        else:
+            if hasattr(clip, 'resized'):
+                return clip.resized((width, height))
+            if hasattr(clip, 'resize'):
+                return clip.resize((width, height))
             
     if hasattr(clip, 'resized'):
         return clip.resized(width=width, height=height)

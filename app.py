@@ -255,29 +255,38 @@ async def process_video(task):
                 print(f"[{task_id}] Sahne {i}: Stok görsel aranıyor (Format: {aspect_ratio})...")
                 from image_generator import fetch_stock_image_pexels, fetch_stock_image_pixabay, fetch_stock_image_unsplash
                 
-                stock_success = False
-                for fetch_fn in [fetch_stock_image_pexels, fetch_stock_image_pixabay, fetch_stock_image_unsplash]:
-                    try:
-                        if fetch_fn(prompt, img_name, topic, aspect_ratio=aspect_ratio):
-                            stock_success = True
-                            break
-                    except Exception as e:
-                        pass
+                max_retries = 3
+                stock_approved = False
                 
-                if stock_success and os.path.exists(img_name):
-                    print(f"[{task_id}] Sahne {i}: Stok görsel indirildi, doğrulanıyor...")
-                    # Görsel uygunluğunu değerlendir
-                    score, reason = evaluate_image_relevance(prompt, img_name)
-                    print(f"[{task_id}] Sahne {i}: Doğrulama skoru: {score}/10. Neden: {reason}")
+                for attempt in range(max_retries):
+                    stock_success = False
+                    for fetch_fn in [fetch_stock_image_pexels, fetch_stock_image_pixabay, fetch_stock_image_unsplash]:
+                        try:
+                            if fetch_fn(prompt, img_name, topic, aspect_ratio=aspect_ratio):
+                                stock_success = True
+                                break
+                        except Exception as e:
+                            pass
                     
-                    if score >= 7:
-                        print(f"[{task_id}] Sahne {i}: Stok görsel onaylandı (>=7/10).")
-                        continue
-                    else:
-                        print(f"[{task_id}] Sahne {i}: Stok görsel reddedildi (<7/10), YZ üretimi başlatılıyor...")
-                        if os.path.exists(img_name):
-                            os.remove(img_name)
+                    if stock_success and os.path.exists(img_name):
+                        print(f"[{task_id}] Sahne {i}: Stok görsel indirildi, doğrulanıyor (Deneme: {attempt+1}/{max_retries})...")
+                        # Görsel uygunluğunu değerlendir
+                        score, reason = evaluate_image_relevance(prompt, img_name)
+                        print(f"[{task_id}] Sahne {i}: Doğrulama skoru: {score}/10. Neden: {reason}")
+                        
+                        if score >= 7:
+                            print(f"[{task_id}] Sahne {i}: Stok görsel onaylandı (>=7/10).")
+                            stock_approved = True
+                            break
+                        else:
+                            print(f"[{task_id}] Sahne {i}: Stok görsel reddedildi (<7/10).")
+                            if os.path.exists(img_name):
+                                os.remove(img_name)
                 
+                if stock_approved:
+                    continue
+                    
+                print(f"[{task_id}] Sahne {i}: 3 deneme başarısız oldu veya reddedildi. YZ üretimi başlatılıyor...")
                 # YZ ile görsel üret (DALL-E 3, FLUX, Pollinations vs. - Aspect Ratio uyumlu)
                 print(f"[{task_id}] Sahne {i}: YZ ile görsel üretiliyor ({image_ai_provider})...")
                 generate_image(prompt, img_name, image_ai_provider, topic=topic, aspect_ratio=aspect_ratio)

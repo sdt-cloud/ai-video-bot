@@ -47,6 +47,9 @@ class PerformanceOptimizer:
                         return True
                     else:
                         self.logger.warning(f"Görsel reddedildi (Puan: {score}/10). Neden: {reason} (Deneme: {attempt+1}/{max_retries})")
+                        import os
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
                         
                 except Exception as e:
                     self.logger.error(f"Görsel üretim hatası: {e}")
