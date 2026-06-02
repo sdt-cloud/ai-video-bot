@@ -63,7 +63,7 @@ def extract_article_text(url: str) -> str:
     words = cleaned_text.split()
     if len(words) > 8000:
         cleaned_text = " ".join(words[:8000])
-        print(f"[url_parser] Metin çok uzun olduğu için 8000 kelimeyle sınırlandırıldı.")
+        print("[url_parser] Metin çok uzun olduğu için 8000 kelimeyle sınırlandırıldı.")
         
     print(f"[url_parser] Başarıyla temizlendi. Toplam karakter: {len(cleaned_text)}")
     return cleaned_text

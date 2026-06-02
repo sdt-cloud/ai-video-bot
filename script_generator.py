@@ -776,7 +776,7 @@ def generate_script(topic, ai_provider="Gemini", duration=30, language="tr", qua
             from url_parser import extract_article_text
             url_text = extract_article_text(url)
             if url_text:
-                print(f"[+] URL metni başarıyla çekildi. Senaryo için birincil kaynak olarak kullanılacak.")
+                print("[+] URL metni başarıyla çekildi. Senaryo için birincil kaynak olarak kullanılacak.")
                 url_instructions = (
                     f"\n\n[ZORUNLU KAYNAK DOKÜMAN - KESİNLİKLE UYULMALIDIR]\n"
                     f"Senaryoyu yazarken YALNIZCA ve KESİNLİKLE aşağıdaki web sayfasından çıkarılan metni kaynak olarak kullan. "
