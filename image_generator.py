@@ -431,8 +431,7 @@ def _stock_search_keyword(prompt: str, topic: str = "") -> str:
     # Fallback: hiç anlamlı kelime bulunamazsa ilk 4 kelimeyi kullan
     return " ".join(words[:4]) if len(words) >= 4 else prompt[:60]
 
-
-def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "") -> bool:
+def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "", aspect_ratio: str = "9:16") -> bool:
     """Pexels API ile ücretsiz stok görsel indir. API key .env'de PEXELS_API_KEY olmalı."""
     api_key = os.environ.get("PEXELS_API_KEY", "").strip()
     if not api_key:
@@ -446,10 +445,16 @@ def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "")
     headers = {"Authorization": api_key}
 
     try:
-        # Portrait (dikey) 1080x1920 uyumlu görseller için
+        # Aspect Ratio bazlı dikey/yatay/kare oryantasyon seçimi
+        orientation = "portrait"
+        if aspect_ratio == "16:9":
+            orientation = "landscape"
+        elif aspect_ratio == "1:1":
+            orientation = "square"
+
         params = {
             "query": keyword,
-            "orientation": "portrait",
+            "orientation": orientation,
             "per_page": 10,
             "page": random.randint(1, 3),
         }
@@ -464,7 +469,6 @@ def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "")
             print(f"[-] Pexels: '{keyword}' için sonuç bulunamadı.")
             return False
 
-        # En büyük dikey görseli seç
         photo = random.choice(photos)
         img_url = photo["src"].get("large2x") or photo["src"].get("large") or photo["src"]["original"]
 
@@ -483,9 +487,7 @@ def fetch_stock_image_pexels(prompt: str, output_filename: str, topic: str = "")
     except Exception as e:
         print(f"[-] Pexels hatası: {e}")
         return False
-
-
-def fetch_stock_image_pixabay(prompt: str, output_filename: str, topic: str = "") -> bool:
+def fetch_stock_image_pixabay(prompt: str, output_filename: str, topic: str = "", aspect_ratio: str = "9:16") -> bool:
     """Pixabay API ile ücretsiz stok görsel indir. API key .env'de PIXABAY_API_KEY olmalı."""
     api_key = os.environ.get("PIXABAY_API_KEY", "").strip()
     if not api_key:
@@ -497,11 +499,18 @@ def fetch_stock_image_pixabay(prompt: str, output_filename: str, topic: str = ""
 
     session = get_session()
     try:
+        # Aspect Ratio bazlı dikey/yatay/kare oryantasyon seçimi (Pixabay 'all' veya 'horizontal'/'vertical' destekler)
+        orientation = "vertical"
+        if aspect_ratio == "16:9":
+            orientation = "horizontal"
+        elif aspect_ratio == "1:1":
+            orientation = "all"
+
         params = {
             "key": api_key,
             "q": urllib.parse.quote(keyword),
             "image_type": "photo",
-            "orientation": "vertical",
+            "orientation": orientation,
             "per_page": 10,
             "page": random.randint(1, 3),
             "safesearch": "true",
@@ -535,9 +544,7 @@ def fetch_stock_image_pixabay(prompt: str, output_filename: str, topic: str = ""
     except Exception as e:
         print(f"[-] Pixabay hatası: {e}")
         return False
-
-
-def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "") -> bool:
+def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "", aspect_ratio: str = "9:16") -> bool:
     """Unsplash API ile ücretsiz stok görsel indir. API key .env'de UNSPLASH_ACCESS_KEY olmalı."""
     access_key = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
     if not access_key:
@@ -550,9 +557,16 @@ def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "
     session = get_session()
     headers = {"Authorization": f"Client-ID {access_key}"}
     try:
+        # Aspect Ratio bazlı dikey/yatay/kare oryantasyon seçimi
+        orientation = "portrait"
+        if aspect_ratio == "16:9":
+            orientation = "landscape"
+        elif aspect_ratio == "1:1":
+            orientation = "squarish"
+
         params = {
             "query": keyword,
-            "orientation": "portrait",
+            "orientation": orientation,
             "per_page": 10,
             "page": random.randint(1, 3),
         }
@@ -585,22 +599,20 @@ def fetch_stock_image_unsplash(prompt: str, output_filename: str, topic: str = "
     except Exception as e:
         print(f"[-] Unsplash hatası: {e}")
         return False
-
-
-def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "") -> bool:
+def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "", aspect_ratio: str = "9:16") -> bool:
     """Otomatik stok görsel: Pexels → Pixabay → Unsplash → GPT Image → Pollinations → HuggingFace"""
-    print(f"[+] Stock-Auto modu başlatıldı: '{output_filename}'")
+    print(f"[+] Stock-Auto modu başlatıldı: '{output_filename}' (Aspect Ratio: {aspect_ratio})")
 
     # 1. Pexels
-    if fetch_stock_image_pexels(prompt, output_filename, topic):
+    if fetch_stock_image_pexels(prompt, output_filename, topic, aspect_ratio=aspect_ratio):
         return True
 
     # 2. Pixabay
-    if fetch_stock_image_pixabay(prompt, output_filename, topic):
+    if fetch_stock_image_pixabay(prompt, output_filename, topic, aspect_ratio=aspect_ratio):
         return True
 
     # 3. Unsplash
-    if fetch_stock_image_unsplash(prompt, output_filename, topic):
+    if fetch_stock_image_unsplash(prompt, output_filename, topic, aspect_ratio=aspect_ratio):
         return True
 
     # 4. GPT Image 1 (eski DALL-E 3'ün yerini aldı)
@@ -616,13 +628,10 @@ def fetch_stock_image_auto(prompt: str, output_filename: str, topic: str = "") -
     # 6. Hugging Face (son çare - ücretsiz AI)
     print("[!] Pollinations başarısız. Son çare: Hugging Face deneniyor...")
     return generate_image_huggingface(prompt, output_filename)
-
-
 # ─────────────────────────────────────────────────────────────
 # ANA YÖNLENDIRICI
 # ─────────────────────────────────────────────────────────────
-
-def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str = ""):
+def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str = "", aspect_ratio: str = "9:16"):
     """
     Görsel üretici / indiricisi.
     topic: Video konusu (Türkçe/İngilizce). Stok aramalarda konuya göre
@@ -632,13 +641,13 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str
 
     # Stok görsel sağlayıcıları
     if provider_lower == "pexels":
-        return fetch_stock_image_pexels(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pexels(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "pixabay":
-        return fetch_stock_image_pixabay(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_pixabay(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "unsplash":
-        return fetch_stock_image_unsplash(prompt, output_filename, topic) or generate_image_openai(prompt, output_filename)
+        return fetch_stock_image_unsplash(prompt, output_filename, topic, aspect_ratio=aspect_ratio) or generate_image_openai(prompt, output_filename)
     elif provider_lower == "stock-auto":
-        return fetch_stock_image_auto(prompt, output_filename, topic)
+        return fetch_stock_image_auto(prompt, output_filename, topic, aspect_ratio=aspect_ratio)
 
     # AI görsel sağlayıcıları
     elif provider_lower == "openai-hd" or provider_lower == "dall-e-hd" or provider_lower == "gpt-image-hd":
@@ -669,8 +678,7 @@ def generate_image(prompt, output_filename, ai_provider="Stock-Auto", topic: str
     else:
         # Bilinmeyen sağlayıcı → Stock-Auto
         print(f"[!] Bilinmeyen sağlayıcı '{ai_provider}', Stock-Auto kullanılıyor.")
-        return fetch_stock_image_auto(prompt, output_filename, topic)
-
+        return fetch_stock_image_auto(prompt, output_filename, topic, aspect_ratio=aspect_ratio)
 if __name__ == "__main__":
     # Test
     test_prompt = "A cinematic hyperrealistic image of an astronaut standing alone on a snowy mountain peak during a dark night with glowing stars, 8k resolution"

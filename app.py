@@ -251,15 +251,14 @@ async def process_video(task):
                 output_paths.append(img_name)
                 temp_files.append(img_name)
                 media_types.append("image")
-                
-                # Önce stok görsel ara
-                print(f"[{task_id}] Sahne {i}: Stok görsel aranıyor...")
+                                # Önce stok görsel ara (Aspect Ratio uyumlu olarak)
+                print(f"[{task_id}] Sahne {i}: Stok görsel aranıyor (Format: {aspect_ratio})...")
                 from image_generator import fetch_stock_image_pexels, fetch_stock_image_pixabay, fetch_stock_image_unsplash
                 
                 stock_success = False
                 for fetch_fn in [fetch_stock_image_pexels, fetch_stock_image_pixabay, fetch_stock_image_unsplash]:
                     try:
-                        if fetch_fn(prompt, img_name, topic):
+                        if fetch_fn(prompt, img_name, topic, aspect_ratio=aspect_ratio):
                             stock_success = True
                             break
                     except Exception as e:
@@ -279,9 +278,9 @@ async def process_video(task):
                         if os.path.exists(img_name):
                             os.remove(img_name)
                 
-                # YZ ile görsel üret (DALL-E 3, FLUX, Pollinations vs.)
+                # YZ ile görsel üret (DALL-E 3, FLUX, Pollinations vs. - Aspect Ratio uyumlu)
                 print(f"[{task_id}] Sahne {i}: YZ ile görsel üretiliyor ({image_ai_provider})...")
-                generate_image(prompt, img_name, image_ai_provider, topic=topic)
+                generate_image(prompt, img_name, image_ai_provider, topic=topic, aspect_ratio=aspect_ratio)
         else:
             # Standart Kısa Video Medya Hazırlama Aşaması (paralel işlem)
             for i, scene in enumerate(scenes):
@@ -357,13 +356,14 @@ async def process_video(task):
                 loop = asyncio.get_running_loop()
                 image_results = await loop.run_in_executor(
                     None,
-                    parallel_process_images,
-                    image_prompts,
-                    image_outputs,
-                    image_providers,
-                    topic,
-                )
-                
+                    lambda: parallel_process_images(
+                        image_prompts,
+                        image_outputs,
+                        image_providers,
+                        topic,
+                        aspect_ratio
+                    )
+                )                
                 # Başarısız görselleri işaretle
                 for idx, success in enumerate(image_results):
                     if not success:

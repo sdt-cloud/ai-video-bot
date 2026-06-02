@@ -17,8 +17,8 @@ class PerformanceOptimizer:
         self.results = {}
         self.logger = logging.getLogger(__name__)
         
-    def parallel_image_generation(self, prompts: List[str], output_paths: List[str], provider: Union[str, List[str]] = "Pollinations", topic: str = "") -> List[bool]:
-        """Görselleri paralel olarak indirir"""
+    def parallel_image_generation(self, prompts: List[str], output_paths: List[str], provider: Union[str, List[str]] = "Pollinations", topic: str = "", aspect_ratio: str = "9:16") -> List[bool]:
+        """Görselleri paralel olarak indirir/üretir"""
         from image_generator import generate_image
         
         # Provider listesini hazırla
@@ -34,7 +34,7 @@ class PerformanceOptimizer:
             max_retries = 3
             for attempt in range(max_retries):
                 try:
-                    success = generate_image(prompt, output_path, current_provider, topic=topic)
+                    success = generate_image(prompt, output_path, current_provider, topic=topic, aspect_ratio=aspect_ratio)
                     if not success:
                         self.logger.warning(f"Görsel üretimi başarısız (Deneme: {attempt+1}/{max_retries})")
                         continue
@@ -55,7 +55,7 @@ class PerformanceOptimizer:
             self.logger.warning(f"[*] 3 deneme başarısız. AI ile zorla üretiliyor: {output_path}")
             try:
                 # "OpenAI" diyerek GPT Image 1 modelini çağırıyoruz (garanti fallback)
-                return generate_image(prompt, output_path, "OpenAI", topic=topic)
+                return generate_image(prompt, output_path, "OpenAI", topic=topic, aspect_ratio=aspect_ratio)
             except Exception as e:
                 self.logger.error(f"Zorunlu AI fallback hatası: {e}")
                 return False
@@ -206,6 +206,6 @@ def get_optimized_settings():
     """Optimize edilmiş ayarları döndürür"""
     return optimizer.adaptive_quality_settings()
 
-def parallel_process_images(prompts: List[str], output_paths: List[str], provider: Union[str, List[str]] = "Pollinations", topic: str = "") -> List[bool]:
-    """Görselleri paralel işler. topic parametresi ile konu bazlı daha alakalı görseller üretir."""
-    return optimizer.parallel_image_generation(prompts, output_paths, provider, topic=topic)
+def parallel_process_images(prompts: List[str], output_paths: List[str], provider: Union[str, List[str]] = "Pollinations", topic: str = "", aspect_ratio: str = "9:16") -> List[bool]:
+    """Görselleri paralel işler. topic ve aspect_ratio parametreleri ile uyumlu görsel aramayı ve üretimini gerçekleştirir."""
+    return optimizer.parallel_image_generation(prompts, output_paths, provider, topic=topic, aspect_ratio=aspect_ratio)
