@@ -136,7 +136,7 @@ def _generate_ambient_tone(output_path: str, tone: str = "calm", duration_secs: 
             wav_file.setsampwidth(2)  # 16-bit
             wav_file.setframerate(sample_rate)
             pcm_data = (signal * 32767).astype(np.int16)
-            wav_file.writeframes(struct.pack(f'<{len(pcm_data)}h', *pcm_data))
+            wav_file.writeframes(pcm_data.tobytes())
 
         print(f"[BGM] Ambient WAV oluşturuldu: {wav_path}")
         return wav_path
