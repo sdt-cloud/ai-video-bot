@@ -1,4 +1,6 @@
 import os
+os.environ["FFMPEG_BINARY"] = os.path.abspath(os.path.join(os.path.dirname(__file__), "ffmpeg_wrapper"))
+
 import argparse
 import asyncio
 import concurrent.futures
@@ -52,6 +54,7 @@ def parse_arguments():
     parser.add_argument("-tr", "--transition", type=str, default="none", choices=["none", "fade", "crossfade", "zoom", "spin", "glitch", "auto"], help="Scene transition effect")
     parser.add_argument("--bgm", action="store_true", help="Enable automatic cinematic background music matching the tone")
     parser.add_argument("--bgm-tone", type=str, default="auto", help="Background music tone (e.g. dramatic, epic, happy, energetic, auto)")
+    parser.add_argument("-tn", "--tone", type=str, default="auto", help="Narration and visual tone (e.g. dramatic, epic, happy, energetic, auto)")
     parser.add_argument("-sp", "--sentence-pause", type=float, default=0.0, help="Brief silence duration between narrator sentences")
     parser.add_argument("--watermark", action="store_true", help="Add default AI Video Bot watermark layer")
     parser.add_argument("-cg", "--color-grade", type=str, default="auto_enhance", choices=["none", "auto_enhance", "warm", "cool", "vintage", "cinematic"], help="Color grading filter style")
@@ -106,7 +109,8 @@ async def main_async():
             custom_script,
             ai_provider=args.script_ai,
             duration=args.duration,
-            quality_level=args.quality
+            quality_level=args.quality,
+            tone=args.tone
         )
     else:
         script_data = generate_script(
@@ -114,7 +118,8 @@ async def main_async():
             ai_provider=args.script_ai,
             duration=args.duration,
             language=args.language,
-            quality_level=args.quality
+            quality_level=args.quality,
+            tone=args.tone
         )
         
     if not script_data or "scenes" not in script_data:
@@ -286,6 +291,17 @@ async def main_async():
     narrations = [scene.get("narration", "") for scene in scenes]
     scene_pacings = [{"pacing": s.get("pacing", "normal"), "mood": s.get("mood", "")} for s in scenes]
     
+    # Konuya göre otomatik ton ve renk eşleştirmeyi çöz
+    bgm_tone = args.bgm_tone
+    if bgm_tone == "auto" and script_data.get("_meta", {}).get("bgm_tone"):
+        bgm_tone = script_data["_meta"]["bgm_tone"]
+        print(f"{Color.GREEN}[+] Otomatik BGM tonu konuya göre seçildi: {bgm_tone}{Color.END}")
+
+    color_grade = args.color_grade
+    if color_grade == "auto_enhance" and script_data.get("_meta", {}).get("color_grade_style"):
+        color_grade = script_data["_meta"]["color_grade_style"]
+        print(f"{Color.GREEN}[+] Otomatik renk derecelendirme konuya göre seçildi: {color_grade}{Color.END}")
+        
     video_success = await create_video(
         valid_media_paths,
         voice_file,
@@ -297,10 +313,10 @@ async def main_async():
         watermark_enabled=args.watermark,
         transition_style=args.transition,
         bgm_enabled=args.bgm,
-        bgm_tone=args.bgm_tone,
+        bgm_tone=bgm_tone,
         aspect_ratio=args.aspect_ratio,
         quality_level=args.quality,
-        color_grade_style=args.color_grade,
+        color_grade_style=color_grade,
         scene_pacings=scene_pacings,
         letterbox_enabled=args.letterbox,
         light_leak_enabled=args.light_leak

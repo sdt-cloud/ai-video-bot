@@ -1,7 +1,9 @@
+import os
+os.environ["FFMPEG_BINARY"] = os.path.abspath(os.path.join(os.path.dirname(__file__), "ffmpeg_wrapper"))
+
 from moviepy import AudioFileClip, ImageClip, VideoFileClip, concatenate_videoclips, CompositeAudioClip
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
-import os
 import requests
 import numpy as np
 import video_effects
@@ -113,14 +115,14 @@ def is_target_resolution_image(image_path, target_size=None, aspect_ratio="9:16"
     except Exception:
         return False
         
-def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.0, aspect_ratio="9:16"):
+def generate_karaoke_subtitle_clips(text, duration, temp_files, subtitle_style="tiktok", subtitle_delay=0.0, aspect_ratio="9:16", word_timings=None):
     """Kelimelerin zamanlamasını hesaplar ve karaoke stili bellekten oluşan bir klip döner."""
     from subtitle_enhancer import subtitle_enhancer
     from moviepy import ImageClip, concatenate_videoclips
     
     target_w, target_h = get_resolution(aspect_ratio)
     
-    timings = subtitle_enhancer.generate_subtitle_timing(text, duration, delay=subtitle_delay)
+    timings = word_timings if word_timings else subtitle_enhancer.generate_subtitle_timing(text, duration, delay=subtitle_delay)
     if not timings:
         return None
         
@@ -309,10 +311,10 @@ def check_gpu_support():
         res = subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=3)
         encoders = res.stdout
         
-        # Sadece listede var olması yetmez, aktif çalışabilirliğini test edelim (lavfi null render testi)
+        # Sadece listede var olması yetmez, aktif çalışabilirliğini test edelim (lavfi null render testi - min çözünürlük 256x256)
         if "h264_nvenc" in encoders:
             test = subprocess.run(
-                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_nvenc", "-f", "null", "-"],
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.05", "-c:v", "h264_nvenc", "-f", "null", "-"],
                 capture_output=True, timeout=2
             )
             if test.returncode == 0:
@@ -320,7 +322,7 @@ def check_gpu_support():
                 
         if "h264_videotoolbox" in encoders:
             test = subprocess.run(
-                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_videotoolbox", "-f", "null", "-"],
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.05", "-c:v", "h264_videotoolbox", "-f", "null", "-"],
                 capture_output=True, timeout=2
             )
             if test.returncode == 0:
@@ -328,29 +330,51 @@ def check_gpu_support():
                 
         if "h264_qsv" in encoders:
             test = subprocess.run(
-                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_qsv", "-f", "null", "-"],
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.05", "-c:v", "h264_qsv", "-f", "null", "-"],
                 capture_output=True, timeout=2
             )
             if test.returncode == 0:
                 return "h264_qsv"
-                
-        if "h264_vaapi" in encoders:
+        
+        # AMD AMF (harici GPU)
+        if "h264_amf" in encoders:
             test = subprocess.run(
-                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=32x32:d=0.05", "-c:v", "h264_vaapi", "-f", "null", "-"],
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.05", "-c:v", "h264_amf", "-f", "null", "-"],
                 capture_output=True, timeout=2
             )
             if test.returncode == 0:
-                return "h264_vaapi"
+                return "h264_amf"
+                
+        # AMD/Intel/VAAPI (entegre GPU — renderD128 cihazı gerekir)
+        if "h264_vaapi" in encoders:
+            vaapi_device = None
+            for dev in ["/dev/dri/renderD128", "/dev/dri/renderD129"]:
+                if os.path.exists(dev):
+                    vaapi_device = dev
+                    break
+            if vaapi_device:
+                test = subprocess.run(
+                    ["ffmpeg", "-y", "-vaapi_device", vaapi_device,
+                     "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.05",
+                     "-vf", "format=nv12,hwupload",
+                     "-c:v", "h264_vaapi", "-f", "null", "-"],
+                    capture_output=True, timeout=3
+                )
+                if test.returncode == 0:
+                    # VAAPI device yolunu sonraki kullanımlar için sakla
+                    os.environ["VAAPI_DEVICE"] = vaapi_device
+                    return "h264_vaapi"
     except Exception:
         pass
     return None
 
-def get_render_settings(video_mode, total_duration, quality_level="medium"):
+def get_render_settings(video_mode, total_duration, quality_level="medium", is_long_video=False):
     """Kalite düzeyine, süreye ve moda göre render ayarlarını belirler."""
     cpu_threads = max(2, min(8, (os.cpu_count() or 4)))
     profile = RENDER_QUALITY_PROFILES.get(quality_level, RENDER_QUALITY_PROFILES["medium"])
 
     gpu_codec = check_gpu_support()
+    vaapi_device = os.environ.get("VAAPI_DEVICE", "/dev/dri/renderD128")
     if gpu_codec:
         print(f"🔥 [GPU HIZLANDIRICI] Donanım ivmeli ultra hızlı video kurgu aktif! (Kullanılan Encoder: {gpu_codec})")
     else:
@@ -370,6 +394,16 @@ def get_render_settings(video_mode, total_duration, quality_level="medium"):
         ],
     }
 
+    # VAAPI encode için init parametreleri (AMD APU / Intel iGPU)
+    if gpu_codec == "h264_vaapi":
+        settings["ffmpeg_params"] = [
+            "-vf", "format=nv12,hwupload",
+            "-movflags", "+faststart",
+            "-b:a", "192k",
+        ]
+        # VAAPI pixel format dönüşümünü video filtre zincirinden yapmalıyız
+        settings["_vaapi_device"] = vaapi_device
+
     # Donanım ivmeli encode için tüm sistemlerle %100 uyumlu bitrate profillerini tanımla
     if gpu_codec:
         # Bitrate belirleyerek tüm GPU markalarında (Nvidia/macOS/Intel/Linux) parametre hatalarını engelliyoruz
@@ -388,6 +422,21 @@ def get_render_settings(video_mode, total_duration, quality_level="medium"):
     # Uzun videolarda (3dk+) encode süresini kontrol altına al
     if total_duration >= 180 and quality_level != "high":
         settings["preset"] = "fast"
+    
+    # UZUN VİDEO HIZLI RENDER OPTİMİZASYONU
+    # YouTube'un kendi re-encoding'i yüksek CRF farkını telafi eder,
+    # bu yüzden lokal render'da hız kaliteye tercih edilir.
+    if is_long_video and not gpu_codec:
+        settings["preset"] = "ultrafast"
+        settings["ffmpeg_params"] = [
+            "-movflags", "+faststart",
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "main",  # high yerine main → daha hızlı decode
+            "-level", "4.1",
+            "-crf", "26",  # 22 → 26: YouTube re-encode edince fark anlaşılmaz
+            "-b:a", "128k",  # Ses biraz düşürülür (YouTube standart 128k)
+        ]
+        print("⚡ [UZUN VİDEO] Hızlı render modu aktif: preset=ultrafast, CRF=26")
 
     # AI video modunda encode daha ağır olur
     if video_mode == "ai_video" and quality_level == "low":
@@ -747,7 +796,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                  watermark_enabled=False, transition_style="none",
                  bgm_enabled=False, bgm_tone="auto", aspect_ratio="9:16",
                  quality_level="medium", color_grade_style="auto_enhance",
-                 scene_pacings=None, letterbox_enabled=False, light_leak_enabled=False):
+                 scene_pacings=None, letterbox_enabled=False, light_leak_enabled=False,
+                 is_long_video=False):
     target_w, target_h = get_resolution(aspect_ratio)
     print(f"[+] Video kurgulanıyor (Mod: {video_mode}, Boyut: {target_w}x{target_h}, Kalite: {quality_level}): {output_filename}...")
     temp_files = []
@@ -793,25 +843,27 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
             # Minimum süre garantisi: hiçbir sahne 2 saniyeden kısa olmasın
             slide_durations = [max(2.0, d) for d in slide_durations]
             
-            # Hook (ilk sahne) en fazla 4 saniye
-            if slide_durations[0] > 4.0:
-                excess = slide_durations[0] - 4.0
-                slide_durations[0] = 4.0
-                # Fazlayı diğer sahnelere dağıt
-                others = len(slide_durations) - 1
-                if others > 0:
-                    for j in range(1, len(slide_durations)):
-                        slide_durations[j] += excess / others
-            
-            # Son sahne (CTA) en az 3 saniye
-            if len(slide_durations) > 1 and slide_durations[-1] < 3.0:
-                deficit = 3.0 - slide_durations[-1]
-                slide_durations[-1] = 3.0
-                others = len(slide_durations) - 1
-                if others > 0:
-                    per_scene = deficit / others
-                    for j in range(len(slide_durations) - 1):
-                        slide_durations[j] = max(2.0, slide_durations[j] - per_scene)
+            # Kısa video (Shorts/Reels) optimizasyonları — uzun belgeselde uygulanmaz
+            if not is_long_video:
+                # Hook (ilk sahne) en fazla 4 saniye
+                if slide_durations[0] > 4.0:
+                    excess = slide_durations[0] - 4.0
+                    slide_durations[0] = 4.0
+                    # Fazlayı diğer sahnelere dağıt
+                    others = len(slide_durations) - 1
+                    if others > 0:
+                        for j in range(1, len(slide_durations)):
+                            slide_durations[j] += excess / others
+                
+                # Son sahne (CTA) en az 3 saniye
+                if len(slide_durations) > 1 and slide_durations[-1] < 3.0:
+                    deficit = 3.0 - slide_durations[-1]
+                    slide_durations[-1] = 3.0
+                    others = len(slide_durations) - 1
+                    if others > 0:
+                        per_scene = deficit / others
+                        for j in range(len(slide_durations) - 1):
+                            slide_durations[j] = max(2.0, slide_durations[j] - per_scene)
             
             # --- RİTMİK KURGU (BGM BEAT-SYNCING) ENTEGRASYONU ---
             if bgm_enabled and len(slide_durations) > 1:
@@ -821,7 +873,34 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                         slide_durations = video_effects.align_durations_to_beats(slide_durations, bgm_path)
                 except Exception as sync_err:
                     print(f"[-] Beat-Sync hatası (devam ediliyor): {sync_err}")
+
+        # Exact word boundary timings yüklemeyi dene (subtitle_sync ile)
+        sliced_timings = None
+        import re
+        import json
+        task_id = None
+        match = re.search(r'vid_(\d+)_', os.path.basename(output_filename))
+        if match:
+            task_id = match.group(1)
+            
+        if task_id:
+            boundaries_path = f"assets/word_boundaries_{task_id}.json"
+            if os.path.exists(boundaries_path):
+                try:
+                    with open(boundaries_path, "r", encoding="utf-8") as bf:
+                        all_boundaries = json.load(bf)
+                    if all_boundaries and narrations:
+                        from subtitle_sync import slice_global_timestamps
+                        sliced_timings = slice_global_timestamps(all_boundaries, narrations, slide_durations)
+                        print(f"[+] Milisaniye hassasiyetli altyazı senkronizasyonu aktif edildi ({len(sliced_timings)} sahne)")
+                except Exception as sync_load_err:
+                    print(f"[-] Kelime zaman damgaları yükleme hatası: {sync_load_err}")
         
+        use_chunk_rendering = len(image_paths) >= 12
+        chunk_files = []
+        chunk_clips = []
+        chunk_size = 8
+
         for i, img in enumerate(image_paths):
             slide_duration = slide_durations[i]
             processed_img = img
@@ -891,8 +970,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 if not is_target_resolution_image(processed_img, aspect_ratio=aspect_ratio):
                     clip = apply_clip_resize(clip, width=target_w, height=target_h)
                 
-                # Sadece ilk sahnede (Hook) Camera Shake uygula
-                if i == 0:
+                # Sadece kısa videolarda (Hook) Camera Shake uygula
+                if i == 0 and not is_long_video:
                     clip = video_effects.apply_camera_shake(clip, duration=0.8, intensity=15)
                 
                 # Statikliği kırmak için her zaman hafif hareket ekle (slideshow olsa bile)
@@ -907,7 +986,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 enhanced_narration = subtitle_enhancer.enhance_text_for_speech(narrations[i])
                 try:
                     from moviepy import CompositeVideoClip
-                    dynamic_sub_clip = generate_karaoke_subtitle_clips(enhanced_narration, slide_duration, temp_files, subtitle_style, subtitle_delay, aspect_ratio)
+                    word_timings = sliced_timings[i] if sliced_timings and i < len(sliced_timings) else None
+                    dynamic_sub_clip = generate_karaoke_subtitle_clips(enhanced_narration, slide_duration, temp_files, subtitle_style, subtitle_delay, aspect_ratio, word_timings=word_timings)
                     if dynamic_sub_clip:
                         clip = CompositeVideoClip([clip, dynamic_sub_clip])
                     else:
@@ -953,14 +1033,63 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                     elif hasattr(clip, 'set_position'):
                         clip = clip.set_position(pos_fn)
             
-            clips.append(clip)
+            if use_chunk_rendering:
+                chunk_clips.append(clip)
+                if len(chunk_clips) == chunk_size or i == len(image_paths) - 1:
+                    chunk_index = len(chunk_files)
+                    temp_chunk_file = f"assets/temp_chunk_{task_id}_{chunk_index}.mp4" if task_id else f"assets/temp_chunk_{chunk_index}.mp4"
+                    print(f"[+] Chunk {chunk_index} render ediliyor (Sahneler {i - len(chunk_clips) + 1} - {i})...")
+                    
+                    overlap_styles = ("crossfade", "zoom", "spin", "glitch", "slide_left", "slide_right", "slide_up", "slide_down")
+                    if (transition_style == "auto" or transition_style in overlap_styles) and len(chunk_clips) > 1:
+                        chunk_video = concatenate_videoclips(chunk_clips, method="compose", padding=-transition_dur)
+                    else:
+                        chunk_video = concatenate_videoclips(chunk_clips, method="compose")
+                    
+                    chunk_render_settings = get_render_settings(video_mode, chunk_video.duration, quality_level, is_long_video=is_long_video)
+                    chunk_write_kwargs = {
+                        "fps": chunk_render_settings["fps"],
+                        "codec": chunk_render_settings["codec"],
+                        "audio": False,  # Chunks are silent
+                        "threads": chunk_render_settings["threads"],
+                        "ffmpeg_params": chunk_render_settings["ffmpeg_params"],
+                        "logger": None
+                    }
+                    if chunk_render_settings.get("preset"):
+                        chunk_write_kwargs["preset"] = chunk_render_settings["preset"]
+                    
+                    chunk_video.write_videofile(temp_chunk_file, **chunk_write_kwargs)
+                    chunk_video.close()
+                    for c in chunk_clips:
+                        try:
+                            c.close()
+                        except Exception:
+                            pass
+                    
+                    chunk_clips = []
+                    import gc
+                    gc.collect()
+                    
+                    chunk_files.append(temp_chunk_file)
+                    temp_files.append(temp_chunk_file)
+            else:
+                clips.append(clip)
         
         # Slayt ve diğer kompozisyon geçişleri için overlap padding uygula
-        overlap_styles = ("crossfade", "zoom", "spin", "glitch", "slide_left", "slide_right", "slide_up", "slide_down")
-        if (transition_style == "auto" or transition_style in overlap_styles) and len(clips) > 1:
-            final_video = concatenate_videoclips(clips, method="compose", padding=-transition_dur)
+        if use_chunk_rendering:
+            print(f"[+] Tüm chunk dosyaları birleştiriliyor: {chunk_files}")
+            flat_chunk_clips = []
+            for cf in chunk_files:
+                flat_chunk_clips.append(VideoFileClip(cf))
+            
+            final_video = concatenate_videoclips(flat_chunk_clips, method="compose")
+            clips.extend(flat_chunk_clips)
         else:
-            final_video = concatenate_videoclips(clips, method="compose")
+            overlap_styles = ("crossfade", "zoom", "spin", "glitch", "slide_left", "slide_right", "slide_up", "slide_down")
+            if (transition_style == "auto" or transition_style in overlap_styles) and len(clips) > 1:
+                final_video = concatenate_videoclips(clips, method="compose", padding=-transition_dur)
+            else:
+                final_video = concatenate_videoclips(clips, method="compose")
 
         # --- Sinematik Post-Efektler (Vignette + Film Grain + Letterbox + Light Leak) ---
         if quality_level in ("medium", "high") or light_leak_enabled:
@@ -1040,8 +1169,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
                 audio_layers.append(hook_sfx)
                 print("[SFX] Başlangıç 'Hook' ses efekti eklendi.")
                 
-            # Sahneler arası geçiş (Whoosh) efektleri
-            if transition_style != "none":
+            # Sahneler arası geçiş (Whoosh) efektleri (Uzun videolarda kapatılır)
+            if transition_style != "none" and not is_long_video:
                 for i, slide_dur in enumerate(slide_durations):
                     current_sfx_time += slide_dur
                     if i < len(slide_durations) - 1:
@@ -1091,7 +1220,7 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         if w % 2 != 0 or h % 2 != 0:
             final_video = apply_clip_resize(final_video, width=w - (w % 2), height=h - (h % 2))
             
-        render_settings = get_render_settings(video_mode, total_duration, quality_level)
+        render_settings = get_render_settings(video_mode, total_duration, quality_level, is_long_video=is_long_video)
         print(
             f"[+] Render işlemi başlıyor... "
             f"(fps={render_settings['fps']}, preset={render_settings['preset']}, threads={render_settings['threads']})"
@@ -1112,7 +1241,8 @@ def create_video(image_paths, audio_path, output_filename="final_video.mp4", nar
         final_video.write_videofile(output_filename, **write_kwargs)
         
         # --- POST-PROCESSING ---
-        if quality_level in ("medium", "high") and os.path.exists(output_filename):
+        # Uzun videolarda post-processing atlanır (YouTube re-encode eder, 2-pass encode gereksiz zaman kaybı)
+        if quality_level in ("medium", "high") and os.path.exists(output_filename) and not is_long_video:
             try:
                 import subprocess
                 temp_pp = output_filename.replace(".mp4", "_pp.mp4")

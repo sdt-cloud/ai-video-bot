@@ -1,0 +1,12 @@
+#!/bin/bash
+device="${VAAPI_DEVICE:-/dev/dri/renderD128}"
+if [[ "$*" == *"h264_vaapi"* ]]; then
+    # Çift kez eklenmeyi önleyelim
+    if [[ "$*" != *"-vaapi_device"* ]]; then
+        exec ffmpeg -vaapi_device "$device" "$@"
+    else
+        exec ffmpeg "$@"
+    fi
+else
+    exec ffmpeg "$@"
+fi

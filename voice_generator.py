@@ -129,8 +129,11 @@ def generate_voice_elevenlabs(text, output_filename, voice_type="erkek", voice_t
             print("[-] ELEVENLABS_API_KEY bulunamadı!")
             return False
             
-        # Ses tipine göre voice ID'si seç
-        voice_id = TURKISH_VOICES.get(voice_type, TURKISH_VOICES["erkek"])
+        # Ses tipine göre voice ID'si seç (Doğrudan Voice ID veya preset)
+        if len(voice_type) > 15 and voice_type not in TURKISH_VOICES:
+            voice_id = voice_type
+        else:
+            voice_id = TURKISH_VOICES.get(voice_type, TURKISH_VOICES["erkek"])
         print(f"[+] Ses tipi: {voice_type} (Voice ID: {voice_id})")
         
         # Ton preset'ini seç
@@ -209,26 +212,60 @@ async def generate_voice_edge(text, output_filename, voice_type="erkek", target_
             rate = _calculate_edge_rate(text, int(target_duration_seconds))
             print(f"[i] Otomatik TTS hızı: hedef {target_duration_seconds} sn için rate={rate}")
         
-        # SSML iyileştirmeleri uygula (dramatik duraklamalar ve vurgular)
-        enhanced_text = _apply_ssml_enhancements(text)
-        if enhanced_text != text:
-            print("[+] SSML iyileştirmeleri uygulandı (dramatik duraklamalar)")
+        # Word boundaries dosya yolunu belirle
+        task_id = None
+        match = re.search(r'narration_(\d+)\.mp3', output_filename)
+        if match:
+            task_id = match.group(1)
+            
+        import json
+        from subtitle_sync import generate_voice_and_timestamps_edge
         
-        communicate = edge_tts.Communicate(enhanced_text, voice, rate=rate)
-        await communicate.save(output_filename)
-        print(f"[+] Ses dosyası kaydedildi: {output_filename}")
+        # SSML etiketleri WordBoundary callback'lerini bozduğu için
+        # ORİJİNAL metni kullanarak ses ve kelime zamanlamalarını üretiyoruz.
+        # Edge-TTS zaten kendi doğal duraklamalarını ekliyor.
+        word_boundaries = await generate_voice_and_timestamps_edge(text, voice, rate, output_filename)
+        
+        if task_id and word_boundaries:
+            boundaries_path = f"assets/word_boundaries_{task_id}.json"
+            with open(boundaries_path, "w", encoding="utf-8") as bf:
+                json.dump(word_boundaries, bf, ensure_ascii=False, indent=4)
+            print(f"[+] Kelime zaman damgaları kaydedildi: {boundaries_path} ({len(word_boundaries)} kelime)")
+            
         return True
     except Exception as e:
         print(f"[-] Ses üretilirken hata oluştu: {e}")
-        # SSML ile hata aldıysa düz metin ile tekrar dene
+        # Düz metin ile tekrar dene
         try:
-            print("[i] SSML'siz tekrar deneniyor...")
-            communicate = edge_tts.Communicate(text, voice, rate=rate)
+            print("[i] Tekrar deneniyor (basit mod)...")
+            voice = _get_edge_voice(voice_type, language)
+            rate_val = "+0%"
+            if target_duration_seconds is not None:
+                rate_val = _calculate_edge_rate(text, int(target_duration_seconds))
+            communicate = edge_tts.Communicate(text, voice, rate=rate_val)
             await communicate.save(output_filename)
-            print(f"[+] Ses dosyası kaydedildi (SSML'siz fallback): {output_filename}")
+            print(f"[+] Ses dosyası kaydedildi (fallback): {output_filename}")
+            
+            # Fallback'te de heuristik kelime zamanlamaları oluştur
+            if task_id:
+                try:
+                    import json
+                    from subtitle_sync import generate_heuristic_timestamps
+                    from moviepy import AudioFileClip
+                    fallback_audio = AudioFileClip(output_filename)
+                    audio_dur = fallback_audio.duration
+                    fallback_audio.close()
+                    heuristic_bounds = generate_heuristic_timestamps(text, audio_dur)
+                    boundaries_path = f"assets/word_boundaries_{task_id}.json"
+                    with open(boundaries_path, "w", encoding="utf-8") as bf:
+                        json.dump(heuristic_bounds, bf, ensure_ascii=False, indent=4)
+                    print(f"[+] Heuristik kelime zamanlamaları kaydedildi: {boundaries_path}")
+                except Exception as heur_err:
+                    print(f"[-] Heuristik zamanlama oluşturulamadı: {heur_err}")
+            
             return True
         except Exception as e2:
-            print(f"[-] SSML'siz deneme de başarısız: {e2}")
+            print(f"[-] Fallback deneme de başarısız: {e2}")
             return False
 
 async def generate_voice_async(text, output_filename, ai_provider="Edge-TTS", voice_type="erkek", target_duration_seconds=None, sentence_pause=0.0, language="tr"):

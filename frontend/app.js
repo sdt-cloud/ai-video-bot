@@ -3,6 +3,7 @@ const translations = {
         "nav_dashboard": "Kontrol Paneli",
         "nav_projects": "Projeler",
         "nav_templates": "Şablonlar (Toplu)",
+        "nav_long_videos": "Uzun Videolar (+8dk)",
         "nav_assets": "Video Galerisi",
         "nav_settings": "Ayarlar",
         "nav_help": "Yardım",
@@ -22,6 +23,7 @@ const translations = {
         "opt_voice_ai": "Ses YZ",
         "opt_image_ai": "Görsel YZ",
         "opt_subtitle": "Altyazı Stili",
+        "opt_subtitles_enabled": "Altyazı Ekle",
         "opt_video_mode": "Video Animasyon",
         "tone_energetic": "Enerjik ve Hızlı",
         "tone_mysterious": "Gizemli ve Derin",
@@ -52,6 +54,7 @@ const translations = {
         "set_api": "API Anahtarları",
         "set_hint": ".env dosyasında yapılandırıldı.",
         "modal_download": "İndir",
+        "virality_title": "Shorts Viralite Analizi",
         
         "placeholder_dash_input": "Video konseptinizi buraya açıklayın...",
         "placeholder_opt_cat": "Örn: Finans, Tarih, Teknoloji...",
@@ -69,6 +72,7 @@ const translations = {
         "nav_dashboard": "Dashboard",
         "nav_projects": "Projects",
         "nav_templates": "Templates (Bulk)",
+        "nav_long_videos": "Long Videos (+8min)",
         "nav_assets": "Video Gallery",
         "nav_settings": "Settings",
         "nav_help": "Help",
@@ -88,6 +92,7 @@ const translations = {
         "opt_voice_ai": "Voice AI",
         "opt_image_ai": "Image AI",
         "opt_subtitle": "Subtitle Style",
+        "opt_subtitles_enabled": "Add Subtitles",
         "opt_video_mode": "Video Animation",
         "tone_energetic": "Energetic & Fast",
         "tone_mysterious": "Mysterious & Deep",
@@ -118,6 +123,7 @@ const translations = {
         "set_api": "API Keys",
         "set_hint": "Configured in .env file",
         "modal_download": "Download",
+        "virality_title": "Shorts Virality Analysis",
         
         "placeholder_dash_input": "Describe your video concept here...",
         "placeholder_opt_cat": "e.g. Finance, History, Technology...",
@@ -207,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else section.classList.remove('active');
             });
 
-            if (targetId === 'projects-view' || targetId === 'assets-view' || targetId === 'dashboard-view') {
+            if (targetId === 'projects-view' || targetId === 'assets-view' || targetId === 'dashboard-view' || targetId === 'long-videos-view') {
                 fetchVideos();
             }
         });
@@ -221,6 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
         advancedToggle.addEventListener('click', () => {
             advancedOptions.classList.toggle('hidden');
             advancedToggle.classList.toggle('open');
+        });
+    }
+
+    // --- Long Video Advanced Options Toggle ---
+    const longAdvancedToggle = document.getElementById('long-advanced-toggle');
+    const longAdvancedOptions = document.getElementById('long-advanced-options');
+    
+    if (longAdvancedToggle && longAdvancedOptions) {
+        longAdvancedToggle.addEventListener('click', () => {
+            longAdvancedOptions.classList.toggle('hidden');
+            longAdvancedToggle.classList.toggle('open');
         });
     }
 
@@ -245,18 +262,102 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- API Calls ---
 
+    // URL Mode Toggle Listener
+    const urlModeToggle = document.getElementById('url-mode-toggle');
+    const urlInputArea = document.getElementById('url-input-area');
+    const customScriptWrapper = document.getElementById('custom-script-area-wrapper');
+    
+    if (urlModeToggle && urlInputArea && customScriptWrapper) {
+        urlModeToggle.addEventListener('change', (e) => {
+            const isUrlMode = e.target.checked;
+            urlInputArea.style.display = isUrlMode ? 'block' : 'none';
+            customScriptWrapper.style.display = isUrlMode ? 'none' : 'block';
+            
+            // Clear inputs when toggling
+            if (isUrlMode) {
+                const customScriptInput = document.getElementById('custom-script-input');
+                if (customScriptInput) customScriptInput.value = '';
+            } else {
+                const urlInput = document.getElementById('url-input');
+                if (urlInput) urlInput.value = '';
+            }
+        });
+    }
+
+    // --- Custom Voice ID Toggle Listener ---
+    const voiceTypeSelect = document.getElementById('voice-type');
+    const customVoiceIdWrapper = document.getElementById('custom-voice-id-wrapper');
+    if (voiceTypeSelect && customVoiceIdWrapper) {
+        voiceTypeSelect.addEventListener('change', (e) => {
+            customVoiceIdWrapper.style.display = e.target.value === 'custom' ? 'block' : 'none';
+        });
+    }
+
+    const bulkVoiceTypeSelect = document.getElementById('bulk-voice-type');
+    const bulkCustomVoiceIdWrapper = document.getElementById('bulk-custom-voice-id-wrapper');
+    if (bulkVoiceTypeSelect && bulkCustomVoiceIdWrapper) {
+        bulkVoiceTypeSelect.addEventListener('change', (e) => {
+            bulkCustomVoiceIdWrapper.style.display = e.target.value === 'custom' ? 'block' : 'none';
+        });
+    }
+
+    // --- Custom BGM Path Toggle Listener ---
+    const optBgmToneSelect = document.getElementById('opt-bgm-tone');
+    const customBgmPathWrapper = document.getElementById('custom-bgm-path-wrapper');
+    if (optBgmToneSelect && customBgmPathWrapper) {
+        optBgmToneSelect.addEventListener('change', (e) => {
+            customBgmPathWrapper.style.display = e.target.value === 'custom' ? 'block' : 'none';
+        });
+    }
+
+    const bulkBgmToneSelect = document.getElementById('bulk-bgm-tone');
+    const bulkCustomBgmPathWrapper = document.getElementById('bulk-custom-bgm-path-wrapper');
+    if (bulkBgmToneSelect && bulkCustomBgmPathWrapper) {
+        bulkBgmToneSelect.addEventListener('change', (e) => {
+            bulkCustomBgmPathWrapper.style.display = e.target.value === 'custom' ? 'block' : 'none';
+        });
+    }
+
     // 1. Single Generation
     const generateBtn = document.getElementById('generate-btn');
     if (generateBtn) {
         generateBtn.addEventListener('click', async () => {
             const topicInput = document.getElementById('topic-input');
             const customScriptInput = document.getElementById('custom-script-input');
+            const urlInput = document.getElementById('url-input');
             const topic = topicInput.value.trim();
             const customScript = customScriptInput ? customScriptInput.value.trim() : "";
+            const isUrlMode = urlModeToggle ? urlModeToggle.checked : false;
+            const urlVal = (isUrlMode && urlInput) ? urlInput.value.trim() : null;
             
-            if(!topic) {
-                alert(currentLang === 'tr' ? "Lütfen bir konu / prompt giriniz!" : "Please enter a topic / prompt!");
+            if (isUrlMode && !urlVal) {
+                alert(currentLang === 'tr' ? "Lütfen geçerli bir web sayfa adresi (URL) giriniz!" : "Please enter a valid website address (URL)!");
                 return;
+            }
+            if (!topic) {
+                alert(currentLang === 'tr' ? "Lütfen bir video başlığı / konusu giriniz!" : "Please enter a video title / topic!");
+                return;
+            }
+
+            let voiceTypeVal = voiceTypeSelect ? voiceTypeSelect.value : "erkek";
+            if (voiceTypeVal === 'custom') {
+                const customVoiceIdInput = document.getElementById('custom-voice-id');
+                voiceTypeVal = customVoiceIdInput ? customVoiceIdInput.value.trim() : "";
+                if (!voiceTypeVal) {
+                    alert(currentLang === 'tr' ? "Lütfen özel ElevenLabs Voice ID değerini giriniz!" : "Please enter a custom ElevenLabs Voice ID!");
+                    return;
+                }
+            }
+
+            let bgmToneVal = optBgmToneSelect ? optBgmToneSelect.value : "auto";
+            const bgmEnabled = document.getElementById('opt-bgm-enabled').checked;
+            if (bgmEnabled && bgmToneVal === 'custom') {
+                const customBgmPathInput = document.getElementById('custom-bgm-path');
+                bgmToneVal = customBgmPathInput ? customBgmPathInput.value.trim() : "";
+                if (!bgmToneVal) {
+                    alert(currentLang === 'tr' ? "Lütfen özel müzik dosyası yolunu giriniz!" : "Please enter a custom background music file path!");
+                    return;
+                }
             }
 
             const originalHtml = generateBtn.innerHTML;
@@ -267,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isMultiLang = document.getElementById('opt-multi-lang').checked;
                 
                 if (isMultiLang) {
-                    // Çoklu Dil Modu — /api/videos/multi-lang endpoint'i kullan
                     const selectedLangs = Array.from(document.querySelectorAll('.multi-lang-cb:checked')).map(cb => cb.value);
                     if (selectedLangs.length === 0) {
                         showToast(currentLang === 'tr' ? "En az 1 dil seçmelisiniz!" : "Select at least 1 language!", "error");
@@ -279,21 +379,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         duration: parseInt(document.getElementById('opt-duration').value),
                         script_ai: document.getElementById('opt-script-ai').value,
                         voice_ai: document.getElementById('opt-voice-ai').value,
-                        voice_type: document.getElementById('voice-type').value,
+                        voice_type: voiceTypeVal,
                         sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                         image_ai: document.getElementById('opt-image-ai').value,
-                        subtitle_style: document.getElementById('opt-subtitle-style').value,
+                        subtitle_style: document.getElementById('opt-subtitles-enabled')?.checked ? document.getElementById('opt-subtitle-style').value : "none",
                         subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 1.0,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: false,
-                        bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
-                        bgm_tone: document.getElementById('opt-bgm-tone').value,
+                        bgm_enabled: bgmEnabled,
+                        bgm_tone: bgmToneVal,
                         quality_level: document.getElementById('opt-quality-level').value,
                         aspect_ratio: document.getElementById('opt-aspect-ratio').value,
                         animation_provider: document.getElementById('opt-animation-provider').value,
                         letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false,
-                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false
+                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false,
+                        url: urlVal
                     };
                     const res = await fetch('/api/videos/multi-lang', {
                         method: 'POST',
@@ -303,6 +404,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(res.ok) {
                         topicInput.value = '';
                         if (customScriptInput) customScriptInput.value = '';
+                        if (urlInput) urlInput.value = '';
+                        if (urlModeToggle) urlModeToggle.checked = false;
+                        if (urlInputArea) urlInputArea.style.display = 'none';
+                        if (customScriptWrapper) customScriptWrapper.style.display = 'block';
+                        const customVoiceIdInput = document.getElementById('custom-voice-id');
+                        if (customVoiceIdInput) customVoiceIdInput.value = '';
+                        if (voiceTypeSelect) voiceTypeSelect.value = 'erkek';
+                        if (customVoiceIdWrapper) customVoiceIdWrapper.style.display = 'none';
+                        const customBgmPathInput = document.getElementById('custom-bgm-path');
+                        if (customBgmPathInput) customBgmPathInput.value = '';
+                        if (optBgmToneSelect) optBgmToneSelect.value = 'auto';
+                        if (customBgmPathWrapper) customBgmPathWrapper.style.display = 'none';
                         showToast(currentLang === 'tr' ? `${selectedLangs.length} dilde video kuyruğa eklendi! 🌍` : `Video queued in ${selectedLangs.length} languages! 🌍`);
                         fetchStats();
                         fetchVideos();
@@ -310,7 +423,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         showToast(currentLang === 'tr' ? "Kuyruğa eklenirken hata oluştu." : "Error adding to queue.", "error");
                     }
                 } else {
-                    // Normal tek dil modu
                     const payload = {
                         topic: topic,
                         category: document.getElementById('opt-category').value.trim() || "Genel",
@@ -320,22 +432,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         script_ai: document.getElementById('opt-script-ai').value,
                         custom_script: customScript || null,
                         voice_ai: document.getElementById('opt-voice-ai').value,
-                        voice_type: document.getElementById('voice-type').value,
+                        voice_type: voiceTypeVal,
                         sentence_pause: parseFloat(document.getElementById('opt-sentence-pause').value) || 0,
                         image_ai: document.getElementById('opt-image-ai').value,
-                        subtitle_style: document.getElementById('opt-subtitle-style').value,
+                        subtitle_style: document.getElementById('opt-subtitles-enabled')?.checked ? document.getElementById('opt-subtitle-style').value : "none",
                         subtitle_delay: parseFloat(document.getElementById('opt-subtitle-delay').value) || 1.0,
                         video_mode: document.getElementById('opt-video-mode').value,
                         transition_style: document.getElementById('opt-transition-style').value,
                         watermark_enabled: false,
-                        bgm_enabled: document.getElementById('opt-bgm-enabled').checked,
-                        bgm_tone: document.getElementById('opt-bgm-tone').value,
+                        bgm_enabled: bgmEnabled,
+                        bgm_tone: bgmToneVal,
                         quality_level: document.getElementById('opt-quality-level').value,
                         aspect_ratio: document.getElementById('opt-aspect-ratio').value,
                         animation_provider: document.getElementById('opt-animation-provider').value,
                         color_grade_style: document.getElementById('opt-color-grade')?.value || 'auto_enhance',
                         letterbox_enabled: document.getElementById('opt-letterbox-enabled')?.checked || false,
-                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false
+                        light_leak_enabled: document.getElementById('opt-light-leak-enabled')?.checked || false,
+                        url: urlVal
                     };
                     const res = await fetch('/api/videos/single', {
                         method: 'POST',
@@ -345,6 +458,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(res.ok) {
                         topicInput.value = '';
                         if (customScriptInput) customScriptInput.value = '';
+                        if (urlInput) urlInput.value = '';
+                        if (urlModeToggle) urlModeToggle.checked = false;
+                        if (urlInputArea) urlInputArea.style.display = 'none';
+                        if (customScriptWrapper) customScriptWrapper.style.display = 'block';
+                        const customVoiceIdInput = document.getElementById('custom-voice-id');
+                        if (customVoiceIdInput) customVoiceIdInput.value = '';
+                        if (voiceTypeSelect) voiceTypeSelect.value = 'erkek';
+                        if (customVoiceIdWrapper) customVoiceIdWrapper.style.display = 'none';
+                        const customBgmPathInput = document.getElementById('custom-bgm-path');
+                        if (customBgmPathInput) customBgmPathInput.value = '';
+                        if (optBgmToneSelect) optBgmToneSelect.value = 'auto';
+                        if (customBgmPathWrapper) customBgmPathWrapper.style.display = 'none';
                         showToast(currentLang === 'tr' ? "Video başarıyla kuyruğa eklendi!" : "Video successfully added to queue!");
                         fetchStats();
                         fetchVideos();
@@ -374,6 +499,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            let voiceTypeVal = bulkVoiceTypeSelect ? bulkVoiceTypeSelect.value : "erkek";
+            if (voiceTypeVal === 'custom') {
+                const customVoiceIdInput = document.getElementById('bulk-custom-voice-id');
+                voiceTypeVal = customVoiceIdInput ? customVoiceIdInput.value.trim() : "";
+                if (!voiceTypeVal) {
+                    alert(currentLang === 'tr' ? "Lütfen özel ElevenLabs Voice ID değerini giriniz!" : "Please enter a custom ElevenLabs Voice ID!");
+                    bulkBtn.innerHTML = originalHtml;
+                    bulkBtn.disabled = false;
+                    return;
+                }
+            }
+
+            let bgmToneVal = bulkBgmToneSelect ? bulkBgmToneSelect.value : "auto";
+            const bgmEnabled = document.getElementById('bulk-bgm-enabled').checked;
+            if (bgmEnabled && bgmToneVal === 'custom') {
+                const customBgmPathInput = document.getElementById('bulk-custom-bgm-path');
+                bgmToneVal = customBgmPathInput ? customBgmPathInput.value.trim() : "";
+                if (!bgmToneVal) {
+                    alert(currentLang === 'tr' ? "Lütfen özel müzik dosyası yolunu giriniz!" : "Please enter a custom background music file path!");
+                    bulkBtn.innerHTML = originalHtml;
+                    bulkBtn.disabled = false;
+                    return;
+                }
+            }
+
             const originalHtml = bulkBtn.innerHTML;
             bulkBtn.innerHTML = '<span class="material-symbols-rounded" style="animation: spin 1s linear infinite;">rotate_right</span> Processing...';
             bulkBtn.disabled = true;
@@ -385,16 +535,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     language: document.getElementById('bulk-language').value,
                     script_ai: document.getElementById('bulk-script-ai').value,
                     voice_ai: document.getElementById('bulk-voice-ai').value,
-                    voice_type: document.getElementById('bulk-voice-type').value,
+                    voice_type: voiceTypeVal,
                     sentence_pause: parseFloat(document.getElementById('bulk-sentence-pause').value) || 0,
                     image_ai: document.getElementById('bulk-image-ai').value,
-                    subtitle_style: document.getElementById('bulk-subtitle-style').value,
+                    subtitle_style: document.getElementById('bulk-opt-subtitles-enabled')?.checked ? document.getElementById('bulk-subtitle-style').value : "none",
                     subtitle_delay: parseFloat(document.getElementById('bulk-subtitle-delay').value) || 1.0,
                     video_mode: document.getElementById('bulk-video-mode').value,
                     transition_style: document.getElementById('bulk-transition-style').value,
                     watermark_enabled: false,
-                    bgm_enabled: document.getElementById('bulk-bgm-enabled').checked,
-                    bgm_tone: document.getElementById('bulk-bgm-tone').value,
+                    bgm_enabled: bgmEnabled,
+                    bgm_tone: bgmToneVal,
                     quality_level: document.getElementById('bulk-quality-level').value,
                     aspect_ratio: document.getElementById('bulk-aspect-ratio').value,
                     animation_provider: document.getElementById('bulk-animation-provider').value,
@@ -409,6 +559,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if(res.ok) {
                     bulkTextarea.value = '';
+                    const customVoiceIdInput = document.getElementById('bulk-custom-voice-id');
+                    if (customVoiceIdInput) customVoiceIdInput.value = '';
+                    if (bulkVoiceTypeSelect) bulkVoiceTypeSelect.value = 'erkek';
+                    if (bulkCustomVoiceIdWrapper) bulkCustomVoiceIdWrapper.style.display = 'none';
+                    const customBgmPathInput = document.getElementById('bulk-custom-bgm-path');
+                    if (customBgmPathInput) customBgmPathInput.value = '';
+                    if (bulkBgmToneSelect) bulkBgmToneSelect.value = 'auto';
+                    if (bulkCustomBgmPathWrapper) bulkCustomBgmPathWrapper.style.display = 'none';
                     showToast(currentLang === 'tr' ? `${lines.length} konu kuyruğa eklendi!` : `${lines.length} topics added to queue!`);
                     fetchStats();
                     fetchVideos();
@@ -459,6 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const langData = translations[currentLang];
         fetch('/api/videos').then(res => res.json()).then(data => {
+            // Store videos data for modal lookup
+            window.completedVideosData = {};
+            data.forEach(task => {
+                window.completedVideosData[task.id] = task;
+            });
             // Queue Grid
             const queueGrid = document.getElementById('queue-grid');
             if (queueGrid) {
@@ -558,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const card = document.createElement('div');
                         card.className = 'video-card';
                         card.innerHTML = `
-                            <div class="video-thumb" onclick="openModal('${vidPath}', '${cleanTopic}')">
+                            <div class="video-thumb" onclick="openModal('${vidPath}', '${cleanTopic}', ${task.id})">
                                 <span class="material-symbols-rounded">play_circle</span>
                             </div>
                             <div class="video-details">
@@ -568,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span>${(task.language || 'TR').toUpperCase()}</span>
                                 </div>
                                 <div class="video-actions">
-                                    <button class="action-btn btn-primary" onclick="openModal('${vidPath}', '${cleanTopic}')">
+                                    <button class="action-btn btn-primary" onclick="openModal('${vidPath}', '${cleanTopic}', ${task.id})">
                                         <span class="material-symbols-rounded" style="font-size:18px;">play_arrow</span>
                                     </button>
                                     <a class="action-btn btn-secondary" href="${vidPath}" download>
@@ -596,16 +759,74 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Modal logic
-    window.openModal = function(src, title) {
+    window.openModal = function(src, title, taskId) {
         const modal = document.getElementById('video-modal');
         const video = document.getElementById('modal-video');
         const titleEl = document.getElementById('modal-title');
         const downloadEl = document.getElementById('modal-download');
         
+        // Virality elements
+        const viralityContainer = document.getElementById('modal-virality-container');
+        const viralityCircle = document.getElementById('virality-circle');
+        const viralityScoreVal = document.getElementById('virality-score-val');
+        const viralityScoreLbl = document.getElementById('virality-score-lbl');
+        const viralityCritiqueText = document.getElementById('virality-critique-text');
+        const viralityTipText = document.getElementById('virality-tip-text');
+        
         if (modal && video) {
             video.src = src;
             titleEl.textContent = title;
             downloadEl.href = src;
+            
+            // Populate Virality Analysis if taskId is provided
+            if (taskId && window.completedVideosData && window.completedVideosData[taskId]) {
+                const task = window.completedVideosData[taskId];
+                const score = task.virality_score !== undefined && task.virality_score !== null ? task.virality_score : null;
+                const critique = task.critique || '';
+                const tip = task.audience_retention_tip || '';
+                
+                if (score !== null) {
+                    if (viralityContainer) viralityContainer.classList.remove('hidden');
+                    if (viralityScoreVal) viralityScoreVal.textContent = score;
+                    
+                    // Update Circle progress
+                    if (viralityCircle) {
+                        const radius = viralityCircle.r.baseVal.value;
+                        const circumference = 2 * Math.PI * radius;
+                        const offset = circumference - (score / 100) * circumference;
+                        viralityCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+                        viralityCircle.style.strokeDashoffset = offset;
+                        
+                        // Set gauge color based on score
+                        if (score >= 85) {
+                            viralityCircle.style.stroke = '#2ecc71'; // Green
+                            if (viralityScoreLbl) {
+                                viralityScoreLbl.textContent = 'Mükemmel Potansiyel';
+                                viralityScoreLbl.style.color = '#2ecc71';
+                            }
+                        } else if (score >= 70) {
+                            viralityCircle.style.stroke = '#f1c40f'; // Orange/Yellow
+                            if (viralityScoreLbl) {
+                                viralityScoreLbl.textContent = 'Güçlü Potansiyel';
+                                viralityScoreLbl.style.color = '#f1c40f';
+                            }
+                        } else {
+                            viralityCircle.style.stroke = '#e74c3c'; // Red
+                            if (viralityScoreLbl) {
+                                viralityScoreLbl.textContent = 'Geliştirilebilir';
+                                viralityScoreLbl.style.color = '#e74c3c';
+                            }
+                        }
+                    }
+                    
+                    if (viralityCritiqueText) viralityCritiqueText.textContent = critique;
+                    if (viralityTipText) viralityTipText.textContent = tip;
+                } else {
+                    if (viralityContainer) viralityContainer.classList.add('hidden');
+                }
+            } else {
+                if (viralityContainer) viralityContainer.classList.add('hidden');
+            }
             
             modal.classList.remove('hidden');
             void modal.offsetWidth;
@@ -700,6 +921,81 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 deleteBtn.innerHTML = `<span class="material-symbols-rounded">delete</span> <span data-i18n="delete_selected" style="font-weight:600;font-size:0.9rem;">${langData.delete_selected}</span>`;
                 deleteBtn.disabled = false;
+            }
+        });
+    }
+
+    // 5. Long Video Generation
+    const longGenerateBtn = document.getElementById('long-generate-btn');
+    if (longGenerateBtn) {
+        longGenerateBtn.addEventListener('click', async () => {
+            const topicInput = document.getElementById('long-topic-input');
+            const customScriptInput = document.getElementById('long-custom-script-input');
+            const topic = topicInput.value.trim();
+            const customScript = customScriptInput ? customScriptInput.value.trim() : "";
+            
+            if (!topic) {
+                alert(currentLang === 'tr' ? "Lütfen bir video başlığı / konusu giriniz!" : "Please enter a video title / topic!");
+                return;
+            }
+
+            const originalHtml = longGenerateBtn.innerHTML;
+            longGenerateBtn.innerHTML = '<span class="material-symbols-rounded spin" style="animation: spin 1s linear infinite;">rotate_right</span> Processing...';
+            longGenerateBtn.disabled = true;
+
+            try {
+                const bgmEnabled = document.getElementById('long-opt-bgm-enabled')?.checked || false;
+                const letterboxEnabled = document.getElementById('long-opt-letterbox-enabled')?.checked || false;
+                const lightLeakEnabled = document.getElementById('long-opt-light-leak-enabled')?.checked || false;
+
+                const payload = {
+                    topic: topic,
+                    category: "Belgesel",
+                    tone: "Dramatik",
+                    duration: parseInt(document.getElementById('long-opt-duration').value) || 480,
+                    language: document.getElementById('long-opt-language').value || "tr",
+                    script_ai: document.getElementById('long-opt-script-ai').value || "Gemini-3.1-Pro",
+                    custom_script: customScript || null,
+                    voice_ai: document.getElementById('long-opt-voice-ai').value || "Edge-TTS",
+                    voice_type: document.getElementById('long-voice-type').value || "erkek",
+                    image_ai: document.getElementById('long-opt-image-ai').value || "Stock-Auto",
+                    subtitle_style: document.getElementById('long-opt-subtitles-enabled')?.checked ? (document.getElementById('long-opt-subtitle-style').value || "netflix") : "none",
+                    subtitle_delay: 1.0,
+                    video_mode: "slideshow",
+                    sentence_pause: 0.0,
+                    watermark_enabled: false,
+                    transition_style: "auto",
+                    bgm_enabled: bgmEnabled,
+                    bgm_tone: "auto",
+                    quality_level: "high",
+                    aspect_ratio: document.getElementById('long-opt-aspect-ratio').value || "16:9",
+                    animation_provider: "none",
+                    color_grade_style: document.getElementById('long-opt-color-grade')?.value || 'auto_enhance',
+                    letterbox_enabled: letterboxEnabled,
+                    light_leak_enabled: lightLeakEnabled,
+                    is_long_video: true
+                };
+
+                const res = await fetch('/api/videos/single', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) {
+                    topicInput.value = '';
+                    if (customScriptInput) customScriptInput.value = '';
+                    showToast(currentLang === 'tr' ? "Uzun video başarıyla kuyruğa eklendi! 🎬" : "Long video successfully added to queue! 🎬");
+                    fetchStats();
+                    fetchVideos();
+                } else {
+                    showToast(currentLang === 'tr' ? "Kuyruğa eklenirken hata oluştu." : "Error adding to queue.", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast(currentLang === 'tr' ? "Sunucu ile bağlantı hatası." : "Server connection error.", "error");
+            } finally {
+                longGenerateBtn.innerHTML = originalHtml;
+                longGenerateBtn.disabled = false;
             }
         });
     }

@@ -241,12 +241,18 @@ def get_bgm_path(tone: str = "auto") -> str | None:
     Verilen tona uygun bir BGM dosyası yolu döndürür.
     
     Öncelik sırası:
+    0. Doğrudan yerel dosya yolu ise onu kullan (Özel BGM)
     1. Yerel assets/bgm/ dizininde hazır dosya (preset veya önceden indirilmiş)
     2. Jamendo API'sinden indir (telifsiz, ücretsiz)
     3. Pixabay Music API'sinden indir (API key gerektirir)
     4. Numpy ile ambient ton üret (internet olmasa da çalışır)
     5. None (BGM olmadan devam et)
     """
+    # 0. Doğrudan yerel bir dosya yolu mu kontrol et
+    if tone and os.path.exists(tone) and os.path.getsize(tone) > 1024:
+        print(f"[BGM] Özel BGM dosyası doğrudan kullanılıyor: {tone}")
+        return tone
+
     tone_key = _normalize_tone(tone)
     query = TONE_TO_QUERY.get(tone_key, TONE_TO_QUERY["auto"])
     tone_filename = TONE_TO_FILENAME.get(tone_key, "calm.mp3")

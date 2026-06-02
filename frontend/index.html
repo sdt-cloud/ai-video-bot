@@ -40,6 +40,10 @@
                         <span class="material-symbols-rounded">description</span>
                         <span data-i18n="nav_templates">Templates</span>
                     </a>
+                    <a href="#" class="nav-item" data-target="long-videos-view">
+                        <span class="material-symbols-rounded">movie_filter</span>
+                        <span data-i18n="nav_long_videos">Uzun Videolar (+8dk)</span>
+                    </a>
                     <a href="#" class="nav-item" data-target="assets-view">
                         <span class="material-symbols-rounded">perm_media</span>
                         <span data-i18n="nav_assets">Assets</span>
@@ -121,11 +125,22 @@
                             <span class="create-subtitle" data-i18n="dash_video_topic">Video Topic / Prompt</span>
                         </div>
                         <div class="create-form">
+                            <div class="url-mode-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 5px 0;">
+                                <label style="margin: 0; font-weight: 500; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" id="url-mode-toggle" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color);">
+                                    🔗 Web Sayfası / Blog Yazısını Videoya Çevir (URL Modu)
+                                </label>
+                            </div>
                             <div class="create-inputs">
+                                <div class="input-area" id="url-input-area" style="display: none; margin-bottom: 15px;">
+                                    <label for="url-input" style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">İçeriği Çekilecek Web Adresi (URL)</label>
+                                    <input type="url" id="url-input" class="topic-input" placeholder="https://example.com/blog-post-url">
+                                </div>
                                 <div class="input-area">
+                                    <label id="topic-input-label" for="topic-input" style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">Video Başlığı / Konusu</label>
                                     <input type="text" id="topic-input" class="topic-input" placeholder="Describe your video concept here..." data-i18n-placeholder="dash_input_placeholder">
                                 </div>
-                                <div class="input-area custom-script-area">
+                                <div class="input-area custom-script-area" id="custom-script-area-wrapper">
                                     <label for="custom-script-input" class="custom-script-label">İsteğe Bağlı Özel Script</label>
                                     <textarea id="custom-script-input" rows="6" class="topic-input custom-script-input" placeholder="Script'i kendin yazmak istersen buraya yapıştır. Doluysa AI script yazmaz, bunu sahnelere bölüp videoyu üretir."></textarea>
                                 </div>
@@ -202,6 +217,10 @@
                                         <option value="ElevenLabs">ElevenLabs (Premium)</option>
                                     </select>
                                 </div>
+                                <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                    <label style="margin:0; font-weight: 500;" data-i18n="opt_subtitles_enabled">💬 Altyazı Ekle</label>
+                                    <input type="checkbox" id="opt-subtitles-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                                </div>
                                 <div class="option-group">
                                     <label data-i18n="voice_type">Ses Tipi</label>
                                     <select id="voice-type">
@@ -212,7 +231,12 @@
                                         <option value="gulucu">Gülücü Ses</option>
                                         <option value="profesyonel">Profesyonel Ses</option>
                                         <option value="sakin">Sakin Ses</option>
+                                        <option value="custom">✍️ Özel ElevenLabs Ses ID'si...</option>
                                     </select>
+                                </div>
+                                <div class="option-group" id="custom-voice-id-wrapper" style="display: none; margin-bottom: 10px;">
+                                    <label for="custom-voice-id">ElevenLabs Voice ID (UUID)</label>
+                                    <input type="text" id="custom-voice-id" class="topic-input" style="height:38px;padding:6px 12px;font-size:0.9rem;" placeholder="Örn: HGokgaAG6y586a3fAmcA">
                                 </div>
                                 <div class="option-group">
                                     <label data-i18n="opt_sentence_pause">Cümle Arası Boşluk</label>
@@ -348,7 +372,12 @@
                                             <option value="gizemli">Gizemli</option>
                                             <option value="neşeli">Neşeli</option>
                                             <option value="profesyonel">Profesyonel</option>
+                                            <option value="custom">✍️ Özel Müzik Dosyası Yolu...</option>
                                         </select>
+                                    </div>
+                                    <div class="option-group" id="custom-bgm-path-wrapper" style="display: none; margin-top: 10px; margin-bottom: 10px;">
+                                        <label for="custom-bgm-path">Müzik Dosyası Yolu (Yerel Yol)</label>
+                                        <input type="text" id="custom-bgm-path" class="topic-input" style="height:38px;padding:6px 12px;font-size:0.9rem;" placeholder="Örn: assets/bgm/custom.mp3">
                                     </div>
                                 </div>
                             </div>
@@ -450,6 +479,10 @@
                                 <option value="ElevenLabs">ElevenLabs (Premium)</option>
                             </select>
                         </div>
+                        <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                            <label style="margin:0; font-weight: 500;" data-i18n="opt_subtitles_enabled">💬 Altyazı Ekle</label>
+                            <input type="checkbox" id="bulk-opt-subtitles-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                        </div>
                         <div class="option-group">
                             <label>Ses Tipi</label>
                             <select id="bulk-voice-type">
@@ -460,7 +493,12 @@
                                 <option value="gulucu">Gülücü Ses</option>
                                 <option value="profesyonel">Profesyonel Ses</option>
                                 <option value="sakin">Sakin Ses</option>
+                                <option value="custom">✍️ Özel ElevenLabs Ses ID'si...</option>
                             </select>
+                        </div>
+                        <div class="option-group" id="bulk-custom-voice-id-wrapper" style="display: none; margin-bottom: 10px;">
+                            <label for="bulk-custom-voice-id">ElevenLabs Voice ID (UUID)</label>
+                            <input type="text" id="bulk-custom-voice-id" class="topic-input" style="height:38px;padding:6px 12px;font-size:0.9rem;" placeholder="Örn: HGokgaAG6y586a3fAmcA">
                         </div>
                         <div class="option-group">
                             <label data-i18n="opt_sentence_pause">Cümle Arası Boşluk</label>
@@ -541,7 +579,12 @@
                                     <option value="gizemli">Gizemli</option>
                                     <option value="neşeli">Neşeli</option>
                                     <option value="profesyonel">Profesyonel</option>
+                                    <option value="custom">✍️ Özel Müzik Dosyası Yolu...</option>
                                 </select>
+                            </div>
+                            <div class="option-group" id="bulk-custom-bgm-path-wrapper" style="display: none; margin-top: 10px; margin-bottom: 10px;">
+                                <label for="bulk-custom-bgm-path">Müzik Dosyası Yolu (Yerel Yol)</label>
+                                <input type="text" id="bulk-custom-bgm-path" class="topic-input" style="height:38px;padding:6px 12px;font-size:0.9rem;" placeholder="Örn: assets/bgm/custom.mp3">
                             </div>
                         </div>
                         <div class="option-group">
@@ -584,6 +627,148 @@
                         <span class="material-symbols-rounded">playlist_add</span>
                         <span data-i18n="bulk_btn">ADD ALL TO QUEUE</span>
                     </button>
+                </div>
+            </section>
+
+            <!-- Long Videos View -->
+            <section id="long-videos-view" class="view-section">
+                <h1 class="page-title"><span class="accent">Uzun Videolar</span> (+8 Dakika)</h1>
+                <p class="page-subtitle">Monetizasyon için optimize edilmiş derinlemesine YZ belgeselleri ve uzun videolar üretin.</p>
+                
+                <div class="create-card">
+                    <div class="create-card-header">
+                        <h3>Uzun Video Jeneratörü</h3>
+                        <span class="create-subtitle">Çok Aşamalı Outline ve Bölüm Genişletme Aşamalarıyla Kusursuz Sonuçlar</span>
+                    </div>
+                    
+                    <div class="create-form">
+                        <div class="create-inputs">
+                            <div class="input-area">
+                                <label for="long-topic-input" style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">Video Başlığı / Konusu</label>
+                                <input type="text" id="long-topic-input" class="topic-input" placeholder="Örn: Roma İmparatorluğu'nun çöküşünün perde arkası...">
+                            </div>
+                            <div class="input-area custom-script-area">
+                                <label for="long-custom-script-input" class="custom-script-label">İsteğe Bağlı Özel Senaryo</label>
+                                <textarea id="long-custom-script-input" rows="6" class="topic-input custom-script-input" placeholder="Uzun video için kendi yazdığınız senaryoyu buraya girebilirsiniz. AI bunu otomatik olarak bölümlere ve sahnelere ayıracaktır."></textarea>
+                            </div>
+                        </div>
+                        
+                        <button class="generate-btn create-submit-btn" id="long-generate-btn" style="background: linear-gradient(135deg, #a855f7, #6366f1); margin-top: 1rem;">
+                            <span class="material-symbols-rounded">movie_filter</span>
+                            <span>UZUN VİDEO ÜRET (+8 DK)</span>
+                        </button>
+                    </div>
+
+                    <!-- Long Video Advanced Options -->
+                    <div class="advanced-toggle" id="long-advanced-toggle">
+                        <span class="material-symbols-rounded">tune</span>
+                        <span>Uzun Video Gelişmiş Ayarları</span>
+                        <span class="material-symbols-rounded toggle-arrow">expand_more</span>
+                    </div>
+                    
+                    <div class="advanced-options hidden" id="long-advanced-options">
+                        <div class="options-grid">
+                            <div class="option-group">
+                                <label>Hedef Süre</label>
+                                <select id="long-opt-duration">
+                                    <option value="480" selected>8 Dakika (Önerilen)</option>
+                                    <option value="600">10 Dakika</option>
+                                    <option value="720">12 Dakika</option>
+                                    <option value="900">15 Dakika</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Dil (Language)</label>
+                                <select id="long-opt-language">
+                                    <option value="tr" selected>Türkçe</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Senaryo Yapay Zekası</label>
+                                <select id="long-opt-script-ai">
+                                    <option value="Gemini-3.1-Pro" selected>Gemini (3.1 Pro - Derin Anlatım)</option>
+                                    <option value="Gemini-3.1-Flash">Gemini (3.1 Flash - Hızlı)</option>
+                                    <option value="OpenAI">OpenAI (GPT-4o-mini)</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Seslendirme Motoru</label>
+                                <select id="long-opt-voice-ai">
+                                    <option value="Edge-TTS" selected>Edge-TTS (Ücretsiz & Doğal)</option>
+                                    <option value="ElevenLabs">ElevenLabs (Premium)</option>
+                                </select>
+                            </div>
+                            <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                <label style="margin:0; font-weight: 500;">💬 Altyazı Ekle</label>
+                                <input type="checkbox" id="long-opt-subtitles-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                            </div>
+                            <div class="option-group">
+                                <label>Ses Karakteri</label>
+                                <select id="long-voice-type">
+                                    <option value="erkek" selected>Erkek Belgesel Sesi</option>
+                                    <option value="kadin">Kadın Belgesel Sesi</option>
+                                    <option value="profesyonel">Profesyonel / Hitabet</option>
+                                    <option value="dramatik">Dramatik / Derin Anlatım</option>
+                                    <option value="sakin">Sakin / Doğa Belgeseli</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Görsel Yapay Zekası</label>
+                                <select id="long-opt-image-ai">
+                                    <optgroup label="⚡ Akıllı Hibrit (Önerilen)">
+                                        <option value="Stock-Auto" selected>Stock-Auto 🚀 (Önce Stok Ara -> 7/10 Skoru Aşarsa Kullan -> Aşamazsa YZ ile Üret ✓)</option>
+                                        <option value="Pexels">Sadece Pexels (Stok)</option>
+                                        <option value="Pixabay">Sadece Pixabay (Stok)</option>
+                                    </optgroup>
+                                    <optgroup label="🤖 Sadece AI Üretimi">
+                                        <option value="OpenAI">OpenAI (GPT Image 1)</option>
+                                        <option value="HuggingFace">🤗 HuggingFace FLUX (Ücretsiz ✓)</option>
+                                        <option value="HuggingFace-Dev">🤗 HuggingFace FLUX Dev (HD)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Altyazı Stili</label>
+                                <select id="long-opt-subtitle-style">
+                                    <option value="netflix" selected>🎬 Netflix Belgesel Stili (Klasik Alt Orta)</option>
+                                    <option value="tiktok">🎵 TikTok (Sarı Vurgulu)</option>
+                                    <option value="mrbeast">⚡ MrBeast Pop (Renkli Çerçeve)</option>
+                                    <option value="hormozi">🔥 Alex Hormozi (Kalın Büyük Harf)</option>
+                                    <option value="none">❌ Altyazı Yok</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Renk Derecelendirme (Filter)</label>
+                                <select id="long-opt-color-grade">
+                                    <option value="auto_enhance" selected>✨ Otomatik İyileştirme</option>
+                                    <option value="cinematic_warm">🔥 Sinematik Sıcak (Sarı/Amber)</option>
+                                    <option value="cinematic_cool">❄️ Sinematik Soğuk (Mavi/Karanlık)</option>
+                                    <option value="vintage">📷 Nostaljik Belgesel</option>
+                                    <option value="none">Orijinal Renkler</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label>Video Boyut Oranı</label>
+                                <select id="long-opt-aspect-ratio">
+                                    <option value="16:9" selected>🖥️ 16:9 Yatay (YouTube Standart)</option>
+                                    <option value="9:16">📱 9:16 Dikey (YouTube Shorts/TikTok Uzun)</option>
+                                </select>
+                            </div>
+                            <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                <label style="margin:0;">🎬 Letterbox (Sinema Bantları)</label>
+                                <input type="checkbox" id="long-opt-letterbox-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                            </div>
+                            <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                <label style="margin:0;">🔆 Sinematik Işık Sızmaları (Light Leak)</label>
+                                <input type="checkbox" id="long-opt-light-leak-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                            </div>
+                            <div class="option-group" style="display:flex; align-items:center; gap:10px;">
+                                <label style="margin:0;">🎵 Arka Plan Müziği (BGM)</label>
+                                <input type="checkbox" id="long-opt-bgm-enabled" checked style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent-color);">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -692,6 +877,36 @@
                     <span class="material-symbols-rounded">download</span>
                     <span data-i18n="modal_download">Download</span>
                 </a>
+            </div>
+
+            <!-- Virality Analysis Dashboard -->
+            <div class="virality-container hidden" id="modal-virality-container">
+                <h4 class="virality-header">
+                    <span class="material-symbols-rounded">trending_up</span>
+                    <span data-i18n="virality_title">Shorts Viralite Analizi</span>
+                </h4>
+                <div class="virality-body">
+                    <div class="virality-score-wrapper">
+                        <div class="virality-gauge">
+                            <svg class="progress-ring" width="80" height="80">
+                                <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.08)" stroke-width="6" fill="transparent" r="34" cx="40" cy="40"/>
+                                <circle class="progress-ring__circle" id="virality-circle" stroke="#ff4757" stroke-width="6" fill="transparent" r="34" cx="40" cy="40" stroke-dasharray="213.628" stroke-dashoffset="213.628"/>
+                            </svg>
+                            <span class="virality-score-val" id="virality-score-val">--</span>
+                        </div>
+                        <span class="virality-score-lbl" id="virality-score-lbl">Değerlendiriliyor</span>
+                    </div>
+                    <div class="virality-details">
+                        <div class="virality-critique">
+                            <strong><i class="fa-solid fa-wand-magic-sparkles text-glow"></i> Yapay Zeka Eleştirisi:</strong>
+                            <p id="virality-critique-text">Senaryo hazırlanıyor veya analiz bulunamadı...</p>
+                        </div>
+                        <div class="virality-tip">
+                            <strong><i class="fa-solid fa-lightbulb text-glow"></i> İzleyiciyi Tutma İpucu (Audience Retention):</strong>
+                            <p id="virality-tip-text">İlk 3 saniyede güçlü bir kanca (hook) kullanmaya özen gösterin.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

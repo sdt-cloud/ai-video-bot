@@ -64,6 +64,12 @@ def init_db():
                 color_grade_style TEXT DEFAULT 'auto_enhance',
                 error_message TEXT,
                 video_path TEXT,
+                url TEXT,
+                virality_score INTEGER,
+                critique TEXT,
+                audience_retention_tip TEXT,
+                is_long_video INTEGER DEFAULT 0,
+                letterbox_enabled INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -144,6 +150,36 @@ def init_db():
             cursor.execute("ALTER TABLE videos ADD COLUMN light_leak_enabled INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN url TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN virality_score INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN critique TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN audience_retention_tip TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN is_long_video INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+        
+        try:
+            cursor.execute("ALTER TABLE videos ADD COLUMN letterbox_enabled INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
         
         # Index oluştur - performans için
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON videos(status)")
@@ -156,7 +192,8 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                    watermark_enabled=False, transition_style="none",
                    bgm_enabled=False, bgm_tone="auto", subtitle_delay=1.0,
                    quality_level="medium", aspect_ratio="9:16", animation_provider="none",
-                   color_grade_style="auto_enhance", light_leak_enabled=False):
+                   color_grade_style="auto_enhance", light_leak_enabled=False, url=None,
+                   is_long_video=False, letterbox_enabled=False):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -165,15 +202,25 @@ def add_video_task(topic, category, tone, duration, language, script_ai, voice_a
                                 sentence_pause, watermark_enabled, transition_style,
                                 bgm_enabled, bgm_tone, subtitle_delay,
                                 quality_level, aspect_ratio, animation_provider, color_grade_style,
-                                light_leak_enabled)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                light_leak_enabled, url, is_long_video, letterbox_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (topic, category, tone, duration, language, script_ai, voice_ai, voice_type,
                image_ai, subtitle_style, video_mode, custom_script,
                sentence_pause, int(watermark_enabled), transition_style,
                int(bgm_enabled), bgm_tone, subtitle_delay,
                quality_level, aspect_ratio, animation_provider, color_grade_style,
-               int(light_leak_enabled)))
+               int(light_leak_enabled), url, int(is_long_video), int(letterbox_enabled)))
         return cursor.lastrowid
+
+def update_virality_data(task_id, virality_score, critique, audience_retention_tip):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE videos 
+            SET virality_score = ?, critique = ?, audience_retention_tip = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (virality_score, critique, audience_retention_tip, task_id))
+
 
 def update_status(task_id, status, progress=None, error_message=None, video_path=None):
     with get_db() as conn:
